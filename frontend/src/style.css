@@ -1,0 +1,68 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light;
+  color: #202a27;
+  background: #f4f5f1;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.app-header {
+  border-bottom: 1px solid #d6dcd6;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+}
+
+.experience-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 24px;
+}
+
+.experience-panel {
+  min-height: 60vh;
+  padding: 20px;
+  border: 1px solid #d6dcd6;
+  background: #fff;
+}
+
+.experience-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+  .app-shell {
+    padding: 16px;
+  }
+
+  .experience-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .experience-panel {
+    min-height: 35vh;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@dwelling/frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0"
+  }
+}

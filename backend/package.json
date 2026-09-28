@@ -1,0 +1,17 @@
+{
+  "name": "@dwelling/backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@dwelling/shared": "*",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@dwelling/database",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0"
+  }
+}

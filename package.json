@@ -1,0 +1,23 @@
+{
+  "name": "dwelling",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "database",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev:frontend",
+    "dev:frontend": "npm run dev --workspace @dwelling/frontend",
+    "dev:backend": "npm run dev --workspace @dwelling/backend",
+    "build": "npm run build --workspace @dwelling/frontend",
+    "start": "npm run start --workspace @dwelling/backend",
+    "db:generate": "npm run generate --workspace @dwelling/database",
+    "db:migrate": "npm run migrate --workspace @dwelling/database"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

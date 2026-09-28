@@ -180,3 +180,35 @@ Dwelling is based on a simple idea:
 > **Instead of finding a conversation in a list, find the person in a world.**
 
 The project combines a familiar communication system with a spatial 2D environment, where **people have places, conversations have locations, and users can move through the world to interact with them.**
+
+## Project Structure
+
+```text
+frontend/   Vite, Vanilla JavaScript, and Phaser 3
+backend/    Node.js, Express, and Socket.IO
+database/   Prisma schema and PostgreSQL migrations
+shared/     Small JavaScript contracts shared by workspaces
+tests/      Cross-workspace tests
+docs/       Architecture notes
+scripts/    Project maintenance scripts
+```
+
+The frontend and backend are separate npm workspaces in one monorepo. The
+initial world and chat directories are boundaries for future features; the
+gameplay and messaging flows are not implemented yet.
+
+## Local Development
+
+Requirements: Node.js 20.19 or newer and PostgreSQL. Redis is optional until a
+feature needs caching.
+
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` for your local PostgreSQL database.
+3. Generate the Prisma client with `npm run db:generate`.
+4. Apply the initial schema with `npm run db:migrate`.
+5. Start the frontend with `npm run dev`.
+6. In a second terminal, start the API with `npm run dev:backend`.
+
+The frontend runs at `http://localhost:5173`; the API health check is at
+`http://localhost:3000/api/health`. Leave `REDIS_URL` unset to run without
+Redis. See [docs/architecture.md](docs/architecture.md) for module boundaries.
