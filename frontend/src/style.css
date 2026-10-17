@@ -1,68 +1,247 @@
 :root {
-  font-family: system-ui, sans-serif;
-  color-scheme: light;
-  color: #202a27;
-  background: #f4f5f1;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  color: #f4f5f1;
+  background: #161c1a;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  min-width: 320px;
-  min-height: 100vh;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
   margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #161c1a;
 }
 
-#app {
-  min-height: 100vh;
-}
-
+/* Fullscreen Application Container */
 .app-shell {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #161c1a;
 }
 
-.app-header {
-  border-bottom: 1px solid #d6dcd6;
-  margin-bottom: 24px;
+/* Edge-to-Edge Phaser Mount */
+.world-mount {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1b2320;
 }
 
-.app-header h1 {
-  margin: 0 0 16px;
-  font-size: 1.5rem;
+.world-mount canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.experience-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
-  gap: 24px;
+/* Floating Glass HUD (Top-Left) */
+.floating-hud {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: rgba(22, 28, 26, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  user-select: none;
 }
 
-.experience-panel {
-  min-height: 60vh;
-  padding: 20px;
-  border: 1px solid #d6dcd6;
-  background: #fff;
-}
-
-.experience-panel h2 {
+.floating-hud h1 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f4f5f1;
 }
 
-@media (max-width: 700px) {
-  .app-shell {
-    padding: 16px;
-  }
+.floating-hud .hud-hint {
+  font-size: 0.82rem;
+  color: #9ac96b;
+  opacity: 0.9;
+}
 
-  .experience-layout {
-    grid-template-columns: 1fr;
-  }
+/* Slide-out Chat Drawer (Overlay) */
+.chat-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 90vw;
+  background: rgba(24, 32, 29, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-  .experience-panel {
-    min-height: 35vh;
-  }
+.chat-drawer.open {
+  transform: translateX(0);
+}
+
+/* Drawer Header */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-title-group h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f4f5f1;
+}
+
+.drawer-title-group .contact-sub {
+  font-size: 0.82rem;
+  color: #9ac96b;
+  margin-top: 2px;
+}
+
+.drawer-close-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #f4f5f1;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Visible Mock Data Notice Banner (FR-033 / ADR-0013) */
+.mock-notice-badge {
+  background: rgba(217, 119, 6, 0.18);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 8px 12px;
+  margin: 12px 16px 0;
+  border-radius: 6px;
+}
+
+/* Messages Feed */
+.drawer-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.chat-bubble.inbound {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+}
+
+.chat-bubble.outbound {
+  align-self: flex-end;
+  background: #3b5f3d;
+  color: #f4f5f1;
+}
+
+.chat-bubble .timestamp {
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+/* Disabled Input Mock Footer */
+.drawer-footer {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-container {
+  display: flex;
+  gap: 8px;
+}
+
+.mock-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #9ca3af;
+  font-size: 0.85rem;
+  cursor: not-allowed;
+}
+
+.mock-send-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #9ca3af;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  cursor: not-allowed;
+}
+
+.input-disclaimer {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  opacity: 0.7;
+  text-align: center;
 }
