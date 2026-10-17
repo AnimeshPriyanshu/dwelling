@@ -3,28 +3,30 @@
 Where game and UI assets live, how they are named, where they come from, and how
 the code references them.
 
-> **Reality check:** Dwelling currently has **no game assets**. The only files
-> present are the project's favicon/icon set and three unused leftovers from the
-> Vite starter template. Nothing below exists yet — it is the agreed plan
-> (ADR-0011), not a description of the repository.
+> **Reality check (2026-10-17):** the first game assets now exist. Two **CC0**
+> Kenney tilesheets live in `frontend/public/assets/tilesets/` and are loaded via
+> `src/world/assets.js`. The tables below are updated to match; folders that are
+> still empty (characters, houses, props, interiors, altar, ui) remain **planned**
+> and are only created when they hold a file.
 
 ---
 
 ## What actually exists today
 
-Verified by inspecting `frontend/`:
+Verified by inspecting `frontend/` on 2026-10-17:
 
 | Path | What it is | Used? |
 | --- | --- | --- |
 | `frontend/public/favicon.svg` | Site favicon | Referenced from `index.html` as `/favicon.svg` |
-| `frontend/public/icons.svg` | SVG icon sprite | Referenced from `index.html` as `/icons.svg` |
-| `frontend/src/assets/hero.png` | Vite starter template image | **Not imported anywhere** |
-| `frontend/src/assets/javascript.svg` | Vite starter template image | **Not imported anywhere** |
-| `frontend/src/assets/vite.svg` | Vite starter template image | **Not imported anywhere** |
-| `frontend/public/assets/` | — | **Does not exist yet** (created in DW-011) |
+| `frontend/public/icons.svg` | SVG icon sprite | Not referenced yet |
+| `frontend/public/assets/tilesets/tiny-town.png` | Kenney Tiny Town tilesheet (CC0), 16×16 tiles | Ground layer (`WorldScene`) |
+| `frontend/public/assets/tilesets/tiny-dungeon.png` | Kenney Tiny Dungeon tilesheet (CC0), 16×16 tiles | Loaded as optional; furnishings in DW-051 |
+| `frontend/public/assets/CREDITS.md` | Provenance for the above | Documentation |
+| `frontend/src/assets/hero.png` etc. | Vite starter leftovers | **Not imported anywhere** |
 
-There is **no tileset, character sprite sheet, house sprite, furniture, prop, UI
-image, font, or audio file** in the repository.
+There is still **no character sheet, house sprite, furniture, prop, UI image,
+font or audio file**. Houses, props and furniture will be sliced from the two
+tilesheets where possible rather than sourced as separate files.
 
 `frontend/dist/` is build output and is **not** a source of assets. It is
 gitignored; treat anything in it as disposable.
@@ -65,29 +67,27 @@ easier to reason about than hashed bundler output.
 ## Agreed folder layout
 
 Created in DW-011 and populated in DW-044. Paths are relative to
-`frontend/public/`:
+`frontend/public/`. Only folders that hold a file are created — the narrower
+categories below are added when they get their first file.
 
 ```text
 assets/
+├── README.md       layout, naming, how to add, ≤512 KB rule
 ├── CREDITS.md      every third-party file: pack, author, license, URL (NFR-014)
-├── tiles/          ground tileset(s) and their tile data
-├── houses/         dwelling exteriors + door
-├── interiors/      the shared room layout + its furniture
-├── props/          trees, bushes, rocks, fences, signs, paths
-├── characters/     the player sprite sheet
-├── altar/          code-authored Altar art
-└── ui/             interact prompt + HUD icons
+└── tilesets/       packed 16×16 tilesheets, sliced by tile index
+    ├── tiny-town.png      Kenney Tiny Town (CC0) — ground, houses, props, trees
+    └── tiny-dungeon.png   Kenney Tiny Dungeon (CC0) — interior furniture
 ```
 
-| Folder | Contents | Source | Used by |
+| Folder | Contents | Source | Status |
 | --- | --- | --- | --- |
-| `tiles/` | Seamless 16×16 ground tiles | CC0 pack | DW-009 |
-| `houses/` | 3–4 house variants + door tile, 3/4 tilt | CC0 pack | DW-026 |
-| `interiors/` | Fireplace, kitchen counter, bed, table, rug, window + floor/wall tiles | CC0 pack | DW-051 |
-| `props/` | Trees, bushes, rocks, fences, signs, path pieces | CC0 pack | DW-020 |
-| `characters/` | Player sheet, 4 directions × 2–4 walk frames | CC0 pack or authored | DW-047 |
-| `altar/` | Altar landmark | **Code-authored** | DW-055 |
-| `ui/` | Interact prompt, HUD icons, door/interior glyphs | **Code-authored** | DW-029, DW-037 |
+| `tilesets/` | Packed 16×16 sheets; ground, houses, props, furniture by tile index | CC0 (Kenney) | ✅ created (DW-044) |
+| `characters/` | Player sheet, 4 directions × 2–4 walk frames | CC0 pack or authored | **planned** (DW-047) |
+| `houses/` | Dedicated house sprites, if sliced sheets are not reused | CC0 pack | **planned** (DW-026) |
+| `props/` | Dedicated prop sprites, if sliced sheets are not reused | CC0 pack | **planned** (DW-020) |
+| `interiors/` | Interior-only furniture, if not sliced from `tiny-dungeon` | CC0 pack | **planned** (DW-051) |
+| `altar/` | Altar landmark | **Code-authored** | **planned** (DW-055) |
+| `ui/` | Interact prompt, HUD icons, door/interior glyphs | **Code-authored** | **planned** (DW-029, DW-037) |
 
 ### Documentation screenshots
 
@@ -124,9 +124,9 @@ the screenshots beside the documents that reference them.
 | Sprite sheets | Even grid, no padding unless the format requires it | Phaser derives frames from a uniform grid |
 | Colour | Consistent palette across all assets | The single biggest risk when mixing packs |
 
-**Undecided:** whether the ground tileset ships as a single image + tile data, or
-as a Phaser tilemap JSON exported from Tiled. Decided in DW-046; recorded there
-and in `decisions.md` if it proves hard to reverse.
+**Decided (DW-046):** tiles ship as **one packed PNG per pack**, sliced by tile
+index; the ground layer's data array is built in code in `WorldScene`. No Tiled
+exported JSON is used.
 
 ---
 
@@ -178,19 +178,20 @@ the file is a complete provenance record for the graded report.
   constructors — entities assume their texture key already exists.
 - **Required:** a missing optional asset must degrade gracefully to a placeholder,
   not crash or blank the world.
-- **Undecided:** whether keys follow the folder structure mechanically or are
-  hand-listed. Decided in DW-046.
+- **Decided (DW-046):** keys are **hand-listed** in `world/assets.js` together
+  with their paths and manifest entry. Scene code refers to the exported key
+  constant, never a literal path.
 
 ---
 
 ## Licensing checklist (before any asset is committed)
 
-- [ ] The license explicitly permits use **and redistribution**.
-- [ ] `frontend/public/assets/CREDITS.md` records pack, author, license, URL and
+- [x] The license explicitly permits use **and redistribution**. (Kenney packs are CC0.)
+- [x] `frontend/public/assets/CREDITS.md` records pack, author, license, URL and
       the files taken from it.
-- [ ] No asset of unknown origin is present.
-- [ ] Any required attribution text is present.
-- [ ] Confirm the files are **not** gitignored, and that no secret-bearing file
+- [x] No asset of unknown origin is present.
+- [x] Any required attribution text is present. (CC0 needs none; credited anyway.)
+- [x] Confirm the files are **not** gitignored, and that no secret-bearing file
       (`*.local`, `.env*`) came along with the download.
 
 ---
