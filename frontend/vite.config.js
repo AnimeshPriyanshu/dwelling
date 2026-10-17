@@ -12,8 +12,4 @@ export default defineConfig({
     },
   },
   plugins: [react()],
-  jsx: {
-    jsxPragma: 'React',
-    jsxFragmentFactory: 'React.Fragment',
-  },
 })
