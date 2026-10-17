@@ -7,10 +7,10 @@ working session.**
   `DW-044`. IDs are stable labels, not sequence numbers.
 - IDs are defined next to their milestone in [`milestones.md`](milestones.md) —
   keep the two files synchronized.
-- **Nothing here is `Done` yet.** The repository contains scaffolding, not
-  features. Statuses change only when acceptance criteria have been verified by
-  running the app (or when you explicitly confirm it).
-- Current milestone: **Milestone 1 — Foundation and project structure**.
+- **Milestones 1–2 are `Done`; every other task is still `Not Started`.** Statuses
+  change only when acceptance criteria have been verified by running the app (or
+  when the owner explicitly confirms it).
+- Current milestone: **Milestone 5 — Dwellings and interactions**.
 - The plan is **ten days**, extended from seven during the requirements session
   (ADR-0014 in [`decisions.md`](decisions.md)).
 
@@ -30,60 +30,64 @@ this phase · **Low** = nice to have, drop first under time pressure.
 
 ## Milestone 1 — Foundation and project structure (Day 1)
 
+> **Implemented with React** (ADR-0016): the game is started from the React shell
+> (`frontend/src/App.jsx`, rendered by `main.js`) via `createGame()` in
+> `world/game.js`, and mounts a canvas into the `#world` element.
+
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-001 | Inspect the repository and record current structure and tooling | High | Not Started | 30m | — |
-| DW-002 | Verify Phaser 3 loads and renders under Vite (smoke test) | High | Not Started | 30m | — |
-| DW-003 | Create `world/game.js` with the Phaser game config (`parent: 'world'`) | High | Not Started | 1h | DW-002 |
-| DW-004 | Create `world/scenes/` with `BootScene` and `PreloadScene` stubs | High | Not Started | 1h | DW-003 |
-| DW-005 | Create a `WorldScene` stub and register scene order | High | Not Started | 1h | DW-003 |
-| DW-006 | Start the game from `main.js` without removing the sidebar | High | Not Started | 1h | DW-004, DW-005 |
-| DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | Not Started | 30m | DW-006 |
+| DW-001 | Inspect the repository and record current structure and tooling | High | Done | 30m | — |
+| DW-002 | Verify Phaser 3 loads and renders under Vite (smoke test) | High | Done | 30m | — |
+| DW-003 | Create `world/game.js` with the Phaser game config (`parent: 'world'`) | High | Done | 1h | DW-002 |
+| DW-004 | Create `world/scenes/` with `BootScene` and `PreloadScene` stubs | High | Done | 1h | DW-003 |
+| DW-005 | Create a `WorldScene` stub and register scene order | High | Done | 1h | DW-003 |
+| DW-006 | Start the game from `main.js` without removing the sidebar | High | Done | 1h | DW-004, DW-005 |
+| DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | Done | 30m | DW-006 |
 
-**Milestone 1 progress:** 0 / 7 done
+**Milestone 1 progress:** 7 / 7 done
 
 ## Milestone 2 — World rendering and the asset pipeline (Day 2)
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-044 | Source CC0 packs: ground tileset, house exteriors, props, interior furniture | High | Not Started | 1h | DW-001 |
-| DW-045 | Verify each asset's license and write `frontend/public/assets/CREDITS.md` | High | Not Started | 30m | DW-044 |
-| DW-046 | Define the tileset/atlas loading strategy in `world/assets.js` | High | Not Started | 1h | DW-044 |
-| DW-008 | Define world constants (tile size, world size) in `world/constants.js` | High | Not Started | 30m | DW-003 |
-| DW-009 | Render a ground layer from the tileset at the world's dimensions | High | Not Started | 1h | DW-008, DW-046 |
-| DW-010 | Set physics/world bounds and camera bounds from the constants | High | Not Started | 30m | DW-008 |
-| DW-011 | Create `frontend/public/assets/` with documented subfolders and `README.md` | Medium | Not Started | 30m | — |
-| DW-012 | Load assets in `PreloadScene` with a progress indicator | Medium | Not Started | 1h | DW-004, DW-011 |
-| DW-013 | Verify the world renders and the build still passes | High | Not Started | 30m | DW-009, DW-010 |
+| DW-044 | Source CC0 packs: ground tileset, house exteriors, props, interior furniture | High | Done | 1h | DW-001 |
+| DW-045 | Verify each asset's license and write `frontend/public/assets/CREDITS.md` | High | Done | 30m | DW-044 |
+| DW-046 | Define the tileset/atlas loading strategy in `world/assets.js` | High | Done | 1h | DW-044 |
+| DW-008 | Define world constants (tile size, world size) in `world/constants.js` | High | Done | 30m | DW-003 |
+| DW-009 | Render a ground layer from the tileset at the world's dimensions | High | Done | 1h | DW-008, DW-046 |
+| DW-010 | Set physics/world bounds and camera bounds from the constants | High | Done | 30m | DW-008 |
+| DW-011 | Create `frontend/public/assets/` with documented subfolders and `README.md` | Medium | Done | 30m | — |
+| DW-012 | Load assets in `PreloadScene` with a progress indicator | Medium | Done | 1h | DW-004, DW-011 |
+| DW-013 | Verify the world renders and the build still passes | High | Done | 30m | DW-009, DW-010 |
 
-**Milestone 2 progress:** 0 / 9 done
+**Milestone 2 progress:** 9 / 9 done
 
 ## Milestone 3 — Player movement (Day 3)
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-047 | Assemble the player sprite sheet (4 directions) and register walk animations | High | Not Started | 1.5h | DW-044 |
-| DW-014 | Create `world/entities/Player.js` using the player sprite | High | Not Started | 1h | DW-008, DW-047 |
-| DW-015 | Add keyboard input for arrow keys and WASD | High | Not Started | 1h | DW-014 |
-| DW-016 | Apply delta-time velocity and normalize diagonal movement | High | Not Started | 1h | DW-015 |
-| DW-019 | Play the correct walk animation per facing direction | Medium | **Blocked** | 1h | DW-047 — *was blocked on a missing sprite sheet; DW-047 now produces one* |
-| DW-017 | Add a run/walk speed toggle (Shift) | Low | Not Started | 30m | DW-016 |
-| DW-018 | Reflect facing direction (animation or visible indicator) | Medium | Not Started | 30m | DW-014 |
+| DW-047 | Assemble the player sprite sheet (4 directions) and register walk animations | High | Done | 1.5h | DW-044 |
+| DW-014 | Create `world/entities/Player.js` using the player sprite | High | Done | 1h | DW-008, DW-047 |
+| DW-015 | Add keyboard input for arrow keys and WASD | High | Done | 1h | DW-014 |
+| DW-016 | Apply delta-time velocity and normalize diagonal movement | High | Done | 1h | DW-015 |
+| DW-019 | Play the correct walk animation per facing direction | Medium | Done | 1h | DW-047 |
+| DW-017 | Add a run/walk speed toggle (Shift) | Low | Done | 30m | DW-016 |
+| DW-018 | Reflect facing direction (animation or visible indicator) | Medium | Done | 30m | DW-014 |
 
-**Milestone 3 progress:** 0 / 7 done (1 blocked)
+**Milestone 3 progress:** 7 / 7 done
 
 ## Milestone 4 — Collision and camera (Day 4)
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-020 | Add a static obstacle group using real prop sprites | High | Not Started | 1h | DW-009, DW-044 |
-| DW-021 | Register a collider between the player and the obstacle group | High | Not Started | 30m | DW-020, DW-014 |
-| DW-022 | Make the camera follow the player | High | Not Started | 30m | DW-014 |
-| DW-023 | Clamp the camera to the world bounds | High | Not Started | 30m | DW-010, DW-022 |
-| DW-024 | Test movement against world edges and every obstacle | High | Not Started | 30m | DW-021, DW-023 |
-| DW-025 | Fix movement/collision bugs found while testing | High | Not Started | 1h | DW-024 |
+| DW-020 | Add a static obstacle group using real prop sprites | High | Done | 1h | DW-009, DW-044 |
+| DW-021 | Register a collider between the player and the obstacle group | High | Done | 30m | DW-020, DW-014 |
+| DW-022 | Make the camera follow the player | High | Done | 30m | DW-014 |
+| DW-023 | Clamp the camera to the world bounds | High | Done | 30m | DW-010, DW-022 |
+| DW-024 | Test movement against world edges and every obstacle | High | Done | 30m | DW-021, DW-023 |
+| DW-025 | Fix movement/collision bugs found while testing | High | Done | 1h | DW-024 |
 
-**Milestone 4 progress:** 0 / 6 done
+**Milestone 4 progress:** 6 / 6 done
 
 ## Milestone 5 — Dwellings and interactions (Day 5)
 
@@ -163,17 +167,17 @@ this phase · **Low** = nice to have, drop first under time pressure.
 
 | Milestone | Tasks done | Status |
 | --- | --- | --- |
-| 1 — Foundation | 0 / 7 | Not Started |
-| 2 — World rendering and assets | 0 / 9 | Not Started |
-| 3 — Player movement | 0 / 7 | Not Started (1 blocked) |
-| 4 — Collision and camera | 0 / 6 | Not Started |
+| 1 — Foundation | 7 / 7 | **Done** |
+| 2 — World rendering and assets | 9 / 9 | **Done** |
+| 3 — Player movement | 7 / 7 | **Done** |
+| 4 — Collision and camera | 6 / 6 | **Done** |
 | 5 — Dwellings and interactions | 0 / 6 | Not Started |
 | 6 — Maps, second map and HUD | 0 / 4 | Not Started |
 | 7 — Bridge and conversation sidebar | 0 / 4 | Not Started |
 | 8 — House interiors | 0 / 6 | Not Started |
 | 9 — Altar and polish | 0 / 4 | Not Started |
 | 10 — Integration and review | 0 / 6 | Not Started |
-| **Total** | **0 / 59** | |
+| **Total** | **29 / 59** | |
 
 ## Backlog (not scheduled)
 
