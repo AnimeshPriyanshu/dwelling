@@ -89,10 +89,10 @@ The scaffold contains transport, config, and schema placeholders, not features._
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| NFR-001 | The frontend uses vanilla JavaScript, HTML5, CSS3, Vite, and Phaser 3 — no React, no TypeScript. | Planned |
-| NFR-002 | Development runs on Node.js `>=20.19.0` (declared in the root `package.json`). | Planned |
-| NFR-003 | `npm run dev` serves the frontend at `http://localhost:5173`. | Planned |
-| NFR-004 | `npm run build` completes without errors or warnings that indicate a broken bundle. | Planned |
+| NFR-001 | The frontend uses React 18, JSX, HTML5, CSS3, Vite, and Phaser 3 (ADR-0016). TypeScript is not used. | Done |
+| NFR-002 | Development runs on Node.js `>=20.19.0` (declared in the root `package.json`). | Done |
+| NFR-003 | `npm run dev` serves the frontend at `http://localhost:5173`. | Done |
+| NFR-004 | `npm run build` completes without errors or warnings that indicate a broken bundle. | Done |
 | NFR-005 | The world targets 60 FPS on a modern desktop browser with the sourced 16-bit asset set loaded. | Planned |
 | NFR-006 | Initial world load is under ~3 seconds on a local development machine. | Planned |
 | NFR-007 | The latest stable Chrome, Firefox, and Safari are supported. | Planned |
