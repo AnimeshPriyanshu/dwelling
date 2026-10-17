@@ -21,7 +21,7 @@ dwelling/
 ├── .gitignore            ✅  ignores node_modules, .env, dist
 ├── .env.example          ✅  documents PORT, CLIENT_ORIGIN, DATABASE_URL, REDIS_URL (no real values)
 ├── README.md             ✅  project overview, concept, and local development
-├── frontend/             ✅  Vite + vanilla JS + Phaser 3 browser app
+├── frontend/             ✅  Vite + React + Phaser 3 browser app
 ├── backend/              ✅  Express + Socket.IO API
 ├── database/             ✅  Prisma schema (no migrations)
 ├── shared/               ✅  cross-workspace constants
@@ -44,26 +44,32 @@ application.
 
 ```text
 frontend/
-├── index.html            ✅  #app mount point, loads /src/main.js, references /favicon.svg and /icons.svg
-├── vite.config.js        ✅  dev proxy: /api → :3000, /socket.io → :3000 (ws: true)
-├── package.json          ✅  dev/build/preview scripts; deps: phaser, socket.io-client
+├── index.html            ✅  #root mount point, loads /src/main.js, references /favicon.svg and /icons.svg
+├── vite.config.js        ✅  @vitejs/plugin-react; dev proxy: /api → :3000, /socket.io → :3000 (ws: true)
+├── package.json          ✅  dev/build/preview scripts; deps: phaser, react, react-dom, socket.io-client · devDeps: vite, @vitejs/plugin-react
 ├── public/
-│   ├── favicon.svg       ✅  served at /favicon.svg
+│   ├── favicon.svg       ✅  served at /favicon.svg (linked from index.html)
 │   ├── icons.svg         ✅  served at /icons.svg
-│   └── assets/           ✅  game assets loaded by path (DW-011 onward) — see design/assets.md
+│   └── assets/           ✅  game assets loaded by path (DW-011)
+│       ├── README.md     ✅   layout, naming, how to add
+│       ├── CREDITS.md    ✅   license/provenance for every third-party file
+│       └── tilesets/     ✅   tiny-town.png, tiny-dungeon.png (Kenney, CC0)
 ├── src/
-│   ├── main.js           ✅  entry point: renders the static two-panel shell, imports style.css
+│   ├── main.js           ✅  entry point: creates the React root and renders App
+│   ├── App.jsx           ✅  React shell: mounts the Phaser game, holds the World panel + Conversations sidebar
 │   ├── style.css         ✅  global layout; grid; responsive below 700px
 │   ├── assets/           🟡  Vite starter leftovers (hero.png, javascript.svg, vite.svg) — nothing imports them
 │   ├── world/            ✅   Phaser world code (DW-001 onward) — scenes, entities, systems, maps, constants, assets
-│   │   ├── game.js       ✅   Phaser config + game startup (DW-003)
-│   │   ├── constants.js  ✅   tile/world sizes, speeds (DW-008)
-│   │   ├── assets.js     ✅   texture keys → file paths (DW-012)
+│   │   ├── README.md     ✅   boundary note
+│   │   ├── game.js       ✅   Phaser config + createGame(parent) (DW-003)
+│   │   ├── constants.js  ✅   tile/world/viewport sizes (DW-008)
+│   │   ├── assets.js     ✅   texture keys, paths, manifest, loadAssets() (DW-046)
 │   │   ├── scenes/       ✅   BootScene, PreloadScene, WorldScene (DW-004, DW-005)
-│   │   ├── entities/     ✅   Player, Dwelling (DW-014, DW-026)
-│   │   ├── systems/      ✅   movement, interaction resolution (DW-015, DW-028)
-│   │   └── maps/         ✅   map + interior-room data and the registry (DW-032, DW-033, DW-050)
-│   └── chat/             ✅   conversation UI (DW-036 onward)
+│   │   ├── entities/     **planned**  Player, Dwelling (DW-014, DW-026)
+│   │   ├── systems/      **planned**  movement, interaction resolution (DW-015, DW-028)
+│   │   └── maps/         **planned**  map + interior-room data and the registry (DW-032, DW-033, DW-050)
+│   ├── bridge/           ✅   React ↔ Phaser event bus (DW-035 groundwork)
+│   └── chat/             ▢   conversation UI — README only (DW-036 onward)
 └── dist/                 🟡  build output — gitignored, do not edit
 ```
 
@@ -74,18 +80,10 @@ separate client module. Those boundaries are treated as fixed. Proposed subfolde
 inside `world/` are listed in
 [`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
-**Planned within `world/`** (not yet created):
-
-```text
-src/world/
-├── game.js          **planned**  Phaser config + game startup (DW-003)
-├── constants.js     **planned**  tile/world sizes, speeds (DW-008)
-├── assets.js        **planned**  texture keys → file paths (DW-012)
-├── scenes/          **planned**  BootScene, PreloadScene, WorldScene (DW-004, DW-005)
-├── entities/        **planned**  Player, Dwelling (DW-014, DW-026)
-├── systems/         **planned**  movement, interaction resolution (DW-015, DW-028)
-└── maps/            **planned**  map + interior-room data and the registry (DW-032, DW-033, DW-050)
-```
+**Created in `world/` so far:** `game.js` and `scenes/` (DW-003/004/005). The
+remaining subfolders (`constants.js`, `assets.js`, `entities/`, `systems/`,
+`maps/`) are planned and listed in
+[`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
 **Interior rooms use the same data format as maps** (ADR-0012), so they are stored
 alongside them rather than in a parallel system. Whether they end up in a
@@ -198,7 +196,7 @@ Both contain **only a README**. Do not describe tests or scripts as existing.
 | A world object with behavior | `frontend/src/world/entities/` |
 | Logic spanning several world objects | `frontend/src/world/systems/` |
 | Map data or map loading | `frontend/src/world/maps/` |
-| Canvas ↔ DOM communication | `frontend/src/bridge/` (**planned**) |
+| Canvas ↔ DOM communication | `frontend/src/bridge/` |
 | A panel, HUD, or DOM component | `frontend/src/ui/` or `frontend/src/chat/` (**planned**) |
 | An HTTP or socket client | `frontend/src/services/` (**planned**) |
 | A game asset loaded by path | `frontend/public/assets/` |

@@ -15,22 +15,32 @@ How the browser application is organized: **React**, **HTML**, **CSS3**, bundled
 
 ```text
 frontend/
-├── index.html            ✅  #app mount point, loads /src/main.js
-├── vite.config.js        ✅  dev proxy: /api and /socket.io → :3000
-├── package.json          ✅  scripts: dev, build, preview · deps: phaser, socket.io-client
+├── index.html            ✅  #root mount point, loads /src/main.js
+├── vite.config.js        ✅  @vitejs/plugin-react; dev proxy: /api and /socket.io → :3000
+├── package.json          ✅  scripts: dev, build, preview · deps: phaser, react, react-dom, socket.io-client
 ├── public/
 │   ├── favicon.svg       ✅
 │   └── icons.svg         ✅
 └── src/
-    ├── main.js           ✅  renders a static two-panel shell, imports style.css
+    ├── main.js           ✅  creates the React root, renders App
+    ├── App.jsx           ✅  mounts the Phaser game; World panel + Conversations sidebar
     ├── style.css         ✅  grid layout, responsive below 700px
-    ├── assets/           ✅  Vite starter leftovers (unused)
-    ├── world/README.md   ▢   boundary only — no code
+    ├── assets/           🟡  Vite starter leftovers (unused)
+    ├── world/
+    │   ├── game.js       ✅  createGame(parent) — the only Phaser config (DW-003)
+    │   ├── constants.js  ✅  tile/world/viewport sizes (DW-008)
+    │   ├── assets.js     ✅  texture keys, paths, manifest, loadAssets() (DW-046)
+    │   └── scenes/       ✅  BootScene, PreloadScene, WorldScene (DW-004/005)
+    ├── bridge/           ✅  React ↔ Phaser event bus (DW-035 groundwork)
     └── chat/README.md    ▢   boundary only — no code
 ```
 
-**Phaser is a declared dependency but is never imported.** No `new Phaser.Game`
-call exists anywhere in the repository.
+**Phaser renders a real tiled world** (verified 2026-10-17, Day 2): `WorldScene`
+draws a 60×40 ground layer from the Kenney Tiny Town tileset (`public/assets/`),
+with physics and camera bounds taken from `constants.js`. `PreloadScene` loads a
+declarative asset manifest with a progress bar and reports missing assets by
+required/optional status. There is still no player or interaction — those arrive
+in later milestones.
 
 ---
 
@@ -43,15 +53,15 @@ transport should be kept in a separate client module").
 
 | Area | Responsibility | Location | Status |
 | --- | --- | --- | --- |
-| **Entry** | Bootstrap the app: mount the game, wire UI | `src/main.js` | ✅ exists (no game yet) |
-| **Game config** | Phaser config: parent, size, scale, physics, scene list | `src/world/game.js` | ▢ DW-003 |
-| **Constants** | Tile size, world size, speeds, depths — defined once | `src/world/constants.js` | ▢ DW-008 |
-| **Asset keys** | Texture keys mapped to file paths | `src/world/assets.js` | ▢ DW-012 |
-| **Scenes** | Lifecycle units (`preload`, `create`, `update`) | `src/world/scenes/` | ▢ DW-004/005 |
+| **Entry** | Bootstrap the app: mount the game, wire UI | `src/main.js`, `src/App.jsx` | ✅ mounts the game |
+| **Game config** | Phaser config: parent, size, scale, physics, scene list | `src/world/game.js` | ✅ DW-003 |
+| **Constants** | Tile size, world size, speeds, depths — defined once | `src/world/constants.js` | ✅ DW-008 |
+| **Asset keys** | Texture keys mapped to file paths | `src/world/assets.js` | ✅ DW-046 |
+| **Scenes** | Lifecycle units (`preload`, `create`, `update`) | `src/world/scenes/` | ✅ DW-004/005 |
 | **Entities** | Player, dwelling — sprite + behavior | `src/world/entities/` | ▢ DW-014, DW-026 |
 | **Systems** | Cross-entity logic: movement, interaction resolution | `src/world/systems/` | ▢ DW-015, DW-028 |
 | **Maps** | Map data, registry, loading | `src/world/maps/` | ▢ DW-032/033 |
-| **Bridge** | Canvas ↔ DOM event translation | `src/bridge/` (proposed) | ▢ DW-035 |
+| **Bridge** | Canvas ↔ DOM event translation | `src/bridge/` | ✅ exists (DW-035 settles details) |
 | **UI** | Panels, HUD, prompts as DOM | `src/ui/` (proposed) | ▢ DW-036/037 |
 | **Chat** | Conversation UI | `src/chat/` | ▢ placeholder only |
 | **Services** | HTTP + Socket.IO clients | `src/services/` (proposed) | ▢ deferred |
@@ -70,9 +80,9 @@ Phaser scenes are the unit of lifecycle. Proposed split (DW-004/DW-005):
 
 | Scene | Purpose | Status |
 | --- | --- | --- |
-| `BootScene` | Minimal startup; anything needed before a loading screen exists | ▢ |
-| `PreloadScene` | Load assets and show a progress indicator (DW-012) | ▢ |
-| `WorldScene` | The world: ground, bounds, obstacles, dwellings, player, interaction | ▢ |
+| `BootScene` | Minimal startup; anything needed before a loading screen exists | ✅ stub |
+| `PreloadScene` | Load assets and show a progress indicator (DW-012) | ✅ stub |
+| `WorldScene` | The world: ground, bounds, obstacles, dwellings, player, interaction | ✅ placeholder |
 
 **Rules**
 
@@ -124,8 +134,8 @@ from `update`, rather than classes with their own state machine. Keep it simple.
 
 ## State
 
-- **There is no state-management library and none is planned** (ADR-0002 —
-  vanilla JS).
+- **There is no state-management library and none is planned** — React local
+  state and the bridge are enough (ADR-0016).
 - State lives in three places, deliberately:
   1. **Scene state** — the active map, entities, systems (source of truth for the
      world).
@@ -214,8 +224,9 @@ See [`realtime.md`](realtime.md).
   - Imported as an **ES module**: `import Phaser from 'phaser'`.
   - **Never** load Phaser from a CDN `<script>` tag — it breaks bundling and
     bypasses the dependency lock.
-- **No framework, no type system** — do not introduce React, Vue, Svelte, or
-  TypeScript (NFR-001).
+- **React is the UI framework** (ADR-0016), with plain JavaScript (no
+  TypeScript by default; TypeScript is optional and can be added later —
+  NFR-001). Do not introduce Vue or Svelte.
 - **Modules** — ES modules only (`import`/`export`); the package is
   `"type": "module"`.
 

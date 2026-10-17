@@ -57,13 +57,11 @@ never be drawn inside the canvas, and the canvas must never own text input.
 
 ---
 
-## Conversation sidebar
+## Conversation drawer
 
-- **Confirmed (ADR-0013):** the conversation UI is a **docked sidebar that
-  replaces the existing Conversations panel**. The canvas is never covered.
-- **Confirmed:** it opens on dwelling interaction, shows the **correct contact
-  name** (FR-023, FR-024), and closes with a button or `Esc` (FR-025).
-- **Confirmed:** it is docked, **not** an overlay and **not** a modal.
+- **Confirmed (ADR-0017, updating ADR-0013):** the game canvas is **fullscreen edge-to-edge**, and the conversation UI is a **slide-out overlay drawer** docked to the right edge.
+- **Confirmed:** it opens when the player **clicks on a house** or approaches and presses `E`, showing the **correct contact name** (FR-023, FR-024), and closes with the ✕ button or `Esc` (FR-025).
+- **Confirmed:** it is an overlay drawer that leaves the majority of the canvas visible behind a soft backdrop blur.
 - **Confirmed:** mock contacts and history are **visibly labelled as mock data**
   (FR-033) — a viewer must not believe messaging works.
 - **Confirmed:** there is **no enabled message input.** An input field that looks
