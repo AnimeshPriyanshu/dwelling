@@ -19,5 +19,8 @@
   },
   "engines": {
     "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2"
   }
 }

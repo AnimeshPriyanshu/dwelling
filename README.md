@@ -189,7 +189,7 @@ backend/    Node.js, Express, and Socket.IO
 database/   Prisma schema and PostgreSQL migrations
 shared/     Small JavaScript contracts shared by workspaces
 tests/      Cross-workspace tests
-docs/       Architecture notes
+docs/       Project documentation, planning, and architecture notes
 scripts/    Project maintenance scripts
 ```
 
@@ -211,4 +211,18 @@ feature needs caching.
 
 The frontend runs at `http://localhost:5173`; the API health check is at
 `http://localhost:3000/api/health`. Leave `REDIS_URL` unset to run without
-Redis. See [docs/architecture.md](docs/architecture.md) for module boundaries.
+Redis.
+
+## Documentation
+
+The [`docs/`](docs/README.md) folder is the full documentation set: project
+intent, the current milestones and task board, world and UI design, architecture,
+and development setup. See the [documentation index](docs/README.md) to find your
+way around.
+
+- **Building now:** [docs/planning/milestones.md](docs/planning/milestones.md) (ten-day plan) and [docs/planning/task-board.md](docs/planning/task-board.md) (task tracking)
+- **Module boundaries:** [docs/architecture.md](docs/architecture.md)
+- **Local setup:** [docs/development/setup.md](docs/development/setup.md)
+
+> The gameplay and messaging flows are **not implemented yet**. The documents
+> above mark anything unbuilt as pending rather than describing it as finished.
