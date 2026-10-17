@@ -38,8 +38,9 @@ based on ADR (Architecture Decision Record).
 | [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Accepted | 2026-10-17 |
 | [ADR-0012](#adr-0012--interiors-as-one-shared-room-template-behind-a-door-trigger) | Interiors as one shared room template behind a door trigger | Accepted | 2026-10-17 |
 | [ADR-0013](#adr-0013--chat-is-a-docked-sidebar-with-explicitly-labelled-mock-data) | Chat is a docked sidebar with explicitly labelled mock data | Accepted | 2026-10-17 |
-| [ADR-0014](#adr-0014--ten-day-frontend-schedule-supersedes-the-seven-day-plan) | Ten-day frontend schedule supersedes the seven-day plan | Accepted | 2026-10-17 |
 | [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted | 2026-10-17 |
+| [ADR-0016](#adr-0016--use-react-for-ui-components-and-application-shell) | Use React for UI components and application shell | Accepted | 2026-10-17 |
+| [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
 
 ---
 
@@ -641,6 +642,42 @@ each other's internals.
 [`architecture/frontend.md`](../architecture/frontend.md),
 [`design/ui-ux.md`](../design/ui-ux.md),
 [`milestones.md`](milestones.md), [`task-board.md`](task-board.md).
+
+---
+
+## ADR-0017 — Fullscreen immersive canvas with slide-out chat drawer on house interaction
+
+**Status:** Accepted (confirmed by project owner 2026-10-17)
+**Date:** 2026-10-17
+
+### Context
+The initial prototype used a fixed `max-width: 1200px` container with a permanent two-column CSS grid splitting the screen into a left game panel and a right conversation panel. This restricted the Phaser viewport to a small portion of the screen, creating large empty white areas and feeling like an administrative dashboard rather than an immersive 16-bit virtual world. The project owner explicitly confirmed:
+> "I want the screen to cover screen fully and chat opens when we click on a house . make change in docs too"
+
+### Decision
+1. **Fullscreen edge-to-edge canvas:** The game canvas fills `100vw × 100vh` edge-to-edge without page margin, header box, or letterboxing bars.
+2. **Floating glass HUD:** Essential titles and interaction hints float minimally in the top-left using dark semi-transparent glassmorphism (`backdrop-filter: blur(12px)`).
+3. **Slide-out chat drawer on house interaction:** The conversation panel becomes an overlay drawer docked to the right edge (`position: fixed`). It is hidden by default (`transform: translateX(100%)`).
+4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) emits a `dwelling:open-chat` event that slides open the drawer populated with that dwelling's resident information.
+5. **Dismissal & Focus:** The drawer can be dismissed by pressing `Escape` or clicking the close button (✕), immediately restoring keyboard focus to the game canvas for seamless movement.
+6. **Mock labelling preserved:** FR-033 is preserved with an amber banner explicitly stating mock data.
+
+### Alternatives considered
+- **Permanent side-by-side columns (ADR-0013 / ADR-0005):** Superseded because it drastically reduces the game world's visible area and immersion.
+- **Center modal dialogue:** Covers the center of the world and blocks the player character from view; a slide-out drawer keeps the world visible and interactable.
+
+### Consequences
+- ✅ Deeply immersive fullscreen gameplay experience.
+- ✅ Clicking houses directly opens the conversation drawer with resident details.
+- ✅ The game world stays fully visible and responsive.
+- ✅ Keyboard focus rules remain clear (`Escape` or close button refocuses game).
+- ⚠️ Supersedes the two-column static layout aspects of ADR-0005 and ADR-0013.
+
+### Related
+[`architecture/frontend.md`](../architecture/frontend.md),
+[`design/ui-ux.md`](../design/ui-ux.md),
+[`milestones.md`](milestones.md),
+[`task-board.md`](task-board.md).
 
 ---
 

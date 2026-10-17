@@ -17,15 +17,15 @@ Settled with the project owner during the requirements session. These are
 
 | Area | Confirmed |
 | --- | --- |
-| Visual style | 16-bit **pixel art**, top-down with a **slight 3/4 tilt** |
+| Visual style | 16-bit **pixel art**, top-down with a **slight 3/4 tilt**, **fullscreen edge-to-edge canvas** (ADR-0017) |
 | Mood | **Cozy and warm** — wood, lantern light, autumn tones |
 | Movement | **WASD and arrow keys**, delta-time, normalized diagonals |
 | Camera | **Follows the player, clamped** to the map edges |
 | Maps | **Separate maps** reached by a selector or portal |
-| Dwelling interaction | Approach → prompt → **press a key** to open the chat sidebar |
+| Dwelling interaction | **Click on a house** or approach → prompt → **press `E`** to slide out the chat drawer (ADR-0017) |
 | Interiors | **In scope** — one **shared** interior template per dwelling (fireplace, kitchen, bed) |
 | Altar | **Scenery only** this phase |
-| Chat UI | **Docked sidebar** replacing the Conversations panel, **mock content labelled as mock** |
+| Chat UI | **Slide-out overlay drawer** over fullscreen canvas, **mock content labelled as mock** (ADR-0017) |
 | Conversation model | 1:1 conversations are **private**; more than two people share a conversation only in an **Altar group space** |
 | Extra UI | **Minimal HUD only** (map name + interact prompt) |
 | Devices | **Desktop-first**, layout stays usable on small screens |
@@ -52,10 +52,10 @@ Settled with the project owner during the requirements session. These are
 | --- | --- |
 | Repo | npm-workspace monorepo: `frontend`, `backend`, `database`, `shared` |
 | Frontend shell | `frontend/src/main.js` renders a static World/Conversations layout |
-| Phaser | Declared (`^3.90.0`, installed `3.90.0`) but **not imported anywhere** — no `new Phaser.Game` call exists |
+| Phaser | Declared (`^3.90.0`, installed `3.90.0`) but **not imported anywhere** — no `new Phaser.Game` call exists. *(Resolved on Day 1: mounted via `world/game.js`.)* |
 | Game code | `frontend/src/world/` contains only a `README.md` — **no scenes, no entities** |
 | Chat code | `frontend/src/chat/` contains only a `README.md` — **no components** |
-| Assets | **No game assets at all.** Only `public/favicon.svg`, `public/icons.svg`, and three unused Vite starter leftovers in `src/assets/`. **No** sprites, tilesets, houses, furniture, Altar art, fonts, or audio. `frontend/public/assets/` does not exist |
+| Assets | **No game assets at all.** Only `public/favicon.svg`, `public/icons.svg`, and three unused Vite starter leftovers in `src/assets/`. **No** sprites, tilesets, houses, furniture, Altar art, fonts, or audio. `frontend/public/assets/` does not exist. *(Resolved on Day 2: Kenney Tiny Town + Tiny Dungeon CC0 tilesheets.)* |
 | Tooling | **No image generator, no Pillow, no ImageMagick, no image libs in `node_modules`.** ffmpeg exists. Python `zlib` + `struct` can write PNGs with no dependencies |
 | Tests | **None configured.** No test script in any `package.json` |
 | Build | `npm run build` passes with `vite@8.3.1` (verified 2026-10-17), producing a 1.15 kB JS bundle from the static shell |
@@ -93,17 +93,17 @@ configuration skeleton, without breaking the current HTML shell.
 | DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | 30m | DW-006 |
 
 ### Acceptance criteria
-- [ ] A Phaser canvas appears inside the existing `#world` element.
-- [ ] The sidebar panel is still present and the page layout is intact.
-- [ ] `npm run dev` serves the app with no console errors from Phaser.
-- [ ] `npm run build` exits successfully.
-- [ ] Phaser is imported as an ES module (no CDN script tag).
+- [x] A Phaser canvas appears inside the existing `#world` element.
+- [x] The sidebar panel is still present and the page layout is intact.
+- [x] `npm run dev` serves the app with no console errors from Phaser.
+- [x] `npm run build` exits successfully.
+- [x] Phaser is imported as an ES module (no CDN script tag).
 
 ### Testing checklist
-- [ ] `npm install` completes.
-- [ ] `npm run dev` → open `http://localhost:5173` → canvas visible in World panel.
-- [ ] Resize the window; the canvas does not overflow its panel.
-- [ ] `npm run build` → `frontend/dist/` is regenerated without errors.
+- [x] `npm install` completes.
+- [x] `npm run dev` → open `http://localhost:5173` → canvas visible in World panel.
+- [x] Resize the window; the canvas does not overflow its panel.
+- [x] `npm run build` → `frontend/dist/` is regenerated without errors.
 
 ### Definition of Done
 Phaser is mounted and running from the Vite entry point, the pre-existing HTML
@@ -141,20 +141,20 @@ pipeline that every later day depends on.
 | DW-013 | Verify the world renders and the build still passes | High | 30m | DW-009, DW-010 |
 
 ### Acceptance criteria
-- [ ] A tiled ground layer fills the visible world with no seams.
-- [ ] Tile size and world dimensions are defined **once**, in constants.
-- [ ] Off-camera area beyond the world bounds is not reachable or shown.
-- [ ] `frontend/public/assets/` exists with the documented subfolders.
-- [ ] **Every third-party file's pack, author, license and URL is recorded in
+- [x] A tiled ground layer fills the visible world with no seams.
+- [x] Tile size and world dimensions are defined **once**, in constants.
+- [x] Off-camera area beyond the world bounds is not reachable or shown.
+- [x] `frontend/public/assets/` exists with the documented subfolders.
+- [x] **Every third-party file's pack, author, license and URL is recorded in
       `CREDITS.md`**, and each license permits this use (NFR-014).
-- [ ] The game still runs if an optional asset is missing (no crash, no blank world).
+- [x] The game still runs if an optional asset is missing (no crash, no blank world).
 
 ### Testing checklist
-- [ ] Ground tiles align with no visible seams at default zoom.
-- [ ] Panning to each edge shows a hard boundary, not infinite empty space.
-- [ ] Devtools Network tab: asset requests return 200, and none exceeds 512 KB.
-- [ ] Temporarily rename one optional asset; the world still loads.
-- [ ] `npm run build` passes after new files are added.
+- [x] Ground tiles align with no visible seams at default zoom.
+- [x] Panning to each edge shows a hard boundary, not infinite empty space.
+- [x] Devtools Network tab: asset requests return 200, and none exceeds 512 KB.
+- [x] Temporarily rename one optional asset; the world still loads.
+- [x] `npm run build` passes after new files are added.
 
 ### Definition of Done
 The world is a bounded, tiled area built from constants, real art loads through a
@@ -194,19 +194,19 @@ Add the player character with keyboard movement and a real walk animation.
 > exist. DW-047 now produces one. Until DW-047 is done, DW-019 stays `Blocked`.
 
 ### Acceptance criteria
-- [ ] The player is visible at the spawn position.
-- [ ] All eight movement directions respond to both arrow keys and WASD.
-- [ ] Movement speed is identical at 60 FPS and at a throttled frame rate.
-- [ ] Diagonal movement is not faster than axis-aligned movement.
-- [ ] Facing direction is visible while moving.
-- [ ] A walk animation plays in the facing direction and stops when idle.
+- [x] The player is visible at the spawn position.
+- [x] All eight movement directions respond to both arrow keys and WASD.
+- [x] Movement speed is identical at 60 FPS and at a throttled frame rate.
+- [x] Diagonal movement is not faster than axis-aligned movement.
+- [x] Facing direction is visible while moving.
+- [x] A walk animation plays in the facing direction and stops when idle.
 
 ### Testing checklist
-- [ ] Hold each direction key individually; the player moves correctly.
-- [ ] Hold two keys (e.g. Up + Right); diagonal speed matches single-axis speed.
-- [ ] Throttle the CPU in devtools; movement stays smooth and consistent.
-- [ ] Release all keys; the player stops cleanly with no drift and no frozen frame.
-- [ ] Walk in all four directions; the animation matches the direction and resets.
+- [x] Hold each direction key individually; the player moves correctly.
+- [x] Hold two keys (e.g. Up + Right); diagonal speed matches single-axis speed.
+- [x] Throttle the CPU in devtools; movement stays smooth and consistent.
+- [x] Release all keys; the player stops cleanly with no drift and no frozen frame.
+- [x] Walk in all four directions; the animation matches the direction and resets.
 
 ### Definition of Done
 The player moves responsively at a frame-rate-independent speed in all
@@ -241,18 +241,18 @@ camera follows.
 | DW-025 | Fix movement/collision bugs found while testing | High | 1h | DW-024 |
 
 ### Acceptance criteria
-- [ ] The player cannot pass through any obstacle from any direction, including
+- [x] The player cannot pass through any obstacle from any direction, including
       diagonals and at corners.
-- [ ] The player cannot leave the world bounds.
-- [ ] The camera follows the player smoothly and never shows area outside the world.
-- [ ] No "sticking" or jitter when sliding along an obstacle.
+- [x] The player cannot leave the world bounds.
+- [x] The camera follows the player smoothly and never shows area outside the world.
+- [x] No "sticking" or jitter when sliding along an obstacle.
 
 ### Testing checklist
-- [ ] Walk into each obstacle from all four sides.
-- [ ] Slide along a wall diagonally — movement continues along the wall.
-- [ ] Walk into each world corner.
-- [ ] Move to a map edge and confirm the camera stops with the player.
-- [ ] Look for screen-shake or stutter while moving continuously for 30s.
+- [x] Walk into each obstacle from all four sides.
+- [x] Slide along a wall diagonally — movement continues along the wall.
+- [x] Walk into each world corner.
+- [x] Move to a map edge and confirm the camera stops with the player.
+- [x] Look for screen-shake or stutter while moving continuously for 30s.
 
 ### Definition of Done
 The world is fully solid and contained, and the camera behaves correctly at all
