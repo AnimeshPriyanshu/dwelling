@@ -291,6 +291,93 @@ that is **already committed**. They are dated by commit date.
 
 ---
 
+## 2026-10-18 — Day 5: Dwellings and interactions
+
+**Status:** complete (Milestone 5 accepted; verified by headless Chrome CDP)
+**Focus task(s):** DW-026, DW-027, DW-028, DW-029, DW-030, DW-031
+**Commit:** _(pending)_
+
+### Completed
+- **DW-026** — Added `world/entities/Dwelling.js`: 2×2 house sprites from `tiny-town.png`, a static collision body, a click zone, a proximity prompt, and the interaction payload.
+- **DW-027** — Dwellings are placed from the `DWELLING_DATA` list in `WorldScene`; four houses at distinct positions each carry a unique `id`/`contactId`, display name, resident, role, tile frames, and interaction radius.
+- **DW-028** — Each dwelling owns a 48 px proximity zone checked against the player every frame.
+- **DW-029** — A floating `[E] <Resident>` badge is shown only for the active dwelling and hidden as soon as the player leaves.
+- **DW-030** — Pressing `E` inside a zone emits `dwelling:interact` on the scene and dispatches `dwelling:open-chat` with `{ id, contactId, name, contact, role }`.
+- **DW-031** — The React shell listens for `dwelling:open-chat` and opens the conversation drawer with the matching resident and mock history.
+
+### Evidence (browser + build)
+- Runtime test (Vite dev server, headless Chrome + CDP, focus emulation enabled):
+  - Dwellings at `(280,160)`, `(680,160)`, `(240,480)`, `(720,480)` with unique contact ids `contact-elowen`, `contact-rowan`, `contact-kael`, `contact-lyra`.
+  - Approaching each showed exactly one prompt (`[E] Elowen`, `[E] Rowan`, `[E] Kael`, `[E] Lyra`) and the correct active contact id.
+  - `E` at each dwelling produced the matching contact id and opened the drawer with the correct title, resident line, and mock message; `Esc` closed it.
+  - Walking back to spawn cleared the active dwelling and all prompts.
+  - Forced overlapping zones (radius 600) resolved to exactly one active dwelling, matching the closer dwelling in both directions.
+  - Clicking each house opened the correct conversation.
+  - `E` while moving (`x` 280 → 324) fired the correct contact and movement continued (no stall).
+  - `E` outside every zone fired no event and opened nothing.
+  - 0 console errors during the run.
+- Dwelling collision body measured 30×24 at `(265,152)` after fixing static-body `refreshBody()` order (it had been silently reduced to 16×16).
+- `npm run build` passes.
+
+### Decisions made
+- The badge names the resident/contact rather than the building, keeping it readable above a 32×32 house.
+- Clicking and `E` share the same `Dwelling.interact()` path; clicking is a convenience, not a second interaction mode.
+- The house body is 30×24 centred on the dwelling, leaving the roof walkable behind the facade.
+- M5 wires the placeholder handler through a DOM `CustomEvent`; Milestone 7 moves this onto the `bridge/` module (ADR-0005).
+
+### Next day's priority
+1. **DW-032** — Extract map data (size, spawn, dwellings, obstacles) into a map format.
+2. **DW-033** — Add a map registry and load a map by id.
+3. **DW-034** — Add a map selector or portal and author the second map.
+4. **DW-037** — Show the current map name in the HUD.
+
+**Tasks moved to Done:** DW-026, DW-027, DW-028, DW-029, DW-030, DW-031
+
+---
+
+## 2026-10-19 — Day 6: Maps, second map and HUD
+
+**Status:** complete (Milestone 6 accepted; verified by headless Chrome CDP)
+**Focus task(s):** DW-032, DW-033, DW-034, DW-037
+**Commit:** _(pending)_
+
+### Completed
+- **DW-032** — Added `frontend/src/world/maps/format.js` (documented map contract + validation) and moved every dwelling, obstacle, spawn, size and altar entry out of `WorldScene`. Starting map `a-c` (“Alder Creek”) preserves the four M5 dwelling ids, contact ids and collision bodies. Shared tile/viewport constants stay in `constants.js`; map size is per-map tile dimensions.
+- **DW-033** — Added `frontend/src/world/maps/index.js`: `registerMap`, `getMap`, `getDefaultMap`, `listMaps`. Invalid/duplicate maps are rejected with console diagnostics; unknown ids return `null`.
+- **DW-034** — Added the second map `s-u` (“Sunhollow”, 56×35) with its own spawn, two dwellings (`contact-sable`, `contact-tomas`), obstacles and altar data. The HUD selector publishes `map:switch`; `WorldScene.loadMap` clears map-owned objects and rebuilds from data on the same scene instance. Player, static group and the single player↔obstacles collider are reused.
+- **DW-037** — The React HUD now shows the active map's name and range and lists registered maps in a keyboard-reachable `<select>`. It is fed by `map:changed` through the bridge; React never reads scene internals. A map change closes the chat drawer so no stale conversation survives the world swap.
+
+### Evidence (browser + build)
+- Runtime (Vite dev server, headless Chrome + CDP, focus emulation):
+  - Default: `a-c` / Alder Creek / A–C, spawn `(480,320)`, world + camera bounds `960×640`, 4 dwellings, 28 static-group entries (24 props + 4 house bodies), 1 collider, altar `(480,560)`, HUD + selector correct.
+  - HUD switch to `s-u`: map Sunhollow / S–U, spawn `(448,280)`, bounds `896×560`, 2 dwellings, 23 group entries (21 props + 2 house bodies), 1 collider, ground layer 56×35, altar `(448,488)`, HUD and selector updated. `performance` sentinel and navigation-entry count unchanged (no reload).
+  - Prompt cleared on switch; a drawer open on Sunhollow closed when switching back to Alder Creek.
+  - 10 repeated `a-c` ↔ `s-u` switches: display-object count stable (54 / 37), obstacles stable, colliders always 1, one canvas, no console errors.
+  - Third map registered at runtime (`test-x`, Test Reach, X–Z, 55×30) and switched to without editing `WorldScene`; HUD and selector updated. Invalid and duplicate registration returned `false`; unknown `missing-map` left the current map running with a warning.
+  - Existing M5 interaction still works after switches (Elowen at Redwood Cottage), and fence collision still blocks at `x=346`.
+  - Real pointer clicks (CDP mouse events at camera-projected screen coordinates) opened Redwood Cottage on `a-c`, Sunhollow Cottage on `s-u`, and Cobalt Haven after switching back to `a-c`; the close button cleared the drawer each time.
+- `npm run build` exits 0 (29 modules transformed).
+
+### Decisions made
+- **ADR-0018** — map data format + registry + reused-scene lifecycle.
+- **ADR-0006** — moved to Accepted now that two alphabet maps load and switch.
+- Map data is plain JS, not JSON, so it can be imported without a loader and validated at startup.
+- Map switching closes the open conversation drawer; a conversation is tied to the map it was opened on.
+- `doors` and `altar` are part of the data contract now but remain render-free until M8/M9.
+
+### Known issues
+- FR-017 is only partially satisfied: the four M5 contacts (E, K, L, R) stay on `a-c` with their original ids rather than being regrouped into their letter ranges. Renaming or relocating them would break preserved M5 interaction ids.
+
+### Next day's priority
+1. **DW-035** — settle the bridge API and move dwelling events onto it.
+2. **DW-036** — conversation sidebar driven by the bridge.
+3. **DW-048** — mock contacts/history, visibly labelled.
+4. **DW-038** — input-focus rule while the panel is open.
+
+**Tasks moved to Done:** DW-032, DW-033, DW-034, DW-037
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:
@@ -301,8 +388,8 @@ Entries are added as the ten-day plan is executed:
 | Day 2 | 2026-10-17 | World rendering and the asset pipeline | Yes |
 | Day 3 | 2026-10-17 | Player movement | Yes |
 | Day 4 | 2026-10-17 | Collision and camera | Yes |
-| Day 5 | _(fill in)_ | Dwellings and interactions | No |
-| Day 6 | _(fill in)_ | Maps, second map and HUD | No |
+| Day 5 | 2026-10-18 | Dwellings and interactions | Yes |
+| Day 6 | 2026-10-19 | Maps, second map and HUD | Yes |
 | Day 7 | _(fill in)_ | DOM bridge and conversation sidebar | No |
 | Day 8 | _(fill in)_ | House interiors | No |
 | Day 9 | _(fill in)_ | Altar and polish | No |

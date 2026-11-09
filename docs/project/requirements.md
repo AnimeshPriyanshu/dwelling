@@ -13,8 +13,9 @@ concrete way to observe whether it holds.
 | `Planned` | Agreed, not started. |
 | `Deferred` | Out of the current phase; see [`scope.md`](scope.md). |
 
-_As of the current repository state, no product requirement below is `Done`.
-The scaffold contains transport, config, and schema placeholders, not features._
+_Updated 2026-10-19 after Milestone 6. Statuses below reflect verified runtime
+checks recorded in [`../planning/daily-log.md`](../planning/daily-log.md); deferred
+requirements stay `Planned` until their milestone lands._
 
 ---
 
@@ -24,45 +25,52 @@ The scaffold contains transport, config, and schema placeholders, not features._
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-001 | The app renders a 2D world in a Phaser canvas inside the World panel. | Planned |
-| FR-002 | The player character is visible in the world at a defined spawn position. | Planned |
-| FR-003 | The player can be moved with the arrow keys **and** WASD. | Planned |
-| FR-004 | Movement is smooth and frame-rate independent (delta-time based). | Planned |
-| FR-005 | Diagonal movement is normalized so it is not faster than straight movement. | Planned |
-| FR-006 | The player cannot move through solid obstacles. | Planned |
-| FR-007 | The player cannot leave the world boundaries. | Planned |
-| FR-008 | The camera follows the player and does not show area outside the world bounds. | Planned |
-| FR-009 | The player's facing direction is reflected visually at all times. | Planned |
+| FR-001 | The app renders a 2D world in a Phaser canvas inside the World panel. | Done |
+| FR-002 | The player character is visible in the world at a defined spawn position. | Done |
+| FR-003 | The player can be moved with the arrow keys **and** WASD. | Done |
+| FR-004 | Movement is smooth and frame-rate independent (delta-time based). | Done |
+| FR-005 | Diagonal movement is normalized so it is not faster than straight movement. | Done |
+| FR-006 | The player cannot move through solid obstacles. | Done |
+| FR-007 | The player cannot leave the world boundaries. | Done |
+| FR-008 | The camera follows the player and does not show area outside the world bounds. | Done |
+| FR-009 | The player's facing direction is reflected visually at all times. | Done |
 
 ### Dwellings and interaction
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-010 | Dwellings are rendered at configured positions in the world. | Planned |
-| FR-011 | Each dwelling is associated with exactly one contact identity. | Planned |
-| FR-012 | Each dwelling has an interaction zone the player can enter. | Planned |
-| FR-013 | Entering an interaction zone shows visible, unambiguous feedback. | Planned |
-| FR-014 | Pressing the interact key inside a zone triggers that dwelling's interaction. | Planned |
-| FR-015 | An interaction resolves to the correct contact's conversation. | Planned |
-| FR-016 | Leaving an interaction zone clears the interaction prompt. | Planned |
+| FR-010 | Dwellings are rendered at configured positions in the world. | Done |
+| FR-011 | Each dwelling is associated with exactly one contact identity. | Done |
+| FR-012 | Each dwelling has an interaction zone the player can enter. | Done |
+| FR-013 | Entering an interaction zone shows visible, unambiguous feedback. | Done |
+| FR-014 | Pressing the interact key inside a zone triggers that dwelling's interaction. | Done |
+| FR-015 | An interaction resolves to the correct contact's conversation. | Done |
+| FR-016 | Leaving an interaction zone clears the interaction prompt. | Done |
 
 ### Maps
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-017 | Contacts are grouped into maps by the first letter of their name, per fixed alphabet ranges. | Planned |
-| FR-018 | Each map is defined by data (size, spawn, dwellings, obstacles), not hard-coded scene logic. | Planned |
-| FR-019 | The game can load any registered map by id. | Planned |
-| FR-020 | There is a mechanism to move between maps (transition or selection). | Planned |
-| FR-021 | The current map is identified in the UI. | Planned |
+| FR-017 | Contacts are grouped into maps by the first letter of their name, per fixed alphabet ranges. | In progress |
+| FR-018 | Each map is defined by data (size, spawn, dwellings, obstacles), not hard-coded scene logic. | Done |
+| FR-019 | The game can load any registered map by id. | Done |
+| FR-020 | There is a mechanism to move between maps (transition or selection). | Done |
+| FR-021 | The current map is identified in the UI. | Done |
+
+> **FR-017 note (2026-10-19):** the fixed ranges (`a-c`, `s-u`, …) and the
+> registry are implemented, and `s-u` places new contacts by range. The four
+> Milestone 5 contacts (Elowen, Rowan, Kael, Lyra) remain on `a-c` with their
+> original contact ids so M5 interactions and dwelling ids are preserved; they
+> are not yet regrouped into `d-f`, `j-l` and `p-r`. Regrouping is deferred until
+> contact ids can be migrated safely.
 
 ### UI and chat
 
 | ID | Requirement | Status |
 | --- | --- | --- |
 | FR-022 | The HTML UI around the canvas (header, panels) remains functional alongside the canvas. | Planned |
-| FR-023 | Interacting with a dwelling opens a conversation UI for that contact. | Planned |
-| FR-024 | The conversation UI shows the contact's name. | Planned |
+| FR-023 | Interacting with a dwelling opens a conversation UI for that contact. | Done |
+| FR-024 | The conversation UI shows the contact's name. | Done |
 | FR-025 | The conversation UI can be closed and returns focus to the world. | Planned |
 | FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** | Planned |
 | FR-027 | An Altar supports interaction by multiple users in the same location. | Deferred |

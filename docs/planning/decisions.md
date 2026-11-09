@@ -30,7 +30,7 @@ based on ADR (Architecture Decision Record).
 | [ADR-0003](#adr-0003--express--socketio-as-the-backend-transport) | Express + Socket.IO as the backend transport | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0004](#adr-0004--postgresql-with-prisma-for-persistence) | PostgreSQL with Prisma for persistence | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0005](#adr-0005--html-ui-around-the-canvas-rather-than-in-canvas) | HTML UI around the canvas rather than in-canvas | Accepted | 2026-10-17 |
-| [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Proposed | 2026-10-17 |
+| [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Accepted | 2026-10-17 |
 | [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Accepted | 2026-10-17 |
 | [ADR-0008](#adr-0008--documentation-first-planning-system) | Documentation-first planning system | Accepted | 2026-10-17 |
 | [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Accepted | 2026-10-17 |
@@ -41,6 +41,7 @@ based on ADR (Architecture Decision Record).
 | [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted | 2026-10-17 |
 | [ADR-0016](#adr-0016--use-react-for-ui-components-and-application-shell) | Use React for UI components and application shell | Accepted | 2026-10-17 |
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
+| [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
 
 ---
 
@@ -211,14 +212,14 @@ other's internals.
 
 ## ADR-0006 — Alphabet-based maps as stable, URL-less ids
 
-**Status:** Proposed
+**Status:** Accepted (2026-10-19 — two maps now load and switch; DW-033/DW-034)
 **Date:** 2026-10-17
 
 ### Context
 Contacts must be split across several maps. The concept (documented in the root
 README) is to group them by the first letter of their name.
 
-### Decision (proposed)
+### Decision
 Fix eight alphabet ranges — `A–C`, `D–F`, `G–I`, `J–L`, `M–O`, `P–R`, `S–U`,
 `V–Z` — and give each map a **stable string id** derived from the range (for
 example `a-c`). Map ids identify loading keys and are not exposed as URLs in this
@@ -236,8 +237,11 @@ phase.
 - ✅ Ranges can be changed later in one place if a range gets too crowded.
 - ⚠️ Uneven distribution (many contacts starting with "S") will crowd `S–U`. A
   split rule may be needed later; not designed yet.
-- ⚠️ Kept **Proposed** until at least two maps actually load side by side in the
-  app (DW-033/DW-034).
+- ✅ Verified 2026-10-19: `a-c` and `s-u` both load by id and switch without a
+  page reload, so the id/range scheme is accepted.
+- ⚠️ The four Milestone 5 contacts (E, K, L, R) were authored on `a-c` before
+  this scheme landed; they remain there with their original ids. Fully deriving
+  placement from names is tracked as the remaining FR-017 gap.
 
 ### Related
 [`design/maps.md`](../design/maps.md), FR-017 to FR-021.
@@ -678,6 +682,67 @@ The initial prototype used a fixed `max-width: 1200px` container with a permanen
 [`design/ui-ux.md`](../design/ui-ux.md),
 [`milestones.md`](milestones.md),
 [`task-board.md`](task-board.md).
+
+---
+
+## ADR-0018 — Map data format and registry, reused-scene loading
+
+**Status:** Accepted
+**Date:** 2026-10-19
+
+### Context
+DW-032/DW-033 needed a data shape for maps and a loading strategy. The single
+world had dwelling and obstacle coordinates inline in `WorldScene`, and a map
+switch had to avoid recreating the Phaser game or duplicating listeners and
+colliders.
+
+### Decision
+1. **Map data is plain JavaScript.** Each map lives in `frontend/src/world/maps/`
+   and exports `{ id, name, range, size: { columns, rows }, groundTile?, spawn,
+   dwellings, doors, obstacles, altar }`. All positions are world pixels; `size`
+   is in tiles. `TILE_SIZE`, the viewport and the default ground frame stay in
+   `world/constants.js`.
+2. **Validate at registration.** `maps/format.js` documents the contract and
+   returns human-readable errors. `maps/index.js` holds a registry
+   (`registerMap`, `getMap`, `getDefaultMap`, `listMaps`). Invalid or duplicate
+   maps are rejected with a console error/warning; unknown ids return `null`.
+3. **One scene, explicit lifecycle.** `WorldScene` is never restarted. `loadMap`
+   resolves the id, clears map-owned objects (`clearMap`), rebuilds ground,
+   obstacles and dwellings from data, repositions the reused player, resets
+   physics/camera bounds, and clears the active prompt. The player, the static
+   group and the single player↔obstacles collider are reused.
+4. **The bridge owns coordination.** The scene publishes `map:changed` with
+   `{ id, name, range }`; React renders the HUD from it. The selector publishes
+   `map:switch` with `mapId`; the scene confirms the result through
+   `map:changed`. React never reads scene internals.
+
+### Alternatives considered
+- **Restart the scene per map** — risks duplicate listeners/colliders and makes
+  the player/collider lifecycle harder to reason about.
+- **One scene subclass per map** — duplicates logic and makes adding a map a code
+  change, violating FR-018.
+- **Hard-code each map in `WorldScene` with a switch statement** — rejected for
+  the same reason.
+- **Let React hold the active map as the source of truth** — contradicts the
+  documented rule that world state lives in Phaser and UI state syncs through
+  the bridge.
+
+### Consequences
+- ✅ Adding a map is a data file plus one `registerMap` call; `WorldScene` is
+  untouched. A runtime-registered third map was switched to during verification.
+- ✅ Repeated switches keep one canvas, one collider and stable display-object
+  counts (10-switch test).
+- ✅ Unknown ids leave the current map running and re-publish it to the HUD.
+- ⚠️ `doors` and `altar` are part of the format but not rendered yet; M8/M9 own
+  their behaviour.
+- ⚠️ Maps larger than the 800×400 viewport are required until camera zoom or a
+  smaller-world rule exists.
+- ⚠️ Legacy M5 contacts do not match the `a-c` letter range; see ADR-0006.
+
+### Related
+[`design/maps.md`](../design/maps.md),
+[`architecture/frontend.md`](../architecture/frontend.md),
+[`milestones.md`](milestones.md) (M6), FR-017–FR-021.
 
 ---
 

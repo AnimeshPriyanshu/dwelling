@@ -56,18 +56,18 @@ frontend/
 │       └── tilesets/     ✅   tiny-town.png, tiny-dungeon.png (Kenney, CC0)
 ├── src/
 │   ├── main.js           ✅  entry point: creates the React root and renders App
-│   ├── App.jsx           ✅  React shell: mounts the Phaser game, holds the World panel + Conversations sidebar
-│   ├── style.css         ✅  global layout; grid; responsive below 700px
+│   ├── App.jsx           ✅  React shell: HUD (map + selector), drawer, Phaser mount
+│   ├── style.css         ✅  fullscreen layout, HUD/drawer styles, responsive
 │   ├── assets/           🟡  Vite starter leftovers (hero.png, javascript.svg, vite.svg) — nothing imports them
 │   ├── world/            ✅   Phaser world code (DW-001 onward) — scenes, entities, systems, maps, constants, assets
 │   │   ├── README.md     ✅   boundary note
 │   │   ├── game.js       ✅   Phaser config + createGame(parent) (DW-003)
-│   │   ├── constants.js  ✅   tile/world/viewport sizes (DW-008)
+│   │   ├── constants.js  ✅   tile/viewport sizes shared by all maps (DW-008)
 │   │   ├── assets.js     ✅   texture keys, paths, manifest, loadAssets() (DW-046)
 │   │   ├── scenes/       ✅   BootScene, PreloadScene, WorldScene (DW-004, DW-005)
-│   │   ├── entities/     **planned**  Player, Dwelling (DW-014, DW-026)
+│   │   ├── entities/     ✅   Player, Dwelling (DW-014, DW-026)
 │   │   ├── systems/      **planned**  movement, interaction resolution (DW-015, DW-028)
-│   │   └── maps/         **planned**  map + interior-room data and the registry (DW-032, DW-033, DW-050)
+│   │   └── maps/         ✅   format.js, a-c.js, s-u.js, index.js registry (DW-032/033; rooms in DW-050)
 │   ├── bridge/           ✅   React ↔ Phaser event bus (DW-035 groundwork)
 │   └── chat/             ▢   conversation UI — README only (DW-036 onward)
 └── dist/                 🟡  build output — gitignored, do not edit
@@ -80,9 +80,8 @@ separate client module. Those boundaries are treated as fixed. Proposed subfolde
 inside `world/` are listed in
 [`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
-**Created in `world/` so far:** `game.js` and `scenes/` (DW-003/004/005). The
-remaining subfolders (`constants.js`, `assets.js`, `entities/`, `systems/`,
-`maps/`) are planned and listed in
+**Created in `world/` so far:** `game.js`, `constants.js`, `assets.js`,
+`scenes/`, `entities/` and `maps/`. `systems/` is still planned and listed in
 [`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
 **Interior rooms use the same data format as maps** (ADR-0012), so they are stored
