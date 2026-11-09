@@ -16,6 +16,7 @@ export const EventType = {
   // React → Phaser
   PLAYER_INPUT: 'player:input',
   UI_ACTION: 'ui:action',
+  MAP_SWITCH: 'map:switch',
 }
 
 // Phaser event names creators
@@ -23,13 +24,17 @@ export const phaserEvents = {
   dwellingNear: (dwellingId) => ({ type: EventType.DWELLING_NEAR, dwellingId }),
   dwellingInteract: (dwellingId) => ({ type: EventType.DWELLING_INTERACT, dwellingId }),
   playerMove: (dx, dy) => ({ type: EventType.PLAYER_MOVE, dx, dy }),
-  mapChanged: (mapName) => ({ type: EventType.MAP_CHANGED, mapName }),
+  mapChanged: (map) => ({
+    type: EventType.MAP_CHANGED,
+    map: { id: map.id, name: map.name, range: map.range },
+  }),
 }
 
 // React event names creators
 export const reactEvents = {
   setPlayerPosition: (x, y) => ({ type: 'set-player-position', x, y }),
   toggleChat: () => ({ type: 'toggle-chat' }),
+  switchMap: (mapId) => ({ type: EventType.MAP_SWITCH, mapId }),
 }
 
 // Subscription map for the bridge
@@ -56,6 +61,11 @@ export function publish(topic, payload) {
   }
 }
 
+// UI → Phaser helper. Keeps React modules away from the event shape.
+export function requestMapSwitch(mapId) {
+  publish(EventType.MAP_SWITCH, { mapId })
+}
+
 // Unsubscribe all listeners for a topic (or all topics)
 export function unsubscribeAll(topic) {
   if (topic) {
@@ -77,6 +87,7 @@ export default {
   phaserEvents,
   reactEvents,
   phaserPublish,
+  requestMapSwitch,
   subscribe,
   publish,
   unsubscribeAll,
