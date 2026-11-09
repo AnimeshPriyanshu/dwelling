@@ -287,20 +287,20 @@ interaction feedback.
 | DW-031 | Wire the event to a placeholder DOM handler (log or panel toggle) | Medium | 30m | DW-030 |
 
 ### Acceptance criteria
-- [ ] Multiple dwellings render at distinct positions in the world.
-- [ ] Each dwelling is bound to a unique contact id.
-- [ ] Entering a zone shows a clear prompt naming the dwelling/contact.
-- [ ] Leaving a zone clears the prompt.
-- [ ] Only the nearest/active dwelling is interactable when zones overlap.
-- [ ] Pressing `E` inside a zone fires an event with the **correct** contact id.
+- [x] Multiple dwellings render at distinct positions in the world.
+- [x] Each dwelling is bound to a unique contact id.
+- [x] Entering a zone shows a clear prompt naming the dwelling/contact.
+- [x] Leaving a zone clears the prompt.
+- [x] Only the nearest/active dwelling is interactable when zones overlap.
+- [x] Pressing `E` inside a zone fires an event with the **correct** contact id.
 
 ### Testing checklist
-- [ ] Walk to each dwelling; the prompt shows the right name.
-- [ ] Walk away; the prompt disappears immediately.
-- [ ] Stand between two dwellings; exactly one prompt is active, matching the
+- [x] Walk to each dwelling; the prompt shows the right name.
+- [x] Walk away; the prompt disappears immediately.
+- [x] Stand between two dwellings; exactly one prompt is active, matching the
       closer one.
-- [ ] Interact with each dwelling and confirm the logged/opened contact id.
-- [ ] Press `E` outside any zone; nothing happens. Press `E` while moving; the
+- [x] Interact with each dwelling and confirm the logged/opened contact id.
+- [x] Press `E` outside any zone; nothing happens. Press `E` while moving; the
       player does not stall.
 
 ### Definition of Done
@@ -333,19 +333,19 @@ Turn the single world into data-driven, switchable maps.
 | DW-037 | Add a HUD showing the current map name | Low | 30m | DW-033 |
 
 ### Acceptance criteria
-- [ ] A map is fully described by data: id, alphabet range, size, spawn,
+- [x] A map is fully described by data: id, alphabet range, size, spawn,
       dwellings, doors, obstacles, and the Altar position.
-- [ ] The world scene contains **no hard-coded dwelling or obstacle positions**.
-- [ ] **Two maps** exist and can be switched between without a page reload.
-- [ ] Switching maps repopulates the world and moves the player to that map's spawn.
-- [ ] The HUD shows the current map's name/range and updates on change.
+- [x] The world scene contains **no hard-coded dwelling or obstacle positions**.
+- [x] **Two maps** exist and can be switched between without a page reload.
+- [x] Switching maps repopulates the world and moves the player to that map's spawn.
+- [x] The HUD shows the current map's name/range and updates on change.
 
 ### Testing checklist
-- [ ] Load the default map; verify spawn, dwellings, obstacles and Altar come from data.
-- [ ] Add a third map entry in data only; confirm it loads without editing scene code.
-- [ ] Switch maps repeatedly; no leaked sprites, no duplicate colliders, no errors.
-- [ ] Switch maps while a prompt is visible; the prompt clears.
-- [ ] HUD text matches the loaded map in both maps.
+- [x] Load the default map; verify spawn, dwellings, obstacles and Altar come from data.
+- [x] Add a third map entry in data only; confirm it loads without editing scene code.
+- [x] Switch maps repeatedly; no leaked sprites, no duplicate colliders, no errors.
+- [x] Switch maps while a prompt is visible; the prompt clears.
+- [x] HUD text matches the loaded map in both maps.
 
 ### Definition of Done
 Maps are data-driven, two of them load and switch cleanly, and the HUD reports

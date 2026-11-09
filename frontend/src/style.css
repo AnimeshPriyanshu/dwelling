@@ -69,6 +69,8 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
   pointer-events: none;
   user-select: none;
 }
@@ -79,6 +81,46 @@ body,
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #f4f5f1;
+}
+
+.floating-hud .hud-map {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.floating-hud .hud-map-name {
+  font-weight: 600;
+  color: #f4f5f1;
+}
+
+.floating-hud .hud-map-range {
+  color: #9ac96b;
+}
+
+.map-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  pointer-events: auto;
+}
+
+.map-picker select {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: #f4f5f1;
+  font: inherit;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.map-picker select:focus-visible {
+  outline: 2px solid #9ac96b;
+  outline-offset: 2px;
 }
 
 .floating-hud .hud-hint {

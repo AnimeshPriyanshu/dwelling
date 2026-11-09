@@ -3,8 +3,9 @@
 How the world is divided, how a contact ends up on a map, and how maps and
 interior rooms are loaded and switched.
 
-> **Nothing here exists yet.** This documents the agreed model, marked
-> accordingly. The exact data field names are settled in DW-032.
+> **Exterior maps are implemented (M6).** The data shape below is settled and
+> recorded in ADR-0018. Doors, interiors and Altar rendering remain planned for
+> Milestones 8–9.
 
 ---
 
@@ -25,8 +26,8 @@ Contacts are grouped by the **first letter of their name** (FR-017).
 
 | Map id | Range | Role this phase |
 | --- | --- | --- |
-| `a-c` | A–C | **Starting map** — the one authored in detail (DW-027) |
-| `s-u` | S–U | **Second map** — proves switching works (DW-034) |
+| `a-c` | A–C | **Starting map** — implemented as Alder Creek (M5 dwellings preserved) |
+| `s-u` | S–U | **Second map** — implemented as Sunhollow (DW-034) |
 | `d-f`, `g-i`, `j-l`, `m-o`, `p-r`, `v-z` | — | Registered in the scheme, not authored yet |
 
 - **Confirmed (ADR-0006):** alphabet ranges with stable string ids such as `a-c`.
@@ -51,23 +52,45 @@ A map is **data**, not scene code (FR-018). Required concepts:
 
 | Concept | Purpose | Status |
 | --- | --- | --- |
-| `id` | Stable key such as `a-c` | Proposed |
-| `name` / `range` | Label shown in the HUD | Proposed |
-| `size` | World dimensions in tiles | Proposed |
-| `spawn` | Player start position on load | Proposed |
-| `dwellings` | Position + contact id per house | Proposed |
-| `doors` | Position + which interior/return point each door leads to | Proposed |
-| `obstacles` | Positions/sizes of blocking props | Proposed |
-| `altar` | Altar position (scenery) | Proposed |
-| `ground` | Ground tile pattern | Undecided — may not be per-map |
+| `id` | Stable key such as `a-c` | Implemented |
+| `name` / `range` | Label shown in the HUD | Implemented |
+| `size` | World dimensions in tiles | Implemented |
+| `spawn` | Player start position on load | Implemented |
+| `dwellings` | Position + contact id per house | Implemented |
+| `doors` | Position + which interior/return point each door leads to | Data only (M8) |
+| `obstacles` | Positions/sizes of blocking props | Implemented |
+| `altar` | Altar position (scenery) | Data only (M9) |
+| `ground` | Ground tile pattern | Implemented as optional `groundTile`, shared default |
 
-> **The exact shape is settled in DW-032**, not here. Treat this as the required
-> *concepts*. Once fixed, the format is recorded in
-> [`../planning/decisions.md`](../planning/decisions.md), because every map and
-> room depends on it.
+### Implemented format (DW-032)
 
-**Requirement:** after DW-032, no dwelling, door, obstacle or Altar position may
-be hard-coded inside a scene (FR-018).
+Map files live in `frontend/src/world/maps/` and export a plain object. The
+contract is documented in `maps/format.js`; the registry is `maps/index.js`.
+
+```js
+{
+  id: 'a-c',                 // stable registry key
+  name: 'Alder Creek',       // HUD label
+  range: 'A–C',              // HUD label
+  size: { columns: 60, rows: 40 }, // tiles; pixels derive from TILE_SIZE
+  groundTile: 0,             // optional shared tileset frame
+  spawn: { x: 480, y: 320 },
+  dwellings: [{ id, contactId, name, contact, role, x, y, tileFrames, radius }],
+  doors: [],                 // reserved for M8
+  obstacles: [{ x, y, frame, width, height, offsetX, offsetY }],
+  altar: { x, y } | null,    // reserved for M9 scenery
+}
+```
+
+- Shared values (`TILE_SIZE`, viewport, default ground frame) stay in
+  `frontend/src/world/constants.js`.
+- Validation rejects malformed sizes, out-of-bounds positions, duplicate
+  dwelling/contact ids, and incomplete body geometry. Invalid or duplicate maps
+  are logged and skipped by `registerMap`.
+- Unknown ids return `null`; the running scene stays on its current map.
+
+**Requirement:** no dwelling, door, obstacle or Altar position is hard-coded
+inside a scene (FR-018). Verified by inspecting `WorldScene` after the move.
 
 ---
 
@@ -102,23 +125,23 @@ data/
 ## Registry and loading
 
 - **Confirmed:** the game can load any registered map by id (FR-019).
-- **Proposed:** a registry maps `id → data`, so adding a map is a data addition.
-  Adding a third map in data alone is an explicit acceptance criterion for DW-034.
+- **Implemented:** `world/maps/index.js` maps `id → data`, so adding a map is a
+  data file plus one `registerMap` call. A runtime-registered third map was
+  switched to without touching `WorldScene`.
 
-Loading a map (**proposed**):
+Loading a map (**implemented in `WorldScene.loadMap`**):
 
 ```text
 load map id
-  → read map data from the registry
-  → clear the current world contents
+  → read map data from the registry (unknown id → keep current map)
+  → clear map-owned objects + active prompt
   → draw ground over the map's size
-  → place obstacles → create colliders
+  → place obstacles → create colliders (player collider is reused)
   → place dwellings  → create interaction zones
-  → place doors      → create (smaller, priority) door zones
-  → place the Altar  → scenery only, no zone
+  → store doors/altar data (rendering deferred to M8/M9)
   → place the player at map.spawn
   → set world/camera bounds to map.size
-  → update the HUD with the map name
+  → publish map:changed → React updates the HUD
 ```
 
 Entering and leaving an interior (**proposed**, DW-052/DW-054):
@@ -145,8 +168,9 @@ press E in the room's exit zone
 
 - **Confirmed:** the player moves between alphabet maps through a **selector or
   portal** (FR-020), not by walking off an edge.
-- **Proposed for this phase:** a minimal HTML selector listing registered maps;
-  choosing one reloads the world at that map's spawn.
+- **Implemented:** a minimal HTML `<select>` in the HUD lists registered maps;
+  choosing one requests a switch through the bridge and the world repopulates at
+  that map's spawn. No page reload, no scene restart.
 - **Not required this phase:** walkable portals between maps, animated transitions,
   or spatial adjacency.
 - **Undecided (long term):** whether maps are ever spatially connected (walking
@@ -162,8 +186,8 @@ Day 6 at the expense of the bridge (DW-035).
 - **Confirmed:** the current map is identified in the UI (FR-021).
 - **Confirmed:** the HUD is **minimal** — map name plus the interact prompt only.
   Contact lists, settings and notifications are out of scope this phase.
-- **Proposed:** an HTML element showing the map's `name`/`range`, updated by the
-  data-driven load — never hard-coded text.
+- **Implemented:** the HUD shows the map's `name`/`range` from `map:changed` —
+  never hard-coded text — alongside the map selector.
 - **Proposed:** show the dwelling/room name when inside a shared interior, so the
   player knows which house they are standing in.
 
@@ -183,12 +207,12 @@ Day 6 at the expense of the bridge (DW-035).
 
 | Question | Status |
 | --- | --- |
-| Exact map and room data field names | Settled in DW-032 |
-| Whether one scene is reused for maps and rooms | Proposed: reused |
+| Exact map and room data field names | Map fields settled in DW-032 / ADR-0018; room fields in DW-050 |
+| Whether one scene is reused for maps and rooms | Confirmed: reused (ADR-0018) |
 | How non-alphabetic names are handled | Undecided |
 | What happens when an alphabet range gets crowded | Undecided |
 | Whether maps are spatially adjacent | Undecided (long term) |
-| Map size in tiles | Undecided (working range: 30×20 – 40×25) |
+| Map size in tiles | Authored per map: `a-c` 60×40, `s-u` 56×35; must remain at least the 800×400 viewport |
 | Where Altars live long term | Undecided (deferred) |
 | Whether maps or rooms become server data | Undecided |
 

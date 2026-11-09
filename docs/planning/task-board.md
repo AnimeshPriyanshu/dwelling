@@ -10,7 +10,7 @@ working session.**
 - **Milestones 1–2 are `Done`; every other task is still `Not Started`.** Statuses
   change only when acceptance criteria have been verified by running the app (or
   when the owner explicitly confirms it).
-- Current milestone: **Milestone 5 — Dwellings and interactions**.
+- Current milestone: **Milestone 6 — Map structure, second map and HUD**.
 - The plan is **ten days**, extended from seven during the requirements session
   (ADR-0014 in [`decisions.md`](decisions.md)).
 
@@ -93,25 +93,25 @@ this phase · **Low** = nice to have, drop first under time pressure.
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-026 | Create `world/entities/Dwelling.js` (house sprite + contact id + position) | High | Not Started | 1h | DW-020 |
-| DW-027 | Place several dwellings in the world from a data list | High | Not Started | 1h | DW-026 |
-| DW-028 | Add an interaction zone to each dwelling | High | Not Started | 1h | DW-026 |
-| DW-029 | Show a visible prompt when the player is inside a zone | High | Not Started | 1h | DW-028 |
-| DW-030 | Emit an interaction event carrying the contact id on the interact key (`E`) | High | Not Started | 1h | DW-028 |
-| DW-031 | Wire the event to a placeholder DOM handler (log or panel toggle) | Medium | Not Started | 30m | DW-030 |
+| DW-026 | Create `world/entities/Dwelling.js` (house sprite + contact id + position) | High | Done | 1h | DW-020 |
+| DW-027 | Place several dwellings in the world from a data list | High | Done | 1h | DW-026 |
+| DW-028 | Add an interaction zone to each dwelling | High | Done | 1h | DW-026 |
+| DW-029 | Show a visible prompt when the player is inside a zone | High | Done | 1h | DW-028 |
+| DW-030 | Emit an interaction event carrying the contact id on the interact key (`E`) | High | Done | 1h | DW-028 |
+| DW-031 | Wire the event to a placeholder DOM handler (log or panel toggle) | Medium | Done | 30m | DW-030 |
 
-**Milestone 5 progress:** 0 / 6 done
+**Milestone 5 progress:** 6 / 6 done
 
 ## Milestone 6 — Map structure, second map and HUD (Day 6)
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-032 | Define the map data format and migrate inline data into it | High | Not Started | 1.5h | DW-027, DW-020 |
-| DW-033 | Add a map registry and load a map by id | High | Not Started | 1h | DW-032 |
-| DW-034 | Add a minimal map selector (or portal) and author the second map | High | Not Started | 1.5h | DW-033 |
-| DW-037 | Add a HUD showing the current map name | Low | Not Started | 30m | DW-033 |
+| DW-032 | Define the map data format and migrate inline data into it | High | Done | 1.5h | DW-027, DW-020 |
+| DW-033 | Add a map registry and load a map by id | High | Done | 1h | DW-032 |
+| DW-034 | Add a minimal map selector (or portal) and author the second map | High | Done | 1.5h | DW-033 |
+| DW-037 | Add a HUD showing the current map name | Low | Done | 30m | DW-033 |
 
-**Milestone 6 progress:** 0 / 4 done
+**Milestone 6 progress:** 4 / 4 done
 
 ## Milestone 7 — DOM bridge and conversation sidebar (Day 7)
 
@@ -171,13 +171,13 @@ this phase · **Low** = nice to have, drop first under time pressure.
 | 2 — World rendering and assets | 9 / 9 | **Done** |
 | 3 — Player movement | 7 / 7 | **Done** |
 | 4 — Collision and camera | 6 / 6 | **Done** |
-| 5 — Dwellings and interactions | 0 / 6 | Not Started |
+| 5 — Dwellings and interactions | 6 / 6 | **Done** |
 | 6 — Maps, second map and HUD | 0 / 4 | Not Started |
 | 7 — Bridge and conversation sidebar | 0 / 4 | Not Started |
 | 8 — House interiors | 0 / 6 | Not Started |
 | 9 — Altar and polish | 0 / 4 | Not Started |
 | 10 — Integration and review | 0 / 6 | Not Started |
-| **Total** | **29 / 59** | |
+| **Total** | **35 / 59** | |
 
 ## Backlog (not scheduled)
 
