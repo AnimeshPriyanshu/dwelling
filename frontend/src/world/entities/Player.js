@@ -1,5 +1,5 @@
-import Phaser from 'phaser'
-import { TEXTURES } from '../assets'
+import Phaser from "phaser";
+import { TEXTURES } from "../assets";
 
 /**
  * Direction-to-idle-frame mapping for the 4-direction spritesheet.
@@ -14,7 +14,7 @@ const IDLE_FRAMES = {
   left: 1,
   right: 2,
   up: 3,
-}
+};
 
 /**
  * Player entity that extends Phaser.Physics.Arcade.Sprite.
@@ -27,99 +27,104 @@ const IDLE_FRAMES = {
  */
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, TEXTURES.playerWalk, IDLE_FRAMES.down)
+    super(scene, x, y, TEXTURES.playerWalk, IDLE_FRAMES.down);
 
-    scene.add.existing(this)
-    scene.physics.add.existing(this)
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
 
     // Render above ground and obstacle bases
-    this.setDepth(10)
+    this.setDepth(10);
 
     // Explicit 3/4-tilt collision body: bottom portion for feet/ground contact
-    this.body.setSize(12, 12)
-    this.body.setOffset(2, 12)
-    this.setCollideWorldBounds(true)
+    this.body.setSize(12, 12);
+    this.body.setOffset(2, 12);
+    this.setCollideWorldBounds(true);
 
     // Movement speeds in pixels per second
-    this.walkSpeed = 120
-    this.runMultiplier = 1.6
-    this.isRunning = false
-    this.direction = 'down'
+    this.walkSpeed = 120;
+    this.runMultiplier = 1.6;
+    this.isRunning = false;
+    this.direction = "down";
 
     // Input bindings: Arrow keys, WASD, and Shift
-    this.cursors = scene.input.keyboard.createCursorKeys()
+    this.cursors = scene.input.keyboard.createCursorKeys();
     this.wasd = scene.input.keyboard.addKeys({
       up: Phaser.Input.Keyboard.KeyCodes.W,
       down: Phaser.Input.Keyboard.KeyCodes.S,
       left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
-    })
-    this.shiftKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+    });
+    this.shiftKey = scene.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SHIFT,
+    );
 
     // Set initial idle frame
     if (this.texture.key === TEXTURES.playerWalk) {
-      this.setFrame(IDLE_FRAMES.down)
+      this.setFrame(IDLE_FRAMES.down);
     }
   }
 
-  update(time, delta) {
-    if (!this.body) return
+  update(_time, _delta) {
+    if (!this.body) return;
 
     // Run toggle via Shift key
-    this.isRunning = this.shiftKey.isDown
-    const speed = this.isRunning ? this.walkSpeed * this.runMultiplier : this.walkSpeed
+    this.isRunning = this.shiftKey.isDown;
+    const speed = this.isRunning
+      ? this.walkSpeed * this.runMultiplier
+      : this.walkSpeed;
 
     // Direction input detection (Arrow keys or WASD)
-    const left = (this.cursors.left?.isDown || this.wasd.left?.isDown) ?? false
-    const right = (this.cursors.right?.isDown || this.wasd.right?.isDown) ?? false
-    const up = (this.cursors.up?.isDown || this.wasd.up?.isDown) ?? false
-    const down = (this.cursors.down?.isDown || this.wasd.down?.isDown) ?? false
+    const left = (this.cursors.left?.isDown || this.wasd.left?.isDown) ?? false;
+    const right =
+      (this.cursors.right?.isDown || this.wasd.right?.isDown) ?? false;
+    const up = (this.cursors.up?.isDown || this.wasd.up?.isDown) ?? false;
+    const down = (this.cursors.down?.isDown || this.wasd.down?.isDown) ?? false;
 
-    let dx = 0
-    let dy = 0
+    let dx = 0;
+    let dy = 0;
 
-    if (left) dx -= 1
-    if (right) dx += 1
-    if (up) dy -= 1
-    if (down) dy += 1
+    if (left) dx -= 1;
+    if (right) dx += 1;
+    if (up) dy -= 1;
+    if (down) dy += 1;
 
     // Normalize diagonal movement speed to avoid faster diagonal travel
     if (dx !== 0 && dy !== 0) {
-      const invSqrt2 = 0.70710678
-      dx *= invSqrt2
-      dy *= invSqrt2
+      const invSqrt2 = 0.70710678;
+      dx *= invSqrt2;
+      dy *= invSqrt2;
     }
 
-    this.body.setVelocity(dx * speed, dy * speed)
+    this.body.setVelocity(dx * speed, dy * speed);
 
     // Update facing direction
     if (dx < 0) {
-      this.direction = 'left'
+      this.direction = "left";
     } else if (dx > 0) {
-      this.direction = 'right'
+      this.direction = "right";
     } else if (dy < 0) {
-      this.direction = 'up'
+      this.direction = "up";
     } else if (dy > 0) {
-      this.direction = 'down'
+      this.direction = "down";
     }
 
     // Update animations independently from movement physics
-    const isMoving = dx !== 0 || dy !== 0
-    const animKey = `player-walk-${this.direction}`
+    const isMoving = dx !== 0 || dy !== 0;
+    const animKey = `player-walk-${this.direction}`;
 
     if (isMoving) {
       if (this.scene.anims.exists(animKey)) {
-        this.play(animKey, true)
+        this.play(animKey, true);
       }
     } else {
-      this.stop()
+      this.stop();
       if (this.texture.key === TEXTURES.playerWalk) {
-        this.setFrame(IDLE_FRAMES[this.direction] ?? 0)
+        this.setFrame(IDLE_FRAMES[this.direction] ?? 0);
       }
     }
   }
 
   destroy(fromScene) {
-    super.destroy(fromScene)
+    super.destroy(fromScene);
   }
 }
