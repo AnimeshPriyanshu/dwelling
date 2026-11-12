@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createGame } from "./world/game";
-import { EventType, requestMapSwitch, subscribe } from "./bridge";
+import { EventType, requestMapSwitch, setChatOpen, subscribe } from "./bridge";
 import { getDefaultMap, listMaps } from "./world/maps";
 
 const RESIDENT_MESSAGES = {
@@ -159,6 +159,12 @@ const App = () => {
     const canvas = worldRef.current?.querySelector("canvas");
     if (canvas) canvas.focus();
   }, []);
+
+  // React owns drawer visibility; the world blocks its own input while the
+  // drawer is open. Publishing from state covers every open and close path.
+  useEffect(() => {
+    setChatOpen(isChatOpen);
+  }, [isChatOpen]);
 
   // Listen for dwelling interaction events from Phaser
   useEffect(() => {

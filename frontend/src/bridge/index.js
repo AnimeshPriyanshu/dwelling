@@ -16,6 +16,7 @@ export const EventType = {
   // React → Phaser
   PLAYER_INPUT: 'player:input',
   UI_ACTION: 'ui:action',
+  UI_STATE: 'ui:state',
   MAP_SWITCH: 'map:switch',
 }
 
@@ -66,6 +67,11 @@ export function requestMapSwitch(mapId) {
   publish(EventType.MAP_SWITCH, { mapId })
 }
 
+// UI → Phaser helper. Tells the world whether a DOM panel owns the input.
+export function setChatOpen(open) {
+  publish(EventType.UI_STATE, { chatOpen: Boolean(open) })
+}
+
 // Unsubscribe all listeners for a topic (or all topics)
 export function unsubscribeAll(topic) {
   if (topic) {
@@ -88,6 +94,7 @@ export default {
   reactEvents,
   phaserPublish,
   requestMapSwitch,
+  setChatOpen,
   subscribe,
   publish,
   unsubscribeAll,
