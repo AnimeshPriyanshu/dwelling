@@ -32,6 +32,9 @@ export default class WorldScene extends Phaser.Scene {
     this.altar = null
     this._unsubscribeMapSwitch = null
     this._handleMapSwitchRequest = null
+    this._unsubscribeUiState = null
+    this._handleUiStateChange = null
+    this.uiInputBlocked = false
   }
 
   create() {
@@ -43,6 +46,8 @@ export default class WorldScene extends Phaser.Scene {
     this.fallbackGround = null
     this.doors = []
     this.altar = null
+    // A restarted scene starts with both input plugins enabled again.
+    this.uiInputBlocked = false
 
     const initialMap = getDefaultMap()
     if (!initialMap) {
@@ -61,6 +66,10 @@ export default class WorldScene extends Phaser.Scene {
     // The bridge calls handlers without a context, so bind the scene method.
     this._handleMapSwitchRequest = (payload) => this.handleMapSwitch(payload)
     this._unsubscribeMapSwitch = subscribe(EventType.MAP_SWITCH, this._handleMapSwitchRequest)
+
+    // React owns panel visibility; the world blocks its own input in response.
+    this._handleUiStateChange = (payload) => this.setUiInputBlocked(Boolean(payload && payload.chatOpen))
+    this._unsubscribeUiState = subscribe(EventType.UI_STATE, this._handleUiStateChange)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneTeardown, this)
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleSceneTeardown, this)
 
@@ -218,7 +227,30 @@ export default class WorldScene extends Phaser.Scene {
     phaserPublish('mapChanged', this.map)
   }
 
+  /**
+   * Blocks or restores the world's input while the DOM owns the interaction.
+   * Movement keys are released so a held key cannot leave the player moving.
+   *
+   * @param {boolean} blocked
+   */
+  setUiInputBlocked(blocked) {
+    if (this.uiInputBlocked === blocked) return
+
+    this.uiInputBlocked = blocked
+    this.input.keyboard.enabled = !blocked
+    this.input.enabled = !blocked
+
+    if (blocked) {
+      this.input.keyboard.resetKeys()
+    }
+  }
+
   handleSceneTeardown() {
+    if (this._unsubscribeUiState) {
+      this._unsubscribeUiState()
+      this._unsubscribeUiState = null
+    }
+
     if (this._unsubscribeMapSwitch) {
       this._unsubscribeMapSwitch()
       this._unsubscribeMapSwitch = null
