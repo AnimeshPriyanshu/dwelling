@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { ASSET_MANIFEST, loadAssets } from '../assets'
+import { registerPlayerAnimations } from '../animations'
 
 /**
  * Loads the asset manifest and shows progress.
@@ -48,6 +49,8 @@ export default class PreloadScene extends Phaser.Scene {
         console.warn(`[assets] optional asset missing: ${asset.key} (${asset.path})`)
       }
     }
+
+    registerPlayerAnimations(this)
     this.scene.start('WorldScene')
   }
 }
