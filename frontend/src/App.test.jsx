@@ -8,7 +8,7 @@ import {
   screen,
 } from "@testing-library/react";
 import App from "./App";
-import { setChatOpen, subscribe } from "./bridge";
+import { requestMapSwitch, setChatOpen, subscribe } from "./bridge";
 
 const { bridgeHandlers } = vi.hoisted(() => ({ bridgeHandlers: new Map() }));
 
@@ -34,6 +34,15 @@ vi.mock("./world/maps", () => ({
     id: "default",
     name: "Default",
     range: "0-0",
+    dwellings: [
+      {
+        id: "dwelling-default",
+        contactId: "contact-default",
+        name: "Default Cottage",
+        contact: "Default Resident",
+        role: "Guide",
+      },
+    ],
   })),
   listMaps: vi.fn(() => [
     {
@@ -42,6 +51,11 @@ vi.mock("./world/maps", () => ({
       range: "0-0",
     },
   ]),
+  summarizeMap: (map) => ({
+    id: map.id,
+    name: map.name,
+    range: map.range,
+  }),
 }));
 
 const CONTACT = {
@@ -94,6 +108,43 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     expect(screen.getByLabelText(/switch map/i)).toBeInTheDocument();
+  });
+
+  it("takes the starting contact and map from the registry", () => {
+    render(createElement(App));
+
+    expect(screen.getByText("Default Cottage")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
+  });
+
+  it("requests a map switch through the bridge", () => {
+    render(createElement(App));
+
+    fireEvent.change(screen.getByLabelText(/switch map/i), {
+      target: { value: "default" },
+    });
+
+    expect(requestMapSwitch).toHaveBeenCalledWith("default");
+  });
+
+  it("shows the map published by the world and closes the drawer", () => {
+    render(createElement(App));
+    emitDwellingInteract();
+
+    act(() => {
+      for (const handler of bridgeHandlers.get("map:changed") ?? []) {
+        handler({
+          type: "map:changed",
+          map: { id: "s-u", name: "Sunhollow", range: "S–U" },
+        });
+      }
+    });
+
+    expect(screen.getByText("Sunhollow")).toBeInTheDocument();
+    expect(screen.getByText("S–U")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /redwood cottage/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the drawer from a bridge interaction", () => {

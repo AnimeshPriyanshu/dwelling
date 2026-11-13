@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createGame } from "./world/game";
 import { EventType, requestMapSwitch, setChatOpen, subscribe } from "./bridge";
-import { getDefaultMap, listMaps } from "./world/maps";
+import { getDefaultMap, listMaps, summarizeMap } from "./world/maps";
 import { AVATAR_URLS } from "./world/assets";
 
 const RESIDENT_MESSAGES = {
@@ -148,21 +148,38 @@ const CONTACT_AVATARS = {
 };
 const DEFAULT_AVATAR = AVATAR_URLS.base;
 
+// The drawer's contact shape. Map data and bridge events both provide plain
+// dwelling data, so one projection keeps the drawer fields in one place.
+const contactFromDwelling = (dwelling) => ({
+  id: dwelling.id,
+  contactId: dwelling.contactId,
+  name: dwelling.name,
+  contact: dwelling.contact,
+  role: dwelling.role || "Resident",
+});
+
+// Fallback for an empty registry; the drawer stays closed until an interaction
+// names a resident.
+const EMPTY_CONTACT = {
+  id: "",
+  contactId: "",
+  name: "",
+  contact: "",
+  role: "",
+};
+
 const App = () => {
   const worldRef = useRef(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeContact, setActiveContact] = useState({
-    id: "dwelling-redwood",
-    contactId: "contact-elowen",
-    name: "Redwood Cottage",
-    contact: "Elowen",
-    role: "Herbalist",
+  // Seed the drawer from map data rather than a copy of it, so map files stay
+  // the only place a dwelling is described.
+  const [activeContact, setActiveContact] = useState(() => {
+    const dwelling = getDefaultMap()?.dwellings?.[0];
+    return dwelling ? contactFromDwelling(dwelling) : EMPTY_CONTACT;
   });
   const [activeMap, setActiveMap] = useState(() => {
     const map = getDefaultMap();
-    return map
-      ? { id: map.id, name: map.name, range: map.range }
-      : { id: "", name: "No map", range: "" };
+    return map ? summarizeMap(map) : { id: "", name: "No map", range: "" };
   });
 
   // Close chat handler
@@ -184,13 +201,7 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = subscribe(EventType.DWELLING_INTERACT, (event) => {
       if (!event) return;
-      setActiveContact({
-        id: event.id,
-        contactId: event.contactId,
-        name: event.name,
-        contact: event.contact,
-        role: event.role || "Resident",
-      });
+      setActiveContact(contactFromDwelling(event));
       setIsChatOpen(true);
     });
 
