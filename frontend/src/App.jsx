@@ -179,26 +179,35 @@ const App = () => {
     setChatOpen(isChatOpen);
   }, [isChatOpen]);
 
-  // Listen for dwelling interaction events from Phaser
+  // Dwellings interact in the world; the bridge carries the result here and
+  // React decides what that means for the UI.
   useEffect(() => {
-    const onOpenChat = (event) => {
-      if (event.detail) {
-        setActiveContact(event.detail);
-      }
+    const unsubscribe = subscribe(EventType.DWELLING_INTERACT, (event) => {
+      if (!event) return;
+      setActiveContact({
+        id: event.id,
+        contactId: event.contactId,
+        name: event.name,
+        contact: event.contact,
+        role: event.role || "Resident",
+      });
       setIsChatOpen(true);
-    };
+    });
 
+    return unsubscribe;
+  }, []);
+
+  // Escape is a DOM concern, so it stays in the React shell.
+  useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
         handleCloseChat();
       }
     };
 
-    window.addEventListener("dwelling:open-chat", onOpenChat);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.removeEventListener("dwelling:open-chat", onOpenChat);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [handleCloseChat]);

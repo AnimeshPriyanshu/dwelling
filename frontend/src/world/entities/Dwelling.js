@@ -1,4 +1,5 @@
 import { TEXTURES } from '../assets'
+import { phaserPublish } from '../../bridge'
 
 /**
  * Dwelling entity representing an approachable, interactive house in the world.
@@ -118,17 +119,8 @@ export default class Dwelling {
   }
 
   interact() {
-    const data = this.getInteractionData();
-
-    // 1. Emit scene-level event
-    this.scene.events.emit("dwelling:interact", data);
-
-    // 2. Dispatch DOM event to open chat drawer in React shell
-    window.dispatchEvent(
-      new CustomEvent("dwelling:open-chat", {
-        detail: data,
-      }),
-    );
+    // The bridge is the only channel to React; entities never touch the DOM.
+    phaserPublish('dwellingInteract', this.getInteractionData())
   }
 
   destroy() {
