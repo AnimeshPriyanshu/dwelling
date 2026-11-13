@@ -378,6 +378,167 @@ that is **already committed**. They are dated by commit date.
 
 ---
 
+## 2026-11-12 — Supplied asset audit and integration
+
+**Focus task(s):** supplied asset packs (Sunnyside World, Sprout Lands)
+**Status:** on track
+
+### Summary
+The two asset packs supplied in the repository root were audited and integrated.
+The Kenney placeholder sheets are no longer loaded. Full inventory, mapping and
+plan: [`../design/asset-inventory.md`](../design/asset-inventory.md).
+
+### Work done
+- Inspected both packs completely (images, sprite grids, UI, metadata); no audio
+  and no Tiled/JSON map files are present. Sprite grids were verified by cropping
+  and viewing, not assumed: Sunnyside world 1024×1024 at 16 px (64×64 tiles);
+  Sprout Lands player 192×192 at 48×48, rows **down, up, left, right**;
+  Sunnyside humans 96×64 per frame with **hair as a separate overlay layer**.
+- Recorded licences: Sunnyside is free/commercial (educational redistribution
+  allowed with a link); Sprout Lands is **non-commercial, credit required** and
+  may not be redistributed as a pack.
+- Copied four files verbatim and created processed copies: five 32×56 cottages
+  and four prop crops from the Sunnyside tileset, plus seven composited contact
+  portraits. Originals untouched.
+- Rewrote `world/assets.js` around the supplied files; registered four 4-frame
+  walk animations; moved the player to the 48×48 sheet; converted dwellings and
+  obstacles to texture keys in map data; switched ground to Sunnyside frame 65;
+  added depth sorting by object base; added contact avatars to the chat drawer.
+
+### Verification (headless Chrome + CDP)
+- All 13 runtime textures resolve; no failed requests, no console errors.
+- Four animations exist with 4 frames at 8 FPS; real arrow-key input gives
+  `player-walk-{right,up,left,down}` and the correct idle frame (8/4/12/0).
+- `a-c`: 60×40 ground, every sampled tile index 65, 4 dwellings, 23 static bodies
+  (4 house bodies + 19 props), player 48×48 with a 12×8 body.
+- Real pointer click opens the drawer for “Redwood Cottage” with a loaded avatar.
+- Switch to `s-u`: 56×35 ground, 2 dwellings, 20 static bodies, spawn (448, 300),
+  HUD “Sunhollow · S–U”, one canvas; clicking opens “Tidewood Lodge”.
+- `npm run build` exits 0.
+
+### Decisions made
+- **ADR-0019** — use the supplied packs as primary art; supersedes ADR-0007 and
+  ADR-0011.
+- Sprout Lands supplies the player (only pack with four verified directions);
+  Sunnyside supplies the world, houses, props and portraits.
+
+### Known issues
+- NFR-014 is only partly met: Sprout Lands is non-commercial and forbids
+  redistributing the pack, so the repository must not be published as an asset
+  source while it contains those files.
+- Sunnyside humans are single-facing; contact characters stay UI-only.
+- Legacy Kenney files and `player-walk.png` remain on disk, unused.
+
+### Next day's priority
+1. Milestone 7 — bridge/sidebar, mock history and input focus.
+2. Place fence runs using the supplied Sprout Lands fence sheet.
+3. Interiors (M8) using the supplied furniture atlases.
+
+---
+
+## 2026-11-12 — Roads and denser woodland
+
+**Focus task(s):** map composition (paths, forest density)
+**Status:** on track
+
+### Summary
+Both exterior maps were re-composed as villages with real dirt roads and much
+denser, clumped woodland. Layout is still data: maps declare `paths` rectangles,
+and a seeded helper derives the obstacle list.
+
+### Work done
+- **Paths.** Verified the supplied kits for a path texture: Sprout Lands
+  `Objects/Paths.png` is actually fence pieces (not paths); the usable ground
+  texture is `Tilesets/Tilled_Dirt_v2.png` (176×112, 11×7 tiles of 16). Copied it
+  to `public/assets/tilesets/sprout-dirt.png` and tone-matched it to the Sunnyside
+  palette (`colorchannelmixer=rr=0.82:gg=0.70:bb=0.58`); grid and pixels otherwise
+  unchanged.
+- Added **path frames 12/56/67/68** (the fully opaque fill tiles) to the manifest
+  and a `PATH_TILE_FRAMES` constant in `world/assets.js`.
+- New `world/maps/terrain.js`: `buildPathCells` rasterises path rectangles;
+  `scatterForest` / `scatterRocks` generate obstacles from an integer seed, with
+  smooth value noise for clumps, a jittered 24 px grid, open verges near roads and
+  clearings around dwellings, spawn and altar.
+- `WorldScene.createPaths` draws the rasterised grid as a second tilemap layer at
+  depth 1 (above grass, below every object), and destroys it on map switch.
+- `format.js` validates the new optional `paths` array (integer tile rectangles,
+  inside the map bounds).
+- Re-authored both maps as villages: `a-c` has a crossroads, a south back lane and
+  a spur to each cottage door (402 obstacles); `s-u` has a main lane, one spur and
+  an L-shaped back lane (421 obstacles).
+
+### Verification (headless Chrome + CDP)
+- `a-c`: 60×40 ground, path layer present, tiles are exactly `{12, 56, 67, 68}`,
+  379 static bodies, 60 FPS at the time of measurement.
+- `s-u`: 56×35 ground, path layer present with the same four frames, 408 bodies,
+  60–61 FPS.
+- After the 2× houses: dwellings report 64×112 sprites with 46×20 bodies, clicks
+  and the map switch still resolve, no console errors. Headless rAF later capped
+  itself at 30 Hz (a plain `requestAnimationFrame` probe measured 30 too); with
+  `--disable-frame-rate-limit` the same scene ran at **≈868 FPS**, so the cap was
+  the browser, not the scene.
+- Map switch through the HUD selector still repopulates without a reload; no
+  console errors or warnings on either map.
+- Screenshots checked at 1280×900: roads read as warm dirt against the grass and
+  the woodland forms stands with open verges, visible ground and no lattice.
+- `npm run build` exits 0.
+
+### Follow-up (same day) — bigger houses, aligned paths
+- Cottages were **32×56**, which read as sheds next to the 48×48 player. Re-cropped
+  the same five Sunnyside tiles, then upscaled 2× with nearest-neighbour to
+  **64×112**; each pixel is doubled, nothing is interpolated. Bodies scale with
+  the sprite (46×20), prompt and click zone follow automatically, interaction
+  radius raised to 76.
+- Rebased both maps on the tile grid: dwelling `x` on a tile boundary, house base
+  on a tile boundary, and every spur two tiles wide at `x/16 − 1` and `x/16`, so
+  each path is centred on its door. A door meets the road at exactly one pixel.
+- Mountain/House clearings now derive from `COTTAGE_FRAME` (`assets.js`), so tree
+  scatter keeps its distance from the larger houses.
+- `s-u`: moved Tidewood Lodge onto the back lane and ran the connector west of
+  it, so no path is hidden underneath a house.
+
+### Follow-up (same day) — farms
+- Added fenced crop plots to both maps, built from supplied art only: Sunnyside
+  has **harvested-produce icons**, not field plants, so the crops come from
+  Sprout Lands `Objects/Basic_Plants.png` (6×2 frames of 16×16: wheat and a root
+  crop, four growth stages, plus a seed packet and a harvested item). Soil is the
+  same Sprout Lands tilled-dirt sheet the roads use, and the rail is the fence
+  sheet that had been loaded but never placed.
+- Farm layout lives in `world/farm.js` and map data (`farms: [{x,y,w,h,gate,crop}]`
+  in tiles). Soil cells, fence frames and crop frames are all derived, so a map
+  stores no pixel positions. Crops pick a growth stage from a cell hash, giving a
+  patchwork field that looks identical on every load.
+- The fence sheet's own vertical column does not tile (posts, no continuous
+  rail), so side runs reuse the horizontal rail turned a quarter turn; posts and
+  rails then line up exactly. Only the rail blocks movement (body 16×8 on a run,
+  8×16 on a side).
+- `a-c`: 8×6 wheat plot in the east meadow, gate on the north edge over a
+  two-tile dirt threshold off the street. `s-u`: 7×5 root plot east of Tidewood
+  Lodge, gate opening straight onto the back lane. Trees keep a one-tile verge
+  around every plot.
+
+### Verification
+- `npm run build` exits 0.
+- a-c: 393 static bodies (30 fence pieces replace 16 removed trees), 48 crop
+  sprites, soil layer present; s-u: 420 bodies, 35 crops. No console errors.
+- Collision by real arrow-key input in s-u: walking up into the south rail stops
+  the player at y=420 (rail body starts at 424); walking up through the gate
+  crosses from y=470 to y=324, i.e. into the plot.
+- Screenshots at 1× and 2× camera zoom confirm the gate sits on the lane, posts
+  and rails are continuous, and no canopy hangs over a fence.
+
+### Known issues
+- Path edges are square tiles: the supplied dirt kit has no outer-corner autotile
+  masks for roads, so edges follow the rectangle layout instead of being decorated.
+  Farm soil has the same square edge; the fence hides most of it.
+- Crops are decorative only — no growth over time, no harvest interaction, and
+  the player can walk over the rows inside the plot.
+- 400+ tree sprites per map; fine at 60 FPS here, but a larger map would need
+  culling or a texture atlas.
+- Sprout Lands is still non-commercial (see NFR-014 note).
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:

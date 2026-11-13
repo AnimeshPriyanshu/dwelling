@@ -59,6 +59,7 @@ A map is **data**, not scene code (FR-018). Required concepts:
 | `dwellings` | Position + contact id per house | Implemented |
 | `doors` | Position + which interior/return point each door leads to | Data only (M8) |
 | `obstacles` | Positions/sizes of blocking props | Implemented |
+| `paths` | Roads and trails as tile rectangles | Implemented |
 | `altar` | Altar position (scenery) | Data only (M9) |
 | `ground` | Ground tile pattern | Implemented as optional `groundTile`, shared default |
 
@@ -73,24 +74,80 @@ contract is documented in `maps/format.js`; the registry is `maps/index.js`.
   name: 'Alder Creek',       // HUD label
   range: 'A–C',              // HUD label
   size: { columns: 60, rows: 40 }, // tiles; pixels derive from TILE_SIZE
-  groundTile: 0,             // optional shared tileset frame
+  groundTile: 65,            // optional world tileset frame (Sunnyside grass)
   spawn: { x: 480, y: 320 },
-  dwellings: [{ id, contactId, name, contact, role, x, y, tileFrames, radius }],
+  dwellings: [{ id, contactId, name, contact, role, x, y, sprite, radius, bodyHeight }],
+  paths: [{ x: 0, y: 19, w: 60, h: 2 }], // tile rectangles: streets and trails
   doors: [],                 // reserved for M8
-  obstacles: [{ x, y, frame, width, height, offsetX, offsetY }],
+  obstacles: [{ x, y, sprite, frame?, width, height, offsetX, offsetY }],
   altar: { x, y } | null,    // reserved for M9 scenery
 }
 ```
 
 - Shared values (`TILE_SIZE`, viewport, default ground frame) stay in
   `frontend/src/world/constants.js`.
+- `sprite` is a texture key declared in `world/assets.js`, never a file path.
+  Dwellings are complete supplied cottage images; obstacles may be images or
+  spritesheet frames. `frame` is only meaningful for a spritesheet texture.
 - Validation rejects malformed sizes, out-of-bounds positions, duplicate
-  dwelling/contact ids, and incomplete body geometry. Invalid or duplicate maps
-  are logged and skipped by `registerMap`.
+  dwelling/contact ids, missing sprite keys, and incomplete body geometry.
+  Invalid or duplicate maps are logged and skipped by `registerMap`.
 - Unknown ids return `null`; the running scene stays on its current map.
 
 **Requirement:** no dwelling, door, obstacle or Altar position is hard-coded
 inside a scene (FR-018). Verified by inspecting `WorldScene` after the move.
+
+---
+
+## Terrain: paths and forest
+
+Two helpers in `frontend/src/world/maps/terrain.js` turn a map's layout data
+into terrain, so a map file stays readable:
+
+- **`buildPathCells(paths, columns, rows)`** rasterises the `paths` rectangles
+  into a set of `"column,row"` cells. `WorldScene.createPaths` renders that grid
+  as a second tilemap layer above the grass, using the fully opaque fill tiles
+  from the supplied Sprout Lands dirt sheet (`PATH_TILE_FRAMES` in
+  `world/assets.js`). Cells outside a path are set to `-1`, so nothing is drawn
+  there.
+- **`scatterForest(...)` / `scatterRocks(...)`** generate the obstacle list at
+  module load from an integer seed: a jittered grid of tree positions, thinned
+  near roads (open verges), cleared around dwellings, spawn and the altar, and
+  clumped with smooth value noise so the woods form stands and glades rather
+  than an even sprinkle. Rock positions come from the same seed-driven loop.
+
+Because the scatter is seeded, a map looks identical on every load and a diff
+never contains hundreds of coordinates. Tuning knobs are the `spacing`,
+`density` and clump range passed to `scatterForest`.
+
+Paths are drawn as square tiles at 16×16, the sheet's native size: the supplied
+kit has no outer-corner autotile pieces for a road edge, so paths use their
+opaque fill frames and take their shape from the map layout instead of
+guessing at edge masks.
+
+**Alignment rule.** A dwelling's `x` sits on a tile boundary (a multiple of
+16, e.g. 224 = 16 × 14) and its `y` puts the house base on a tile boundary
+(`y + 56`), so a two-tile spur at columns `x/16 − 1` and `x/16` is centred on
+the door and starts exactly at the threshold. Both maps keep every path
+rectangle on whole tiles for that reason; a hand-placed house must follow the
+same rule or its door will sit half a tile off its path.
+
+### Farms
+
+A farm is data too: `farms: [{ x, y, w, h, gate, crop }]`, in tiles. `x`/`y`/`w`/`h`
+describe the **tilled soil**; the rail fence is drawn one tile outside it, so a
+plot must keep a tile of margin from the map edge (the validator enforces this).
+`gate` (`north`/`south`/`east`/`west`) names the edge the fence opens on, and the
+two gate tiles are centred on that edge. `crop` picks the growth sequence
+(`wheat` or `root`).
+
+`world/farm.js` derives everything else — soil cells, fence frames, crop frames
+— so a map never stores pixel positions for a plot. Crops take a growth stage
+from a hash of their cell, which makes a field a patchwork instead of a solid
+block and keeps it identical on every load. Trees and rocks are kept out of the
+plot and one tile around it, and a gate is worth aligning with a path: a-c puts
+its gate on a two-tile threshold off the main street, s-u opens its gate
+directly onto the back lane.
 
 ---
 
@@ -136,6 +193,7 @@ load map id
   → read map data from the registry (unknown id → keep current map)
   → clear map-owned objects + active prompt
   → draw ground over the map's size
+  → draw paths above the ground
   → place obstacles → create colliders (player collider is reused)
   → place dwellings  → create interaction zones
   → store doors/altar data (rendering deferred to M8/M9)

@@ -3,16 +3,17 @@ import { TEXTURES } from './assets'
 /**
  * Player walk animations.
  *
- * `characters/player-walk` is a 4 column x 3 row sheet of 16x24 frames: one
- * column per facing direction, and the three frames of a column are that
- * direction's walk cycle. The keys are the ones `Player` already builds as
- * `player-walk-${direction}`.
+ * The supplied Sprout Lands sheet (`characters/player-sprout.png`) is a 4×4
+ * grid of 48×48 frames, row-major: one row per facing direction, in the order
+ * down, up, left, right, and the four frames of a row are that direction's walk
+ * cycle. Verified by inspecting the frames. The keys are the ones `Player`
+ * already builds as `player-walk-${direction}`.
  */
 export const PLAYER_WALK_ANIMATIONS = [
-  { key: 'player-walk-down', frames: [0, 4, 8] },
-  { key: 'player-walk-left', frames: [1, 5, 9] },
-  { key: 'player-walk-right', frames: [2, 6, 10] },
-  { key: 'player-walk-up', frames: [3, 7, 11] },
+  { key: 'player-walk-down', frames: [0, 1, 2, 3] },
+  { key: 'player-walk-up', frames: [4, 5, 6, 7] },
+  { key: 'player-walk-left', frames: [8, 9, 10, 11] },
+  { key: 'player-walk-right', frames: [12, 13, 14, 15] },
 ]
 
 const FRAME_RATE = 8

@@ -162,6 +162,32 @@ body,
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.drawer-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Pixel portraits composited from the supplied Sunnyside character pack. */
+.contact-avatar {
+  width: 40px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px;
+  flex: none;
+}
+
 .drawer-title-group h2 {
   margin: 0;
   font-size: 1.15rem;
