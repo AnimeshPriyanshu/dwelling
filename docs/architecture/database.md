@@ -82,6 +82,12 @@ user.
 revision; the exact row shape (one canonical pair row versus mirrored rows) is a
 schema detail.
 
+**API representation:** the contacts endpoints identify a contact by the
+**peer's `User.id`**, never by a `Contact` row id. `POST /api/contacts` takes
+`{ userId }` and `DELETE /api/contacts/:id` takes that same peer id, so the API
+never exposes a contact row and the row shape stays free for the schema revision
+([`../api/README.md`](../api/README.md#contacts-pr-36--pr-42)).
+
 Contacts are what make a conversation legal: creating one requires **both**
 participants to be mutual contacts (ADR-0020, ADR-0021).
 
