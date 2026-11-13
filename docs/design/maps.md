@@ -254,10 +254,10 @@ Day 6 at the expense of the bridge (DW-035).
 ## Altar and maps
 
 - **Confirmed:** the Altar is placed by map data and rendered as scenery (FR-026).
-- **Undecided:** whether Altars live inside alphabet maps, in separate shared
-  maps, or both. The concept describes them as shared gathering places, which
-  suggests they may not belong to any single letter range.
-- **Deferred:** Altar interaction (FR-027, DW-B03).
+- **Decided:** an Altar is map scenery like any other landmark, so it lives in the
+  map data that places it; there is no separate shared map (ADR-0020).
+- **Not supported:** Altar interaction and group conversation (FR-027 withdrawn by
+  ADR-0020).
 
 ---
 
@@ -271,7 +271,7 @@ Day 6 at the expense of the bridge (DW-035).
 | What happens when an alphabet range gets crowded | Undecided |
 | Whether maps are spatially adjacent | Undecided (long term) |
 | Map size in tiles | Authored per map: `a-c` 60×40, `s-u` 56×35; must remain at least the 800×400 viewport |
-| Where Altars live long term | Undecided (deferred) |
+| Where Altars live long term | Resolved: map scenery, no separate shared map (ADR-0020) |
 | Whether maps or rooms become server data | Undecided |
 
 ## Related

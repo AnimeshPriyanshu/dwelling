@@ -100,7 +100,7 @@ pending there.
 
 `sockets/index.js` registers a connection handler that emits `server:ready` to
 the connecting client. That is the entire realtime surface. The intended
-separation of messaging, presence, movement, and group interactions is in
+separation of messaging, presence, and movement is in
 [`realtime.md`](realtime.md).
 
 - **Confirmed:** CORS origin for sockets is `env.clientOrigin`

@@ -12,6 +12,7 @@ concrete way to observe whether it holds.
 | `In progress` | Partly implemented. |
 | `Planned` | Agreed, not started. |
 | `Deferred` | Out of the current phase; see [`scope.md`](scope.md). |
+| `Not supported` | Ruled out by a recorded decision (ADR); kept for traceability. |
 
 _Updated 2026-10-19 after Milestone 6. Statuses below reflect verified runtime
 checks recorded in [`../planning/daily-log.md`](../planning/daily-log.md); deferred
@@ -73,9 +74,12 @@ requirements stay `Planned` until their milestone lands._
 | FR-024 | The conversation UI shows the contact's name. | Done |
 | FR-025 | The conversation UI can be closed and returns focus to the world. | Planned |
 | FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** | Planned |
-| FR-027 | An Altar supports interaction by multiple users in the same location. | Deferred |
+| FR-027 | An Altar supports interaction by multiple users in the same location. | Not supported |
 | FR-028 | Users can send and receive messages in a conversation. | Deferred |
 | FR-029 | The app shows which contacts are online (presence). | Deferred |
+
+> **FR-027 note (2026-11-13):** withdrawn by ADR-0020. Group conversations and
+> Altar interaction are not supported; the Altar stays scenery (FR-026).
 
 ### Interiors
 
@@ -90,6 +94,14 @@ requirements stay `Planned` until their milestone lands._
 | --- | --- | --- |
 | FR-032 | The conversation UI opens as a docked sidebar beside the world, covering no part of the canvas. | Planned |
 | FR-033 | Any mock conversation content is visibly labelled as mock data, and no input field implies that sending works. | Planned |
+
+### Conversations and contacts
+
+| ID | Requirement | Status |
+| --- | --- | --- |
+| FR-034 | Every conversation has exactly two participants; a conversation cannot be created or stored with zero, one, three or more. | Planned |
+| FR-035 | A conversation can only be created between two users who are contacts of each other (mutual add, immediate, no request/accept state). | Planned |
+| FR-036 | Participant and contact rules are enforced by the backend and the data model, not only by the UI. | Planned |
 
 ---
 
@@ -126,6 +138,9 @@ requirements stay `Planned` until their milestone lands._
 - Requirements added during the 2026-10-17 requirements session are FR-030 to
   FR-033 and NFR-014 to NFR-015; FR-026 was narrowed from "shared gathering
   location" to scenery-only for this phase.
+- FR-034 to FR-036 were added on 2026-11-13 with the one-to-one-only decisions
+  (ADR-0020, ADR-0021); they are backend/data-model requirements and are not
+  implemented yet.
 
 > **NFR-014 note (2026-11-12):** all files used at runtime are recorded in
 > `frontend/public/assets/CREDITS.md` with pack, author, licence and URL. The

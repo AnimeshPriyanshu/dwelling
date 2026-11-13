@@ -188,7 +188,7 @@ Move an item into a milestone only when it is the right time; otherwise leave it
 | --- | --- | --- |
 | DW-B01 | Farms: travel to a farm, work there, and chat | Requested 2026-10-17. Needs the activity + reward design first. Depends on the interaction system (M5) and real messaging. |
 | DW-B02 | Achievements with unlock rules and a panel | Requested 2026-10-17. Display is cheap; the unlock rules and persistence need deciding. Local mock is acceptable. |
-| DW-B03 | Altar as an interactive group space | FR-027. Deferred product feature; requires presence and group conversation delivery. |
+| DW-B03 | ~~Altar as an interactive group space~~ | Withdrawn: FR-027 is not supported and group conversations are out of scope (ADR-0020). The Altar stays scenery (DW-056). |
 | DW-B04 | Personalised interiors (a distinct room per contact) | The shared template (DW-051) is deliberate for this phase. |
 | DW-B05 | Player identity: name and a personal avatar | Currently a generic character. Needs an account concept. |
 | DW-B06 | Audio: footsteps, doors, ambient music | No audio assets exist and none are being sourced this phase. |
