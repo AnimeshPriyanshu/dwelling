@@ -50,10 +50,15 @@ frontend/
 ├── public/
 │   ├── favicon.svg       ✅  served at /favicon.svg (linked from index.html)
 │   ├── icons.svg         ✅  served at /icons.svg
-│   └── assets/           ✅  game assets loaded by path (DW-011)
+│   └── assets/           ✅  supplied game assets loaded by path
 │       ├── README.md     ✅   layout, naming, how to add
 │       ├── CREDITS.md    ✅   license/provenance for every third-party file
-│       └── tilesets/     ✅   tiny-town.png, tiny-dungeon.png (Kenney, CC0)
+│       ├── tilesets/     ✅   sunnyside-world.png (16 px world), sprout-dirt.png (paths)
+│       ├── characters/   ✅   player-sprout.png (4×4 frames of 48×48)
+│       ├── houses/       ✅   cottage-*.png (64×112 processed crops, 2×)
+│       ├── props/        ✅   tree/rock crops + fences.png
+│       ├── ui/           ✅   avatar-*.png portraits, expression-chat.png
+│       └── interiors/    ⬜   created for Milestone 8
 ├── src/
 │   ├── main.js           ✅  entry point: creates the React root and renders App
 │   ├── App.jsx           ✅  React shell: HUD (map + selector), drawer, Phaser mount
@@ -64,6 +69,7 @@ frontend/
 │   │   ├── game.js       ✅   Phaser config + createGame(parent) (DW-003)
 │   │   ├── constants.js  ✅   tile/viewport sizes shared by all maps (DW-008)
 │   │   ├── assets.js     ✅   texture keys, paths, manifest, loadAssets() (DW-046)
+│   │   ├── farm.js       ✅   farm plots: soil cells, fence pieces, crop frames
 │   │   ├── scenes/       ✅   BootScene, PreloadScene, WorldScene (DW-004, DW-005)
 │   │   ├── entities/     ✅   Player, Dwelling (DW-014, DW-026)
 │   │   ├── systems/      **planned**  movement, interaction resolution (DW-015, DW-028)
@@ -81,7 +87,7 @@ inside `world/` are listed in
 [`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
 **Created in `world/` so far:** `game.js`, `constants.js`, `assets.js`,
-`scenes/`, `entities/` and `maps/`. `systems/` is still planned and listed in
+`farm.js`, `scenes/`, `entities/` and `maps/`. `systems/` is still planned and listed in
 [`../architecture/frontend.md`](../architecture/frontend.md#module-responsibilities).
 
 **Interior rooms use the same data format as maps** (ADR-0012), so they are stored

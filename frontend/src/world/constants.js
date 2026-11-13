@@ -13,6 +13,11 @@ export const TILE_SIZE = 16
 export const VIEW_WIDTH = 800
 export const VIEW_HEIGHT = 400
 
-// Shared default ground frame (plain grass in tiny-town.png). Maps may override
-// it with their own `groundTile` entry.
-export const GROUND_TILE_INDEX = 0
+// Shared default ground frame: plain grass in the Sunnyside 16px tileset
+// (row 1, column 1 of 64). Maps may override it with their own `groundTile`.
+export const GROUND_TILE_INDEX = 65
+
+// Grass frames used to break up a flat field: plain tiles from row 1 and
+// lightly decorated tiles from row 2 of the supplied tileset. Only applied when
+// a map uses the default grass; any other `groundTile` stays uniform.
+export const GROUND_TILE_VARIANTS = [65, 65, 65, 65, 65, 65, 65, 65, 66, 129, 130]

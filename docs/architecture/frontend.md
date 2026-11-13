@@ -113,7 +113,8 @@ An entity owns its sprite and its own behavior:
 - An entity must not decide *who* the player is talking to. Interaction
   *resolution* (which dwelling is active) belongs to a system, so the rule can
   change in one place.
-- Placeholder textures are generated in code until real art exists (ADR-0007).
+- Art comes from the two supplied packs (ADR-0019); entities reference texture
+  keys declared in `world/assets.js` and never load files themselves.
 
 ---
 

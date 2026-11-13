@@ -29,3 +29,9 @@ coverage
 
 # freebuff
 .freebuff/
+
+# Original asset packs. Kept on disk as the design source; not redistributed,
+# and the Sprout Lands licence forbids redistributing the pack itself. Only the
+# files copied into frontend/public/assets/ are part of the project.
+Sunnyside_World_ASSET_PACK_V2.1/
+Sprout Lands - Sprites - Basic pack/

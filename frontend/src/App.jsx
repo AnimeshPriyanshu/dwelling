@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createGame } from './world/game'
 import { EventType, requestMapSwitch, subscribe } from './bridge'
 import { getDefaultMap, listMaps } from './world/maps'
+import { AVATAR_URLS } from './world/assets'
 
 const RESIDENT_MESSAGES = {
   'contact-elowen': [
@@ -39,6 +40,18 @@ const RESIDENT_MESSAGES = {
 const DEFAULT_MESSAGES = [
   { id: 1, sender: 'inbound', text: 'Welcome to our dwelling! Make yourself at home.', time: '10:00 AM' },
 ]
+
+// Contact portraits composited from the supplied Sunnyside character pack.
+// Paths live in `world/assets.js`; this map only picks the portrait per contact.
+const CONTACT_AVATARS = {
+  'contact-elowen': AVATAR_URLS.curlyhair,
+  'contact-rowan': AVATAR_URLS.longhair,
+  'contact-kael': AVATAR_URLS.mophair,
+  'contact-lyra': AVATAR_URLS.bowlhair,
+  'contact-sable': AVATAR_URLS.shorthair,
+  'contact-tomas': AVATAR_URLS.spikeyhair,
+}
+const DEFAULT_AVATAR = AVATAR_URLS.base
 
 const App = () => {
   const worldRef = useRef(null)
@@ -162,9 +175,17 @@ const App = () => {
       <aside className={`chat-drawer ${isChatOpen ? 'open' : ''}`} aria-hidden={!isChatOpen}>
         <div className="drawer-header">
           <div className="drawer-title-group">
-            <h2>{activeContact.name}</h2>
-            <div className="contact-sub">
-              Resident: {activeContact.contact} ({activeContact.role || 'Resident'})
+            <img
+              className="contact-avatar"
+              src={CONTACT_AVATARS[activeContact.contactId] || DEFAULT_AVATAR}
+              alt=""
+              aria-hidden="true"
+            />
+            <div className="drawer-heading">
+              <h2>{activeContact.name}</h2>
+              <div className="contact-sub">
+                Resident: {activeContact.contact} ({activeContact.role || 'Resident'})
+              </div>
             </div>
           </div>
           <button

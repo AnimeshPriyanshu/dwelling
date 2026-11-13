@@ -2,18 +2,15 @@ import Phaser from 'phaser'
 import { TEXTURES } from '../assets'
 
 /**
- * Direction-to-idle-frame mapping for the 4-direction spritesheet.
- * Spritesheet layout: 4 columns × 3 rows (16×24 px per frame).
- * Column 0: Down (frames 0, 4, 8)
- * Column 1: Left (frames 1, 5, 9)
- * Column 2: Right (frames 2, 6, 10)
- * Column 3: Up (frames 3, 7, 11)
+ * Direction-to-idle-frame mapping for the Sprout Lands player sheet.
+ * Layout: 4 columns × 4 rows of 48×48 frames, row-major. Each row is a facing
+ * direction (down, up, right, left), so the idle frame is the row's first frame.
  */
 const IDLE_FRAMES = {
   down: 0,
-  left: 1,
-  right: 2,
-  up: 3,
+  up: 4,
+  right: 8,
+  left: 12,
 }
 
 /**
@@ -32,12 +29,13 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this)
     scene.physics.add.existing(this)
 
-    // Render above ground and obstacle bases
-    this.setDepth(10)
+    // Depth is sorted against world objects by the scene from the feet up.
+    this.setDepth(y)
 
-    // Explicit 3/4-tilt collision body: bottom portion for feet/ground contact
-    this.body.setSize(12, 12)
-    this.body.setOffset(2, 12)
+    // Explicit 3/4-tilt collision body: feet only, so the character can walk
+    // behind the top of a roof while still standing on the ground.
+    this.body.setSize(12, 8)
+    this.body.setOffset(18, 36)
     this.setCollideWorldBounds(true)
 
     // Movement speeds in pixels per second

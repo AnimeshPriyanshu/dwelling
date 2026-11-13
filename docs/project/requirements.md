@@ -105,12 +105,12 @@ requirements stay `Planned` until their milestone lands._
 | NFR-006 | Initial world load is under ~3 seconds on a local development machine. | Planned |
 | NFR-007 | The latest stable Chrome, Firefox, and Safari are supported. | Planned |
 | NFR-008 | The layout remains usable down to 320px viewport width. | Planned |
-| NFR-009 | All raster assets are PNG or WebP and individually kept small (target ≤ 512 KB). | Planned |
+| NFR-009 | All raster assets are PNG or WebP and individually kept small (target ≤ 512 KB). | Done |
 | NFR-010 | DOM UI is reachable and operable by keyboard, with visible focus states. | Planned |
 | NFR-011 | No secret, credential, or environment-specific value is committed to source control. | Planned |
 | NFR-012 | Module boundaries are respected: transport code does not contain persistence logic, and vice versa. | Planned |
 | NFR-013 | Documentation is updated as part of each completed milestone. | Planned |
-| NFR-014 | Every third-party asset's pack, author, license and source URL is recorded in `frontend/public/assets/CREDITS.md`, and its license permits use and redistribution. | Planned |
+| NFR-014 | Every third-party asset's pack, author, license and source URL is recorded in `frontend/public/assets/CREDITS.md`, and its license permits use and redistribution. | In progress |
 | NFR-015 | The app always starts in a working, demonstrable state — the frontend phase is graded partly on a live demonstration and a written report. | Planned |
 
 ---
@@ -126,3 +126,12 @@ requirements stay `Planned` until their milestone lands._
 - Requirements added during the 2026-10-17 requirements session are FR-030 to
   FR-033 and NFR-014 to NFR-015; FR-026 was narrowed from "shared gathering
   location" to scenery-only for this phase.
+
+> **NFR-014 note (2026-11-12):** all files used at runtime are recorded in
+> `frontend/public/assets/CREDITS.md` with pack, author, licence and URL. The
+> Sunnyside World licence permits use and redistribution. The **Sprout Lands**
+> pack is non-commercial and forbids redistributing the pack itself, so the
+> requirement is only partly met: the player sheet and fences may ship inside
+> this non-commercial project with the required credit, but the repository must
+> not be published as a reusable asset source. Largest shipped file is the
+> 134 KB Sunnyside tileset (NFR-009 met).

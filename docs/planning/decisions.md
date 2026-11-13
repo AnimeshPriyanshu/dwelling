@@ -31,17 +31,18 @@ based on ADR (Architecture Decision Record).
 | [ADR-0004](#adr-0004--postgresql-with-prisma-for-persistence) | PostgreSQL with Prisma for persistence | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0005](#adr-0005--html-ui-around-the-canvas-rather-than-in-canvas) | HTML UI around the canvas rather than in-canvas | Accepted | 2026-10-17 |
 | [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Accepted | 2026-10-17 |
-| [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Accepted | 2026-10-17 |
+| [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0008](#adr-0008--documentation-first-planning-system) | Documentation-first planning system | Accepted | 2026-10-17 |
 | [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Accepted | 2026-10-17 |
 | [ADR-0010](#adr-0010--16-bit-pixel-art-top-down-with-a-slight-34-tilt-cozy-palette) | 16-bit pixel art, top-down with a slight 3/4 tilt, cozy palette | Accepted | 2026-10-17 |
-| [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Accepted | 2026-10-17 |
+| [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0012](#adr-0012--interiors-as-one-shared-room-template-behind-a-door-trigger) | Interiors as one shared room template behind a door trigger | Accepted | 2026-10-17 |
 | [ADR-0013](#adr-0013--chat-is-a-docked-sidebar-with-explicitly-labelled-mock-data) | Chat is a docked sidebar with explicitly labelled mock data | Accepted | 2026-10-17 |
 | [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted | 2026-10-17 |
 | [ADR-0016](#adr-0016--use-react-for-ui-components-and-application-shell) | Use React for UI components and application shell | Accepted | 2026-10-17 |
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
 | [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
+| [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
 
 ---
 
@@ -250,7 +251,7 @@ phase.
 
 ## ADR-0007 — Placeholder art generated in code until assets exist
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0019
 **Date:** 2026-10-17
 
 ### Context
@@ -398,7 +399,7 @@ tones. Pixel art is authored on a 16×16 tile grid with buildings at
 
 ## ADR-0011 — CC0 packs plus code-authored art (no image generator available)
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0019
 **Date:** 2026-10-17
 
 ### Context
@@ -743,6 +744,74 @@ colliders.
 [`design/maps.md`](../design/maps.md),
 [`architecture/frontend.md`](../architecture/frontend.md),
 [`milestones.md`](milestones.md) (M6), FR-017–FR-021.
+
+---
+
+## ADR-0019 — Use the supplied Sunnyside World and Sprout Lands packs as primary art
+
+**Status:** Accepted
+**Date:** 2026-11-12
+
+### Context
+Two complete, professionally drawn asset packs were supplied in the repository
+root: **Sunnyside World V2.1** by Daniel Diggle and the **Sprout Lands Basic
+pack** by Cup Nooble. Until now the world used CC0 Kenney placeholder sheets
+(ADR-0007, ADR-0011), which were functional but not the art the project is meant
+to ship with. The brief requires the supplied assets to be used, not replaced,
+recreated or left as coloured-rectangle placeholders.
+
+An audit found that Sunnyside supplies a 1024×1024 16 px world tileset, modular
+buildings, five complete 32×56 cottages, trees, rocks, furniture, UI and layered
+human characters — but its humans are **single-facing**, so they cannot drive a
+four-direction player. Sprout Lands supplies a verified 4-direction 48×48
+character sheet, plus fences, house parts and furniture.
+
+### Decision
+Use the supplied packs as the primary visual source:
+
+1. **Sunnyside World** builds the world — grass ground (tileset frame 65),
+   cottage dwellings (processed crops), trees and rocks (processed crops), UI
+   portraits.
+2. **Sprout Lands** supplies the player (`Basic Charakter Spritesheet.png`, 48×48
+   frames, rows down/up/right/left) and fence tiles.
+3. Assets are copied verbatim into `frontend/public/assets/`; crops are separate
+   processed files and the pack folders are never modified.
+4. Loading stays centralised in `world/assets.js`; animations are registered once
+   in `PreloadScene`.
+5. Map data references texture keys (`sprite`) rather than tileset frame indices
+   for dwellings and obstacles.
+6. The Kenney sheets stay on disk but are removed from the manifest.
+
+### Alternatives considered
+- **Stay on Kenney placeholders** — ignores the supplied assets and the brief.
+- **Use Sunnyside humans for the player** — single facing fails FR-009.
+- **Composite Sunnyside bodies + hair for the player** — still single-facing.
+- **Assemble houses from modular roof/wall tiles** — the sheets are exploded
+  kits; assembling them reliably is far slower than cropping the complete
+  cottages the artist already arranged.
+- **Generate new art** — explicitly forbidden while suitable supplied art exists.
+
+### Consequences
+- ✅ Every runtime visual now comes from a supplied pack; no generic placeholder
+  rectangles remain.
+- ✅ Adding a dwelling or prop is a data change plus a texture key.
+- ✅ Sprite grids were inspected rather than assumed (48×48 player, 16×16 world,
+  32×56 cottages).
+- ⚠️ **Licence:** Sprout Lands is non-commercial and forbids redistributing the
+  pack itself; credit is required and recorded in
+  `frontend/public/assets/CREDITS.md`. The project must stay non-commercial, and
+  publishing the repository as an asset source is not permitted.
+- ⚠️ Two packs are mixed: palettes are close but not identical. Sunnyside owns
+  the world, Sprout Lands only the player and fences, which limits the clash.
+- ⚠️ Cottages are 32×56 against a 16 px grid, so a dwelling is a sprite, not a
+  tile rectangle; collision bodies are therefore explicit, not tile-derived.
+- ⚠️ The 32 px Sunnyside forest tileset and all audio remain unused.
+
+### Related
+[`design/asset-inventory.md`](../design/asset-inventory.md),
+[`design/assets.md`](../design/assets.md),
+[`../../frontend/public/assets/CREDITS.md`](../../frontend/public/assets/CREDITS.md),
+FR-002, FR-009, FR-010, NFR-014.
 
 ---
 

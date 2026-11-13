@@ -146,8 +146,8 @@ the existing code does this in `app.js` (`(_request, response)`).
   - Refuse to start on invalid required configuration rather than defaulting
     silently ([`../architecture/security-and-caching.md`](../architecture/security-and-caching.md)).
 - **Frontend:**
-  - A failed asset load must not blank the world — degrade to placeholder visuals
-    (ADR-0007).
+  - A failed asset load must not blank the world — degrade to fallback visuals
+    (ADR-0019).
   - Do not let a canvas error break the surrounding HTML UI, or vice versa.
 - **Never** add a `try`/`catch` whose only effect is to hide a failure. If a failure
   is genuinely safe to ignore, say so in a comment.

@@ -1,15 +1,17 @@
-import Phaser from 'phaser'
 import { TEXTURES } from '../assets'
 
 /**
  * Dwelling entity representing an approachable, interactive house in the world.
  *
  * Responsibilities:
- * - Visuals: Renders the 2x2 house tile structure from tiny-town.png.
- * - Solid Physics: Registers a static collision body preventing player penetration.
- * - Interaction Zone: Detects player proximity within an interaction radius.
- * - Prompt: Displays a clear visual tooltip [E] naming the resident/dwelling.
- * - Click & Key Interaction: Emits interaction events with unique contactId.
+ * - Visuals: one cottage sprite from the supplied Sunnyside tileset crop.
+ * - Solid physics: registers a static collision body at the building's base.
+ * - Interaction zone: detects player proximity within an interaction radius.
+ * - Prompt: displays a clear visual tooltip [E] naming the resident/dwelling.
+ * - Click & key interaction: emits interaction events with the contact id.
+ *
+ * Map data provides the sprite key and position; nothing about a specific
+ * dwelling is hard-coded here.
  */
 export default class Dwelling {
   /**
@@ -20,10 +22,11 @@ export default class Dwelling {
    * @param {string} config.name Display name of the dwelling
    * @param {string} config.contact Name of the resident contact
    * @param {string} [config.role] Role or profession of resident
-   * @param {number} config.x World X coordinate (center of house)
-   * @param {number} config.y World Y coordinate (center of house)
-   * @param {number[]} config.tileFrames 4 tile frame indices [topLeft, topRight, bottomLeft, bottomRight]
-   * @param {number} [config.radius=48] Proximity interaction radius in pixels
+   * @param {number} config.x World X coordinate (center of the building)
+   * @param {number} config.y World Y coordinate (center of the building)
+   * @param {string} config.sprite Texture key of the cottage image
+   * @param {number} [config.radius=64] Proximity interaction radius in pixels
+   * @param {number} [config.bodyHeight=14] Solid collision height at the base
    */
   constructor(scene, config) {
     this.scene = scene
@@ -34,59 +37,50 @@ export default class Dwelling {
     this.role = config.role || 'Resident'
     this.x = config.x
     this.y = config.y
-    this.tileFrames = config.tileFrames
-    this.radius = config.radius || 48
+    this.radius = config.radius || 64
 
     this.isPromptVisible = false
 
-    // 1. Render the 4 house tiles (2x2 grid of 16x16 tiles = 32x32 house)
-    this.sprites = []
-    const offsets = [
-      { dx: -8, dy: -8 }, // Top-Left
-      { dx: 8, dy: -8 },  // Top-Right
-      { dx: -8, dy: 8 },  // Bottom-Left
-      { dx: 8, dy: 8 },   // Bottom-Right
-    ]
+    // 1. The building itself, drawn at native pixel size.
+    this.sprite = scene.add.image(this.x, this.y, config.sprite)
+    this.width = this.sprite.width
+    this.height = this.sprite.height
+    this.baseY = this.y + this.height / 2
+    this.sprite.setDepth(this.baseY)
 
-    for (let i = 0; i < 4; i++) {
-      const frame = this.tileFrames[i]
-      const sprite = scene.add.sprite(
-        this.x + offsets[i].dx,
-        this.y + offsets[i].dy,
-        TEXTURES.tinyTown,
-        frame
-      )
-      sprite.setDepth(6)
-      this.sprites.push(sprite)
-    }
-
-    // 2. Add solid static collision body in the scene's obstacle group
+    // 2. Solid static body across the lower part of the building. A static
+    // body keeps the group's single collider valid across map switches.
     if (scene.obstacles) {
-      this.collider = scene.obstacles.create(this.x, this.y + 4, TEXTURES.tinyTown, 0)
+      const bodyHeight = config.bodyHeight ?? 14
+      const bodyWidth = Math.max(12, Math.round(this.width * 0.72))
+      this.collider = scene.obstacles.create(
+        this.x,
+        this.baseY - bodyHeight / 2,
+        TEXTURES.worldTiles,
+        0
+      )
       this.collider.setVisible(false)
-      // Refresh first: a static body's refreshBody() restores the 16x16 frame
-      // size, which would discard an explicit body set beforehand. With the
-      // default centre=true, setSize() then centres the 30x24 body on the house.
       this.collider.refreshBody()
-      this.collider.body.setSize(30, 24)
+      this.collider.body.setSize(bodyWidth, bodyHeight)
     }
 
-    // 3. Mouse Click Interactive Zone over the house
+    // 3. Mouse click zone over the building.
     this.clickZone = scene.add
-      .zone(this.x, this.y, 36, 36)
+      .zone(this.x, this.y, this.width + 8, this.height)
       .setInteractive({ useHandCursor: true })
 
     this.clickZone.on('pointerdown', () => {
       this.interact()
     })
 
-    // 4. Floating Visual Prompt Badge ([E] Talk to Resident)
+    // 4. Floating visual prompt badge ([E] Talk to Resident).
     this.createPromptBadge()
   }
 
   createPromptBadge() {
-    this.promptContainer = this.scene.add.container(this.x, this.y - 30)
-    this.promptContainer.setDepth(25)
+    const promptY = this.y - this.height / 2 - 16
+    this.promptContainer = this.scene.add.container(this.x, promptY)
+    this.promptContainer.setDepth(this.baseY + 60)
     this.promptContainer.setVisible(false)
 
     const label = `[E] ${this.contact}`
@@ -138,7 +132,7 @@ export default class Dwelling {
   }
 
   destroy() {
-    this.sprites.forEach((s) => s.destroy())
+    if (this.sprite) this.sprite.destroy()
     if (this.collider) this.collider.destroy()
     if (this.clickZone) this.clickZone.destroy()
     if (this.promptContainer) this.promptContainer.destroy()
