@@ -539,6 +539,46 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-13 — Phase 2, PR-10: one-to-one-only decisions
+
+**Status:** complete (documentation only; not committed)
+**Focus task(s):** PR-10
+
+### Completed
+- Approved the one-to-one-only rule as **ADR-0020**, superseding the
+  group-in-Altar allowance in ADR-0015. ADR-0015 is kept and marked
+  `Superseded by ADR-0020` rather than rewritten.
+- Recorded contact modeling as **ADR-0021**: contacts are mutual, added
+  immediately, with no request/accept state, and required before a conversation
+  exists.
+- Aligned the documents that referenced the old rule: `architecture/database.md`
+  (canonical pair, contact model, Altar removal, open questions),
+  `architecture/realtime.md` (group transport removed),
+  `architecture/security-and-caching.md` (participant checks),
+  `api/README.md`, `project/requirements.md` (FR-027 withdrawn, FR-034–FR-036
+  added), `project/scope.md`, `project/glossary.md`, `project/vision.md`,
+  `planning/roadmap.md`, `planning/milestones.md`, `planning/task-board.md`,
+  `design/game-world.md`, `design/ui-ux.md` and `design/maps.md`.
+- No application code, Prisma schema, migration, or dependency changed.
+
+### Problems encountered
+- ADR-0015 **explicitly allowed group conversations in Altars**, which conflicts
+  with the one-to-one-only requirement. Reported and resolved by supersession,
+  not by editing the accepted record.
+
+### Decisions made
+- **ADR-0020** — one-to-one conversations only; no group conversations or
+  Altars.
+- **ADR-0021** — contacts are mutual-add pairs with no request/accept flow.
+
+### Next day's priority
+1. PR-11 — API contract for auth, contacts, conversations and messages.
+2. PR-15/PR-16 — five-model schema and the first migration.
+
+**Tasks moved to Done:** PR-10
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:

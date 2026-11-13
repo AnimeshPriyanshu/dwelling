@@ -74,7 +74,7 @@ The world contains:
 * Paths
 * Different maps
 * Interaction points
-* Shared gathering areas
+* Landmarks (Altars), rendered as scenery
 
 The 2D environment provides the visual layer through which users interact with the communication system.
 
@@ -107,23 +107,11 @@ This allows the virtual world to organize a large number of contacts across diff
 
 ## Altars
 
-**Altars** are shared gathering locations within the world.
+**Altars** are landmarks within the world, placed by map data like any other scenery.
 
-Unlike individual dwellings, which represent individual contacts, an Altar is a common space where multiple people can gather.
+Unlike individual dwellings, which represent individual contacts, an Altar is a common landmark rather than a person's home.
 
-Conceptually:
-
-```text
-             🧍
-              \
-               \
-        🧍 ── ⛩ ── 🧍
-               /
-              /
-             🧍
-```
-
-An Altar can serve as a shared location for group communication, allowing multiple users to meet in the same virtual space.
+Altars are **scenery only**. Dwelling has **no group communication and no group conversations**: every conversation is one-to-one, between exactly two mutual contacts (ADR-0020 and ADR-0021 in [`docs/planning/decisions.md`](docs/planning/decisions.md)). An Altar must therefore not offer an interaction it cannot perform.
 
 ---
 
@@ -169,7 +157,7 @@ Imagine Alex wants to talk to Sarah.
 7. Sarah's conversation opens.
 8. Alex can communicate with Sarah.
 
-Similarly, if Alex wants to interact with multiple people, Alex can visit an **Altar** where other users can gather.
+Dwelling is one-to-one only: there is no group chat, and an **Altar** is scenery rather than a place to meet several people at once.
 
 ---
 

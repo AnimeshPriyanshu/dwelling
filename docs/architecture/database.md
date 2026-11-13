@@ -37,11 +37,15 @@ The current schema defines seven models:
 | --- | --- | --- |
 | `User` | `id`, `displayName`, `createdAt` | A person using Dwelling |
 | `Dwelling` | `id`, `title` (default `"Home"`), `ownerId` (unique) | A user's place in the world |
-| `Conversation` | `id`, `createdAt` | A conversation, one-to-one or group |
-| `ConversationMember` | `conversationId`, `userId`, `joinedAt` | Membership join table |
+| `Conversation` | `id`, `createdAt` | A private conversation between exactly two contacts (ADR-0020) |
+| `ConversationMember` | `conversationId`, `userId`, `joinedAt` | Membership join table — **not the target** (ADR-0020) |
 | `Message` | `id`, `content`, `createdAt`, `conversationId`, `senderId` | A single message |
-| `Altar` | `id`, `name` | A shared gathering location |
-| `AltarMembership` | `altarId`, `userId`, `joinedAt` | Membership join table |
+| `Altar` | `id`, `name` | Out of scope — scenery only, removed in the target model (ADR-0020) |
+| `AltarMembership` | `altarId`, `userId`, `joinedAt` | Out of scope — removed in the target model (ADR-0020) |
+
+**Target model set:** five models — `User`, `Dwelling`, `Contact`, `Conversation`,
+`Message` (ADR-0020, ADR-0021). The sketch still contains seven until the schema
+revision; note that `Contact` does not exist yet.
 
 Notable design points already expressed in the schema:
 
@@ -49,7 +53,9 @@ Notable design points already expressed in the schema:
   **optional** — encoding "one dwelling per contact" (matching the glossary and
   [`../design/game-world.md`](../design/game-world.md)).
 - `ConversationMember` and `AltarMembership` use **composite primary keys**
-  (`@@id([conversationId, userId])`), so duplicates are impossible.
+  (`@@id([conversationId, userId])`), so duplicates are impossible. Both models
+  are **not the target**: a conversation is a canonical pair and Altars are
+  removed (ADR-0020).
 - `Message` has `@@index([conversationId, createdAt])`, which matches the
   "load a conversation in time order" read pattern.
 - Deletes **cascade** from `User`, `Conversation`, and `Altar`.
@@ -65,13 +71,19 @@ Described independently of the sketch, because the schema will change:
 A person. Has a display name and an identity used to route conversations.
 
 ### Contact
-A **relationship, not a stored entity** in the current sketch: a contact is
-another user as seen from the perspective of the current user. The schema has no
-friendship/contacts table yet, so "my contacts" is not modeled.
+A **mutual relationship between two users**, stored as data (ADR-0021). A contact
+is symmetric: if A has B as a contact then B has A as a contact. Adding is
+immediate — there is no pending request or accept state — and adding yourself is
+rejected. "My contacts" is a query over that relationship, not a view of every
+user.
 
-**Undecided:** whether contacts are bidirectional friendships, one-way follows, or
-simply "every other user". This is the biggest open question in the data model
-and it directly affects which dwellings appear in a player's world.
+**Decided, not yet in the sketch:** the current schema has no contacts table. A
+`Contact` model is part of the target five-model set and arrives with the schema
+revision; the exact row shape (one canonical pair row versus mirrored rows) is a
+schema detail.
+
+Contacts are what make a conversation legal: creating one requires **both**
+participants to be mutual contacts (ADR-0020, ADR-0021).
 
 ### Dwelling
 A user's place in the world: a title plus the owning user. A dwelling's world
@@ -82,13 +94,18 @@ contact id, and the contact resolves to the user and therefore to their dwelling
 or frontend data (per build)? This decides whether moving a house is a data change
 or a deploy.
 
-### Conversation and ConversationMember
-A conversation plus its participants. Membership is explicit, so group
-conversations (Altars) and direct conversations use the same shape — the
-distinction is currently **implicit**, based on member count.
+### Conversation
+A **private conversation between exactly two contacts** (ADR-0020). Group
+conversations are not supported, so there is no conversation type to
+distinguish: a single kind of conversation exists and a `type` field is **not
+needed**.
 
-**Undecided:** whether to distinguish conversation types explicitly with a
-`type` field. Adding it later is easy; guessing wrong now is not.
+**Decided, not yet in the sketch:** the target model stores the pair directly as
+`userOneId` and `userTwoId`, canonically ordered (`userOneId` < `userTwoId`) so a
+pair always resolves to the same row, with a uniqueness constraint on the pair,
+an index on `userTwoId`, and a database check that the two ids differ. The current
+sketch's `ConversationMember` — arbitrary membership — is **not** the target and
+is removed with the schema revision.
 
 ### Message
 Content, author, and the conversation it belongs to. Timestamp plus index
@@ -98,12 +115,10 @@ supports ordered reads.
 edit/delete semantics, and read receipts. None are designed.
 
 ### Altar and AltarMembership
-A named shared space with members. Conceptually distinct from a dwelling because
-**many users occupy one Altar at a time**.
-
-**Undecided:** whether an Altar references a conversation directly, or whether
-the conversation is derived from its membership, and whether Altars always have
-a conversation at all.
+**Out of scope** (ADR-0020). An Altar is scenery in the world — a visible landmark
+positioned by map data — with no interaction, no membership and no conversation.
+The sketch's `Altar` and `AltarMembership` models are removed with the schema
+revision and are not part of the target data model.
 
 ### Map
 **Not in the schema.** Maps are currently frontend data
@@ -116,19 +131,19 @@ is **undecided**.
 
 ```text
 User ────1:1──▶ Dwelling            (Dwelling.ownerId is unique; a user may have none)
-User ────N:M──▶ Conversation         (via ConversationMember)
+User ────N:M──▶ User                 (as contacts: mutual, one relationship per pair)
+User ────1:N──▶ Conversation         (as userOne or userTwo — exactly two participants)
 User ────1:N──▶ Message              (as sender)
 Conversation ─1:N─▶ Message
-User ────N:M──▶ Altar                (via AltarMembership)
 ```
 
 - **No relationship exists between a contact and a map.** Map placement is derived
   from the contact's name at the frontend layer
   ([`../design/maps.md`](../design/maps.md)).
 - **No relationship exists between a dwelling and a conversation.** Opening a
-  conversation from a dwelling means resolving the contact first. **Undecided:**
-  whether direct conversations are created lazily on first interaction, and how a
-  canonical direct conversation between two users is found.
+  conversation from a dwelling means resolving the contact first. **Decided:** the
+  canonical ordered pair identifies the conversation, so it is resolved by a pair
+  lookup and created on first use (ADR-0020).
 
 ---
 
@@ -147,12 +162,13 @@ User ────N:M──▶ Altar                (via AltarMembership)
 
 | Question | Status |
 | --- | --- |
-| How contacts are modeled (friends vs. all users) | Undecided |
+| How contacts are modeled (friends vs. all users) | Resolved: mutual add, no request/accept state (ADR-0021) |
 | Whether dwelling positions are stored server-side | Undecided |
-| Whether conversations have an explicit type | Undecided |
-| How a direct conversation is resolved between two users | Undecided |
+| Whether conversations have an explicit type | Resolved: not needed — one-to-one only (ADR-0020) |
+| How a direct conversation is resolved between two users | Resolved: canonical ordered pair (ADR-0020) |
+| What happens to a conversation when a contact is removed | Undecided — decide before implementing removal |
 | Message content format and limits | Undecided |
-| How Altars relate to conversations | Undecided |
+| How Altars relate to conversations | Out of scope (ADR-0020) |
 | Whether maps become server data | Undecided |
 | When the first migration is generated | Deferred — messaging phase |
 
@@ -164,6 +180,8 @@ User ────N:M──▶ Altar                (via AltarMembership)
 3. Generate a migration in the same change — an unmigrated schema is a lie.
 4. Record a hard-to-reverse choice (like contact modeling) as an ADR in
    [`../planning/decisions.md`](../planning/decisions.md).
+5. **Do not introduce a group or Altar model.** Conversations have exactly two
+   participants and Altars are scenery only (ADR-0020).
 
 ## Related
 

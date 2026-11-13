@@ -114,7 +114,7 @@ Three things must be distinguishable or the interaction is ambiguous (FR-013):
 - **Proposed:** the active target highlights; the door and the house highlight
   differently, since they do different things.
 - **Confirmed:** the Altar shows **no** prompt — it is scenery, and prompting would
-  falsely imply a working group space.
+  falsely imply a group interaction that is not supported (ADR-0020).
 
 ### Overlapping targets
 
@@ -173,7 +173,7 @@ screens. Touch controls are out of scope (DW-B07).
 - Final palette, spacing and typography (DW-058).
 - Onboarding / first-run experience.
 - Settings, profile or account screens.
-- Altar interfaces (deferred, FR-027).
+- Altar interfaces — not supported: the Altar is scenery (ADR-0020).
 - Contact list, notifications, toasts (out of scope this phase).
 
 ## Related

@@ -12,8 +12,8 @@ interact with it.
 
 The world is split into several **maps**, organized by the first letter of a
 contact's name, so that a large number of contacts can be spread across
-recognizable areas instead of one crowded space. **Altars** are shared gathering
-places where several people can meet in the same location.
+recognizable areas instead of one crowded space. **Altars** are landmarks in that
+world; conversations themselves are always one-to-one (ADR-0020).
 
 ## The problem
 
@@ -66,9 +66,9 @@ familiar messaging experience, not a replacement for it.
 - **Dwelling** — one contact's place in the world. Walking to it and interacting
   is the entry point into that contact's conversation. Conceptually *one
   dwelling per contact*.
-- **Altar** — a shared place that many contacts can occupy at once. Intended as
-  the entry point for **group** interaction, complementing the one-to-one
-  dwelling.
+- **Altar** — a landmark in the world, rendered from map data. Altars are
+  **scenery only**: Dwelling is one-to-one, so there is no group interaction
+  (ADR-0020).
 - **Chat** — the actual communication. Space determines *who* you are talking to;
   the chat panel handles the conversation itself.
 

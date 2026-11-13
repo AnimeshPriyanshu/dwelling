@@ -39,6 +39,7 @@ forwards it to the backend, so no absolute URL or CORS setup is needed
 | 🟡 **Partial** | Exists, but not usable for its intended purpose. |
 | ▢ **Pending** | Planned, not implemented. The shape shown is a proposal. |
 | ⏸ **Deferred** | Out of the current phase. |
+| ⛔ **Not supported** | Ruled out by a decision; not planned at all. |
 
 ---
 
@@ -84,11 +85,13 @@ curl -i http://localhost:3000/api/health
 The authenticated user. Depends on authentication, which does not exist.
 
 ### `GET /api/contacts` ▢ Pending
-The current user's contacts. **Blocked on a product decision:** how contacts are
-modeled is undecided ([`../architecture/database.md`](../architecture/database.md)).
+The current user's contacts. Contact modeling is decided: a contact is a mutual
+relationship added immediately, with no request/accept state (ADR-0021 in
+[`../planning/decisions.md`](../planning/decisions.md)).
 
 ### `GET /api/conversations` ▢ Pending
-The user's conversations.
+The user's conversations. **One-to-one only:** every conversation has exactly two
+participants (ADR-0020).
 
 ### `GET /api/conversations/:id/messages` ▢ Pending
 Message history. Requirements to design: pagination, ordering, and a membership
@@ -106,8 +109,9 @@ the server at all, or live in frontend map data
 ### `GET /api/maps` ▢ Pending
 Map definitions. **Undecided:** maps may never become server data.
 
-### `GET /api/altars` ⏸ Deferred
-Altars are out of scope (FR-026, FR-027).
+### `GET /api/altars` ⛔ Not supported
+Altars are scenery only and are not a conversation venue (ADR-0020); FR-027 is
+withdrawn.
 
 ---
 
@@ -127,7 +131,7 @@ are in [`../architecture/realtime.md`](../architecture/realtime.md).
 | _Messaging events_ | both | ▢ Pending | Not named or designed yet — see [`../architecture/realtime.md`](../architecture/realtime.md). |
 | _Presence events_ | server → client | ⏸ Deferred | FR-029. |
 | _Movement events_ | both | ⏸ Deferred | Authority model is undecided. |
-| _Altar events_ | both | ⏸ Deferred | FR-026, FR-027. |
+| _Altar events_ | both | ⛔ Not supported | Group behavior is out of scope (ADR-0020). |
 
 **Do not invent event names in code before they are designed and documented
 here.** An undocumented event is an integration bug waiting to happen.

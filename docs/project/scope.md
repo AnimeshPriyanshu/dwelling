@@ -29,6 +29,8 @@ interior, a visible Altar, and a working conversation sidebar — using a real
 - **A shared interior room** containing a fireplace, a kitchen area and a bed,
   with correct return to the door that was entered (FR-030, FR-031).
 - **Two alphabet maps** with a selector or portal, plus HUD identification.
+- **One-to-one conversations only** — exactly two participants between mutual
+  contacts; group conversations are not part of the product (ADR-0020).
 - A **docked conversation sidebar** replacing the Conversations panel, opened by
   interaction, with **mock content visibly labelled as mock** (FR-032, FR-033).
 - The **Altar rendered as scenery**: visible, distinct, placed by map data, and
@@ -58,11 +60,14 @@ being extended. **No migrations have been generated.** The frontend does not tal
 to the backend or the database in this phase
 ([`../architecture/backend.md`](../architecture/backend.md)).
 
-### Altar interaction and group conversations
-The rule is decided — 1:1 conversations are private, and more than two people
-share a conversation only in an Altar group space (ADR-0015) — but it is **not
-built**. The Altar is scenery, and group conversation delivery depends on the
-realtime phase (FR-027, DW-B03).
+### Group conversations and Altar interaction
+**Not supported.** Conversations are one-to-one only: every conversation has
+exactly two participants, between mutual contacts, with no group chat and no group
+membership (ADR-0020, ADR-0021). The earlier allowance for group conversations at
+an Altar (ADR-0015) is withdrawn.
+
+The Altar stays **scenery** — visible, distinct and placed by map data, but never
+interactive (FR-026). FR-027 and DW-B03 are withdrawn with the group feature.
 
 ### Personalised interiors
 Every dwelling opens the **same shared room** this phase (ADR-0012). Distinct
