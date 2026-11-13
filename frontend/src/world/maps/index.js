@@ -5,10 +5,24 @@ import sU from './s-u'
 export { getMapWorldSize, validateMap } from './format'
 
 /**
- * The map the world starts on. Falling back to the first registered map keeps
- * boot working if the default entry is ever removed or fails validation.
+ * The map the world starts on. The default map owns its own id, so renaming it
+ * cannot leave a copied id string behind. Falling back to the first registered
+ * map keeps boot working if the default entry is ever removed or fails
+ * validation.
  */
-export const DEFAULT_MAP_ID = 'a-c'
+export const DEFAULT_MAP_ID = aC.id
+
+/**
+ * The HUD-facing view of a map: identity labels only, never mutable internals.
+ * One projection here keeps the map selector, the HUD and the `map:changed`
+ * payload from drifting apart.
+ *
+ * @param {import('./format').MapConfig} map
+ * @returns {{id: string, name: string, range: string}}
+ */
+export function summarizeMap(map) {
+  return { id: map.id, name: map.name, range: map.range }
+}
 
 /** @type {Map<string, import('./format').MapConfig>} */
 const registry = new Map()
@@ -71,7 +85,7 @@ export function getDefaultMap() {
  * @returns {{id: string, name: string, range: string}[]}
  */
 export function listMaps() {
-  return [...registry.values()].map(({ id, name, range }) => ({ id, name, range }))
+  return [...registry.values()].map(summarizeMap)
 }
 
 registerMap(aC)

@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventType, setChatOpen, subscribe, unsubscribeAll } from "./index";
+import {
+  EventType,
+  phaserEvents,
+  setChatOpen,
+  subscribe,
+  unsubscribeAll,
+} from "./index";
 
 describe("bridge", () => {
   afterEach(() => {
@@ -15,6 +21,15 @@ describe("bridge", () => {
 
     expect(handler).toHaveBeenNthCalledWith(1, { chatOpen: true });
     expect(handler).toHaveBeenNthCalledWith(2, { chatOpen: false });
+  });
+
+  it("carries the map summary published by the world", () => {
+    const summary = { id: "a-c", name: "Alder Creek", range: "A–C" };
+
+    expect(phaserEvents.mapChanged(summary)).toEqual({
+      type: EventType.MAP_CHANGED,
+      map: summary,
+    });
   });
 
   it("stops delivering chat visibility once unsubscribed", () => {

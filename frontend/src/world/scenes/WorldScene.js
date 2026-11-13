@@ -3,7 +3,7 @@ import { TILE_SIZE, GROUND_TILE_INDEX, GROUND_TILE_VARIANTS } from '../constants
 import { TEXTURES, PATH_TILE_FRAMES } from '../assets'
 import Player from '../entities/Player'
 import Dwelling from '../entities/Dwelling'
-import { getDefaultMap, getMap, getMapWorldSize } from '../maps'
+import { getDefaultMap, getMap, getMapWorldSize, summarizeMap } from '../maps'
 import { buildPathCells } from '../maps/terrain'
 import {
   buildFarmCells,
@@ -403,7 +403,8 @@ export default class WorldScene extends Phaser.Scene {
 
   publishMapChanged() {
     if (!this.map) return
-    phaserPublish('mapChanged', this.map)
+    // Identity labels only: React never receives the map's mutable data.
+    phaserPublish('mapChanged', summarizeMap(this.map))
   }
 
   /**
