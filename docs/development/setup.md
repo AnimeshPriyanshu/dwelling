@@ -13,7 +13,7 @@ where things live.
 | **Node.js** | **`>=20.19.0`** | `engines` in root `package.json` | Everything |
 | **npm** | A version bundled with Node 20.19+ | — (workspaces required) | Installing and running |
 | **PostgreSQL** | Any recent version | Root `README.md` local-development section | The database workspace only |
-| **Redis** | Optional | `.env.example` comment | **Not required** — the backend no-ops without `REDIS_URL` |
+| **Redis** | Optional | `backend/.env.example` comment | **Not required** — the backend no-ops without `REDIS_URL` |
 
 - The backend loads environment variables with `dotenv` from the **root** `.env`
   file (`backend/src/config/env.js` resolves `../../../.env` relative to itself).
@@ -37,21 +37,20 @@ install covers `frontend`, `backend`, `database`, and `shared` — do not run
 
 ## Configure
 
+Create the env file at the **repository root** from the tracked template:
+
 ```bash
-cp .env.example .env
-```
-
-Then set `DATABASE_URL` in `.env` for your local PostgreSQL instance. The template
-value is:
-
-```text
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwelling?schema=public
+cp backend/.env.example .env
 ```
 
 - `.env` is gitignored — **never commit it** (NFR-011).
-- `.env.example` documents the shape with placeholder values only.
-- Other keys: `PORT` (default `3000`), `CLIENT_ORIGIN` (default
-  `http://localhost:5173`), and optional `REDIS_URL`.
+- **`JWT_SECRET` is required.** `backend/src/server.js` calls `validateEnv()` on
+  boot and exits if it is missing. Generate one with `openssl rand -base64 32`
+  and never commit the real value.
+- `PORT` (default `3000`) and `CLIENT_ORIGIN` (default
+  `http://localhost:5173`).
+- `DATABASE_URL` is used by Prisma for database work. The template value is
+  `postgresql://postgres:postgres@localhost:5432/dwelling?schema=public`.
 - **Leave `REDIS_URL` unset** to run without Redis; `backend/src/cache/` no-ops.
 
 ## Database (optional for frontend work)
@@ -64,6 +63,9 @@ npm run db:migrate    # prisma migrate dev → creates/applies migrations
 - ⚠️ **No migrations have been generated yet.** There is no
   `database/prisma/migrations/` directory, so `db:migrate` would create the first
   one and requires a reachable PostgreSQL database.
+- ⚠️ The Prisma CLI does not read the root `.env` when run from the `database`
+  workspace. Export `DATABASE_URL` in your shell (or pass it inline) before
+  `db:migrate`; `db:generate` needs no database.
 - ⚠️ `db:generate` must succeed for `backend/src/db/prisma.js` to import
   `@prisma/client` at all.
 - **Neither command is needed to work on the frontend.** The frontend does not
@@ -116,6 +118,10 @@ npm start         # runs the backend from source (node src/server.js)
 | Build the frontend | `npm run build` |
 | Generate the Prisma client | `npm run db:generate` |
 | Create/apply a migration | `npm run db:migrate` |
+| Run frontend tests | `npm test --workspace=@dwelling/frontend` |
+| Run backend tests | `npm test --workspace=@dwelling/backend` |
+| Lint a workspace | `npm run lint --workspace=@dwelling/<workspace>` |
+| Check formatting | `npm run format:check --workspace=@dwelling/<workspace>` |
 | Run all workspace installs | `npm install` (root) |
 | Add a frontend dependency | `npm install <pkg> --workspace @dwelling/frontend` |
 | Add a backend dependency | `npm install <pkg> --workspace @dwelling/backend` |
@@ -134,8 +140,8 @@ package produces an install that works locally and breaks for everyone else.
 | Port already in use (`5173` or `3000`) | A previous run is still active | Stop it, or change `PORT` in `.env` (frontend port: `vite --port`) |
 | `prisma migrate dev` fails to connect | PostgreSQL not running, or wrong `DATABASE_URL` | Start PostgreSQL; verify the URL and database exist |
 | Redis connection errors | `REDIS_URL` set but no Redis running | **Unset `REDIS_URL`** — Redis is optional |
-| Canvas missing from the World panel | Expected today — no game is mounted yet | This is Milestone 1 (DW-002 … DW-006) |
-| Build fails on Vite | Dependency mismatch or stale install | Verified working on 2026-10-17 with `vite@8.3.1`. Check `npm ls vite`, then reinstall from the repo root with `npm install` |
+| Backend exits with `Missing required environment variable(s): JWT_SECRET` | No root `.env`, or the key is empty | `cp backend/.env.example .env` and set `JWT_SECRET` |
+| Build fails on Vite | Dependency mismatch or stale install | Verified working on 2026-11-13 with `vite@8.3.1`. Check `npm ls vite`, then reinstall from the repo root with `npm install` |
 
 ---
 
@@ -143,12 +149,12 @@ package produces an install that works locally and breaks for everyone else.
 
 Do **not** assume any of these exist:
 
-- **No test command.** No `test` script exists in any `package.json`, and no test
-  runner is installed ([`testing.md`](testing.md), ADR-0009).
-- **No lint/format command.** No ESLint or Prettier configuration exists.
-- **No CI, deployment, or hosting configuration.**
+- **No deployment or hosting configuration.** CI runs lint, format checks, tests,
+  and the build; it does not deploy.
+- **No TypeScript or type checking** — the code is plain JavaScript/JSX.
 - **No seed data or database fixtures.**
 - **No scripts in `scripts/`** — the folder contains only a README.
+- **No cross-workspace test suite** — each workspace tests its own code.
 
 ## Related
 

@@ -8,7 +8,7 @@ always the ten-day plan in [`milestones.md`](milestones.md).
 Stage 0  Scaffold                ✅ repository structure, tooling, schema placeholders
 Stage 1  Playable world          ▶ CURRENT — render, move, collide, interact   (Days 1–5)
 Stage 2  Maps and rooms          ▶ data-driven maps, second map, shared interior (Days 6, 8)
-Stage 3  Interface integration   ▶ canvas ↔ HTML, conversation sidebar        (Days 7, 9)
+Stage 3  Interface integration   ▶ canvas ↔ HTML, conversation drawer        (Days 7, 9)
 Stage 4  Realtime messaging      ▢ sockets, message delivery, history
 Stage 5  Presence & Altars       ▢ online status, shared gathering spaces
 Stage 6  Activities              ▢ farms, working, achievements
@@ -77,14 +77,14 @@ Covers **Days 6 and 8**.
 **Goal:** the canvas and the HTML UI work as one product.
 
 - A DOM bridge so scene events reach the HTML UI.
-- A **docked conversation sidebar** that opens on interaction and closes cleanly,
-  with mock content **labelled as mock**.
+- A **slide-out conversation drawer** over the fullscreen canvas (ADR-0017) that
+  opens on interaction and closes cleanly, with mock content **labelled as mock**.
 - A minimal HUD: current map name and interact prompt.
 - The **Altar** rendered as a distinct landmark (scenery only).
 - A visual consistency pass so exteriors, interiors and HUD look like one game.
 
-**Success:** interacting with a dwelling opens a sidebar naming the right contact,
-without reloading the page and without covering the world.
+**Success:** interacting with a dwelling opens a drawer naming the right contact,
+without reloading the page and without interrupting the world.
 
 Covers **Days 7 and 9**.
 
@@ -96,16 +96,22 @@ Covers **Days 7 and 9**.
 
 - Socket event contract for sending and receiving messages.
 - Conversation membership resolution, with **1:1 conversations private to their
-  two members** and group conversations belonging to Altars (ADR-0015).
+  two members** (ADR-0015). Group conversations belong to Altars and arrive in
+  Phase 12 of [`plan.md`](plan.md).
 - Persisting messages via Prisma — requires the first migration.
 - Loading history when a conversation opens, replacing the labelled mock data.
 
-**Depends on:** Stage 3 (a sidebar to send from), plus backend and database work
+**Depends on:** Stage 3 (a drawer to send from), plus backend and database work
 currently out of scope.
 
 ---
 
 ## Stage 5 — Presence & Altars ▢
+
+> **📅 Scheduled — Phase 12 of [`plan.md`](plan.md).** Altars are part of the
+> product vision: one group conversation per Altar, persistent membership. The
+> legacy tables are dropped at PR-15/PR-16 and rebuilt in Phase 12 with a
+> migration; direct messages ship first.
 
 **Goal:** shared space becomes real.
 

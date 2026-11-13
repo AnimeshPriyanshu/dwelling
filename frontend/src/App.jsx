@@ -150,6 +150,9 @@ const DEFAULT_AVATAR = AVATAR_URLS.base;
 
 const App = () => {
   const worldRef = useRef(null);
+  const drawerRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const returnFocusRef = useRef(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeContact, setActiveContact] = useState({
     id: "dwelling-redwood",
@@ -165,12 +168,11 @@ const App = () => {
       : { id: "", name: "No map", range: "" };
   });
 
-  // Close chat handler
+  // Close chat handler. Focus is returned to the world by the drawer's own
+  // focus-management effect, so closing by button, Escape, or a map change all
+  // follow the same path.
   const handleCloseChat = useCallback(() => {
     setIsChatOpen(false);
-    // Refocus canvas so player controls respond immediately
-    const canvas = worldRef.current?.querySelector("canvas");
-    if (canvas) canvas.focus();
   }, []);
 
   // React owns drawer visibility; the world blocks its own input while the
@@ -179,14 +181,14 @@ const App = () => {
     setChatOpen(isChatOpen);
   }, [isChatOpen]);
 
-  // Listen for dwelling interaction events from Phaser
+  // Dwelling interactions arrive through the bridge (ADR-0005); the world
+  // never reaches into React and React never reaches into the scene.
   useEffect(() => {
-    const onOpenChat = (event) => {
-      if (event.detail) {
-        setActiveContact(event.detail);
-      }
+    const unsubscribe = subscribe(EventType.DWELLING_INTERACT, (event) => {
+      if (!event || !event.dwelling) return;
+      setActiveContact(event.dwelling);
       setIsChatOpen(true);
-    };
+    });
 
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -194,14 +196,71 @@ const App = () => {
       }
     };
 
-    window.addEventListener("dwelling:open-chat", onOpenChat);
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.removeEventListener("dwelling:open-chat", onOpenChat);
+      unsubscribe();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [handleCloseChat]);
+
+  // Focus management for the drawer. While it is open, focus moves into it and
+  // Tab stays inside; when it closes — by button, Escape, or a map change —
+  // focus returns to whatever had it before, falling back to the game canvas
+  // so player controls respond immediately.
+  useEffect(() => {
+    if (!isChatOpen) return undefined;
+
+    const container = worldRef.current;
+    returnFocusRef.current = document.activeElement;
+    closeButtonRef.current?.focus();
+
+    const FOCUSABLE =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const onKeyDown = (event) => {
+      if (event.key !== "Tab") return;
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+
+      const focusable = [...drawer.querySelectorAll(FOCUSABLE)];
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (!drawer.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+
+      const target = returnFocusRef.current;
+      returnFocusRef.current = null;
+      if (target && target !== document.body && document.contains(target)) {
+        target.focus();
+        return;
+      }
+      const canvas = container?.querySelector("canvas");
+      if (canvas) {
+        // Phaser's canvas is not focusable by default. `-1` makes it
+        // programmatically focusable without adding a new tab stop.
+        if (!canvas.hasAttribute("tabindex")) canvas.tabIndex = -1;
+        canvas.focus();
+      }
+    };
+  }, [isChatOpen]);
 
   // Keep the HUD in sync with the world's active map (Phaser → bridge → React).
   useEffect(() => {
@@ -279,8 +338,12 @@ const App = () => {
 
       {/* Slide-out Chat Drawer */}
       <aside
+        ref={drawerRef}
         className={`chat-drawer ${isChatOpen ? "open" : ""}`}
+        role="dialog"
+        aria-label={`Conversation with ${activeContact.contact}`}
         aria-hidden={!isChatOpen}
+        inert={isChatOpen ? undefined : ""}
       >
         <div className="drawer-header">
           <div className="drawer-title-group">
@@ -299,10 +362,12 @@ const App = () => {
             </div>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             className="drawer-close-btn"
             onClick={handleCloseChat}
             aria-label="Close conversation"
+            aria-keyshortcuts="Escape"
           >
             ✕
           </button>

@@ -106,8 +106,9 @@ the server at all, or live in frontend map data
 ### `GET /api/maps` ▢ Pending
 Map definitions. **Undecided:** maps may never become server data.
 
-### `GET /api/altars` ⏸ Deferred
-Altars are out of scope (FR-026, FR-027).
+### `GET /api/altars` ▢ Planned — Phase 12
+Altar identity and membership (FR-026, FR-027). Group conversations belong to an
+Altar and arrive in Phase 12 of [`../planning/plan.md`](../planning/plan.md).
 
 ---
 
@@ -127,7 +128,7 @@ are in [`../architecture/realtime.md`](../architecture/realtime.md).
 | _Messaging events_ | both | ▢ Pending | Not named or designed yet — see [`../architecture/realtime.md`](../architecture/realtime.md). |
 | _Presence events_ | server → client | ⏸ Deferred | FR-029. |
 | _Movement events_ | both | ⏸ Deferred | Authority model is undecided. |
-| _Altar events_ | both | ⏸ Deferred | FR-026, FR-027. |
+| _Altar events_ | both | ▢ Planned | FR-026, FR-027 — Phase 12 (group conversation per Altar). |
 
 **Do not invent event names in code before they are designed and documented
 here.** An undocumented event is an integration bug waiting to happen.

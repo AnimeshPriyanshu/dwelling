@@ -539,6 +539,141 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-13 — Quality gates, input focus and the asset-pack merge
+
+**Status:** on track
+**Focus task(s):** PR #12 (asset integration), PR-02 – PR-07 (tooling, tests, CI), DW-038 groundwork
+**Commits:** `9e5fb3f`, `07fbc94`, `4b5a9b2`, `3adeee8`, `e7f9f6f`, `b865f14`, `169441f`, `918ee92`, `ae4c2c3`
+
+### Completed
+- **PR-02 to PR-05 — quality gates now exist.** Backend gained ESLint, Prettier,
+  Vitest and Supertest (`9e5fb3f`); frontend gained ESLint, Prettier, Vitest and
+  Testing Library (`07fbc94`); `validateEnv` refuses to boot without `JWT_SECRET`
+  (`4b5a9b2`); GitHub Actions runs lint, format check and tests per workspace
+  (`3adeee8`).
+- **PR-06 — walk animations registered** (`e7f9f6f`): four directional animations
+  with idle frames, verified through real keyboard input.
+- **PR-07 — Phaser input blocked while the chat drawer is open** (`b865f14`):
+  opening the drawer publishes `ui:state` through the bridge and `WorldScene`
+  disables its keyboard, releasing held keys. Covered by new App and bridge tests.
+- **PR #12 — supplied asset packs merged into `main`** (`169441f`, merged through
+  `918ee92` and `ae4c2c3`): 48 files, +2,179/−424. World, houses, props and
+  portraits come from Sunnyside World; the player and farm rail come from Sprout
+  Lands. `world/terrain.js` and `world/farm.js` add paths, seeded woodland, dirt
+  roads and fenced crop plots as map data.
+- **Re-audit fixes** recorded in [`../design/asset-inventory.md`](../design/asset-inventory.md#9-re-audit--2026-11-13):
+  the two original pack folders are gitignored (P1), the duplicated path frame is
+  removed (P2), portrait paths moved out of `App.jsx` into `world/assets.js` (P4),
+  and the stale fence line in `CREDITS.md` was corrected (P5). P3, P6, P7 and P8
+  remain open by decision.
+
+### Verified
+- `npm test --workspace=@dwelling/backend` → 6/6 passing (health + env validation).
+- `npm test --workspace=@dwelling/frontend` → 7/7 passing (App 5, bridge 2).
+- `npm run lint` in both workspaces exits 0.
+- `npm run build` exits 0; the only warning is the pre-existing chunk-size warning
+  (1,370 kB minified, 375 kB gzip).
+- All 15 runtime asset paths resolve to files on disk (re-audit, read-only check).
+
+### Problems encountered
+- **Milestone 7 is delivered in code but not marked `Done`.** The drawer, labelled
+  mock history, `Esc` close and input blocking all work, yet DW-035's criterion
+  "scenes never touch the DOM directly" still fails: `Dwelling.interact()`
+  dispatches a raw `window` `CustomEvent` instead of publishing through
+  `bridge/`. That routing is PR-08 and is the remaining blocker for M7.
+- **`task-board.md` is internally inconsistent:** the M6 rows and the per-milestone
+  counter say 4/4 `Done`, while the overall progress table says `0 / 4` `Not Started`.
+- **Root `plan.md` contradicts the docs and the schema.** It describes an 84-PR
+  plan with a five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`,
+  `Message`), no Altar/`ConversationMember`, Supabase hosting and cookie auth —
+  which conflicts with ADR-0015 and `database/prisma/schema.prisma`. Reported,
+  not reconciled.
+- **Several guides are now stale:** `development/testing.md` and
+  `development/coding-conventions.md` still say no test runner or linter exists,
+  `development/setup.md` still says "no test command / no CI",
+  `development/folder-structure.md` claims a root `.env.example` documenting
+  `DATABASE_URL` (the file is `backend/.env.example` and has no `DATABASE_URL`),
+  and `architecture/overview.md` still lists non-existent `WorldScene.jsx` /
+  `ChatScene.jsx` files and "no CI".
+
+### Decisions made
+- None new. The asset re-audit changes are corrections to earlier notes; the
+  remaining items (unused `uiExpressionChat`, legacy Kenney files, Vite starter
+  leftovers, dwelling collider coupled to the terrain texture) stay open by
+  decision, not by oversight.
+
+### Next day's priority
+1. **DW-035 / PR-08** — route dwelling interactions through `bridge/`, then run
+   the M7 acceptance checklist and update `task-board.md` honestly.
+2. **M8 — house interiors** (DW-049 to DW-054), the next unstarted milestone.
+3. Reconcile the stale guides above and decide what to do with root `plan.md`.
+
+**Tasks moved to Done:** none — M7 has no verified acceptance run yet
+
+---
+
+## 2026-11-13 — PR-08 bridge routing and documentation reconciliation
+
+**Status:** on track
+**Focus task(s):** DW-035 (PR-08), M7 acceptance, stale-guide cleanup
+**Commits:** not committed yet (working tree)
+
+### Completed
+- **PR-08 / DW-035 — dwelling interactions now go through the bridge.**
+  `Dwelling.interact()` calls `phaserPublish('dwellingInteract', …)`; the raw
+  `window` `CustomEvent` and the duplicate scene event are gone. Clicking a house
+  and pressing `E` share that one path, and the payload is the dwelling's
+  resident (`id`, `contactId`, `name`, `contact`, `role`).
+- **New tests:** `Dwelling.test.js` (bridge publication, no DOM event, click and
+  second-dwelling payloads) and `WorldScene.test.js` (`E` in/out of range, bridge
+  publication, input blocking). `App.test.jsx` now drives the real bridge and
+  asserts the removed `CustomEvent` is ignored.
+- **M7 marked done:** all four tasks (`DW-035`, `DW-036`, `DW-048`, `DW-038`)
+  and the milestone acceptance list are complete. The six criteria are covered by
+  the App/WorldScene/Dwelling tests except the docked layout, which is verified
+  from `style.css` and re-checked in M10.
+- **Secret regression removed.** The working tree had a real-looking
+  `JWT_SECRET` in `backend/.env.example` and a hardcoded fallback in `env.js`.
+  Restored a placeholder (with generation instructions), removed the unused
+  fallback, and documented that the backend requires `JWT_SECRET`.
+- **Guides reconciled with reality:** `testing.md`, `coding-conventions.md`,
+  `setup.md`, `folder-structure.md`, `architecture/overview.md`, the root
+  `README.md`, `task-board.md`, and `milestones.md` no longer claim there is no
+  runner/linter/CI or that the world is unimplemented. Added **ADR-0020** and
+  marked ADR-0009 (and the ADR-0002 index row) superseded.
+
+### Verified
+- `npm test --workspace=@dwelling/frontend` → 22/22 passing (4 files).
+- `npm test --workspace=@dwelling/backend` → 6/6 passing (2 files).
+- `npm run lint` in both workspaces exits 0.
+- `npm run format:check` in both workspaces exits 0 after the env fix.
+- `npm run build` exits 0 (pre-existing ~1,370 kB chunk warning only).
+
+### Problems encountered
+- **Duplicate test file:** `backend/src/config/validateEnv.test.js` duplicated
+  `backend/tests/config/validateEnv.test.js` and was never executed (Vitest only
+  includes `tests/**`). Removed.
+- **Root `plan.md`** still contradicts the docs and schema; left untouched and
+  still reported, not reconciled.
+- **M7 docked-layout check** was not run in a browser this session; automated
+  tests cover behaviour and `style.css` shows the right-edge drawer. Re-run the
+  M10 manual list before the demo.
+
+### Decisions made
+- **ADR-0020** — adopt ESLint, Prettier, Vitest and CI; supersedes ADR-0009.
+- M7 is `Done` on the strength of automated tests plus CSS review; the visual
+  pass is deferred to M10 rather than reopening the milestone.
+
+### Next day's priority
+1. **M8 — house interiors** (DW-049 to DW-054): door trigger, room format,
+   shared room, exterior ↔ interior switching, interior collision, exit spawn.
+2. Run the M7 and M8 manual checklists together once interiors exist.
+3. Decide the fate of root `plan.md` (archive or reconcile).
+
+**Tasks moved to Done:** DW-035, DW-036, DW-048, DW-038 (M7 complete)
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:
@@ -551,7 +686,7 @@ Entries are added as the ten-day plan is executed:
 | Day 4 | 2026-10-17 | Collision and camera | Yes |
 | Day 5 | 2026-10-18 | Dwellings and interactions | Yes |
 | Day 6 | 2026-10-19 | Maps, second map and HUD | Yes |
-| Day 7 | _(fill in)_ | DOM bridge and conversation sidebar | No |
+| Day 7 | 2026-11-13 | DOM bridge and conversation sidebar | Yes |
 | Day 8 | _(fill in)_ | House interiors | No |
 | Day 9 | _(fill in)_ | Altar and polish | No |
 | Day 10 | _(fill in)_ | Integration and review | No |

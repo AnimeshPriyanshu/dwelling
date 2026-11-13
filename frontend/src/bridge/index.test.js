@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventType, setChatOpen, subscribe, unsubscribeAll } from "./index";
+import {
+  EventType,
+  phaserPublish,
+  setChatOpen,
+  subscribe,
+  unsubscribeAll,
+} from "./index";
 
 describe("bridge", () => {
   afterEach(() => {
@@ -15,6 +21,26 @@ describe("bridge", () => {
 
     expect(handler).toHaveBeenNthCalledWith(1, { chatOpen: true });
     expect(handler).toHaveBeenNthCalledWith(2, { chatOpen: false });
+  });
+
+  it("publishes a dwelling interaction with the full resident payload", () => {
+    const handler = vi.fn();
+    subscribe(EventType.DWELLING_INTERACT, handler);
+
+    const dwelling = {
+      id: "dwelling-redwood",
+      contactId: "contact-elowen",
+      name: "Redwood Cottage",
+      contact: "Elowen",
+      role: "Herbalist",
+    };
+    phaserPublish("dwellingInteract", dwelling);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.DWELLING_INTERACT,
+      dwelling,
+    });
   });
 
   it("stops delivering chat visibility once unsubscribed", () => {

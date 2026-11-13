@@ -1,4 +1,5 @@
 import { TEXTURES } from '../assets'
+import { phaserPublish } from '../../bridge'
 
 /**
  * Dwelling entity representing an approachable, interactive house in the world.
@@ -8,7 +9,7 @@ import { TEXTURES } from '../assets'
  * - Solid physics: registers a static collision body at the building's base.
  * - Interaction zone: detects player proximity within an interaction radius.
  * - Prompt: displays a clear visual tooltip [E] naming the resident/dwelling.
- * - Click & key interaction: emits interaction events with the contact id.
+ * - Click & key interaction: publishes the interaction through the bridge.
  *
  * Map data provides the sprite key and position; nothing about a specific
  * dwelling is hard-coded here.
@@ -117,18 +118,13 @@ export default class Dwelling {
     };
   }
 
+  /**
+   * Opens this dwelling's conversation. The click zone and the scene's E-key
+   * handler both call this method, so there is exactly one interaction path
+   * and one payload shape (ADR-0005).
+   */
   interact() {
-    const data = this.getInteractionData();
-
-    // 1. Emit scene-level event
-    this.scene.events.emit("dwelling:interact", data);
-
-    // 2. Dispatch DOM event to open chat drawer in React shell
-    window.dispatchEvent(
-      new CustomEvent("dwelling:open-chat", {
-        detail: data,
-      }),
-    );
+    phaserPublish("dwellingInteract", this.getInteractionData());
   }
 
   destroy() {

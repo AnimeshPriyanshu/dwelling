@@ -23,7 +23,10 @@ export const EventType = {
 // Phaser event names creators
 export const phaserEvents = {
   dwellingNear: (dwellingId) => ({ type: EventType.DWELLING_NEAR, dwellingId }),
-  dwellingInteract: (dwellingId) => ({ type: EventType.DWELLING_INTERACT, dwellingId }),
+  dwellingInteract: (dwelling) => ({
+    type: EventType.DWELLING_INTERACT,
+    dwelling,
+  }),
   playerMove: (dx, dy) => ({ type: EventType.PLAYER_MOVE, dx, dy }),
   mapChanged: (map) => ({
     type: EventType.MAP_CHANGED,

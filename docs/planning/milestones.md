@@ -2,7 +2,7 @@
 
 The current plan: **ten small milestones, one per working day**, focused on
 **frontend development** — a usable 2D world with movement, collision, dwellings,
-a shared interior, an Altar, and a conversation sidebar.
+a shared interior, an Altar, and a conversation drawer.
 
 > **The plan was extended from seven days to ten during the requirements session**
 > on 2026-10-17. Interiors were added to the phase and the map selector was kept,
@@ -89,12 +89,12 @@ configuration skeleton, without breaking the current HTML shell.
 | DW-003 | Create `frontend/src/world/game.js` with the Phaser game config (`parent: 'world'`) | High | 1h | DW-002 |
 | DW-004 | Create `world/scenes/` with `BootScene` and `PreloadScene` stubs | High | 1h | DW-003 |
 | DW-005 | Create a `WorldScene` stub and register scene order in the config | High | 1h | DW-003 |
-| DW-006 | Start the game from `frontend/src/main.js` without removing the sidebar | High | 1h | DW-004, DW-005 |
+| DW-006 | Start the game from `frontend/src/main.js` without removing the conversation panel | High | 1h | DW-004, DW-005 |
 | DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | 30m | DW-006 |
 
 ### Acceptance criteria
 - [x] A Phaser canvas appears inside the existing `#world` element.
-- [x] The sidebar panel is still present and the page layout is intact.
+- [x] The conversation panel is still present and the page layout is intact.
 - [x] `npm run dev` serves the app with no console errors from Phaser.
 - [x] `npm run build` exits successfully.
 - [x] Phaser is imported as an ES module (no CDN script tag).
@@ -360,12 +360,12 @@ the active map.
 
 ---
 
-## Milestone 7 — DOM bridge and the conversation sidebar
+## Milestone 7 — DOM bridge and the conversation drawer
 
 **Day 7 · Covers:** FR-022, FR-023, FR-024, FR-025, FR-032, FR-033
 
 ### Objective
-Connect the canvas to the HTML UI and open a real conversation sidebar, with
+Connect the canvas to the HTML UI and open a real conversation drawer, with
 mock content clearly labelled as mock.
 
 ### Tasks
@@ -373,27 +373,27 @@ mock content clearly labelled as mock.
 | ID | Task | Priority | Estimate | Dependencies |
 | --- | --- | --- | --- | --- |
 | DW-035 | Add a Phaser ↔ DOM event bridge module | High | 1h | DW-031 |
-| DW-036 | Add a conversation sidebar panel driven by interactions (replaces the Conversations panel) | High | 1.5h | DW-035, DW-030 |
+| DW-036 | Add a slide-out conversation drawer driven by interactions (replaces the Conversations panel) | High | 1.5h | DW-035, DW-030 |
 | DW-048 | Add mock contacts and message history, clearly labelled "Mock data — messaging not implemented yet" | Medium | 1h | DW-036 |
 | DW-038 | Decide and implement the input-focus rule (panel open = DOM owns the keyboard; `Esc` closes) | High | 1h | DW-036 |
 
 ### Acceptance criteria
-- [ ] Interacting with a dwelling opens the sidebar showing the **correct** contact name.
-- [ ] The panel is docked beside the world; the canvas stays visible and is not covered.
-- [ ] The panel can be closed with `Esc` and a close button, returning control to the world.
-- [ ] Mock content is **visibly labelled** as mock; no input field pretends to work.
-- [ ] While the panel is open, movement keys do not move the player.
-- [ ] Scenes never touch the DOM directly; all updates arrive through the bridge.
+- [x] Interacting with a dwelling opens the drawer showing the **correct** contact name.
+- [x] The drawer slides in over the right edge of the fullscreen canvas (ADR-0017); the world stays visible behind it.
+- [x] The panel can be closed with `Esc` and a close button, returning control to the world.
+- [x] Mock content is **visibly labelled** as mock; no input field pretends to work.
+- [x] While the panel is open, movement keys do not move the player.
+- [x] Scenes never touch the DOM directly; all updates arrive through the bridge.
 
 ### Testing checklist
-- [ ] Open a conversation for each dwelling; the name matches every time.
-- [ ] Close the panel; movement and interaction work again.
-- [ ] Type while the panel is open; nothing moves the player.
-- [ ] Reload mid-session; the app returns to a clean state.
-- [ ] Console is free of bridge/listener warnings after 10 open/close cycles.
+- [x] Open a conversation for each dwelling; the name matches every time.
+- [x] Close the panel; movement and interaction work again.
+- [x] Type while the panel is open; nothing moves the player.
+- [x] Reload mid-session; the app returns to a clean state.
+- [x] Console is free of bridge/listener warnings after 10 open/close cycles.
 
 ### Definition of Done
-The canvas and the HTML sidebar communicate only through a dedicated bridge, the
+The canvas and the HTML drawer communicate only through a dedicated bridge, the
 right conversation opens and closes cleanly, and nothing misrepresents itself as
 working messaging.
 
@@ -553,7 +553,7 @@ documentation and report material honestly reflect reality.
 | M4 — Collision and camera | 6 | ~4h |
 | M5 — Dwellings and interactions | 6 | ~5.5h |
 | M6 — Maps, second map, HUD | 4 | ~4.5h |
-| M7 — Bridge and chat sidebar | 4 | ~4.5h |
+| M7 — Bridge and conversation drawer | 4 | ~4.5h |
 | M8 — House interiors | 6 | ~7.5h |
 | M9 — Altar and polish | 4 | ~5h |
 | M10 — Integration and review | 6 | ~6h |
@@ -577,4 +577,5 @@ realistic, with Day 9 as the buffer.
 | NFR-001 – NFR-004, NFR-006 | M1, M2, M10 |
 | NFR-005, NFR-009, NFR-014 | M2, M9 |
 | NFR-013, NFR-015 | M10 |
+| NFR-007, NFR-008, NFR-010 – NFR-012 | Cross-cutting — [`development/testing.md`](../development/testing.md) and the M10 regression |
 | FR-027 – FR-029 | **Not in this phase** — deferred (see `scope.md`) |

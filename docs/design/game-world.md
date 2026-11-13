@@ -59,7 +59,7 @@ them.
 - **Confirmed:** diagonal movement normalized so diagonals are not faster (FR-005).
 - **Confirmed:** facing direction is visible at all times (FR-009) — with a real
   sprite sheet this is the animation direction, not a marker.
-- **Confirmed:** while the conversation sidebar is open, the player does **not**
+- **Confirmed:** while the conversation drawer is open, the player does **not**
   move; the DOM owns the keyboard and `Esc` closes the panel (DW-038, ADR-0013).
 
 | Parameter | Value |
@@ -99,7 +99,7 @@ Two different actions live on a dwelling, which is a deliberate design decision:
 
 | Target | Zone | Prompt | Action |
 | --- | --- | --- | --- |
-| **House** | Larger zone around the building | "Talk to *Contact* — `E`" | Opens the conversation sidebar (FR-023) |
+| **House** | Larger zone around the building | "Talk to *Contact* — `E`" | Opens the conversation drawer (FR-023) |
 | **Door** | Smaller zone at the doorway | "Enter — `E`" | Enters the shared interior (FR-030) |
 
 - **Confirmed:** the door zone is **smaller** and **takes priority** where the two
@@ -162,7 +162,7 @@ interior has a window showing the exterior.
   (ADR-0015).
 - **Proposed:** its silhouette (a stone platform with a brazier) should read as a
   landmark from across the map, clearly different from a dwelling.
-- **Deferred:** group interaction at the Altar (FR-027, DW-B03).
+- **Planned — Phase 12:** group interaction at the Altar (FR-027, DW-B03, [`../planning/plan.md`](../planning/plan.md)).
 
 ---
 
@@ -213,12 +213,12 @@ interior has a window showing the exterior.
 | Interiors | Shared template, fireplace/kitchen/bed, return to the entered door | Room size, furniture layout, window |
 | Altar | Visible, distinct, from map data, non-interactive | Whether it ever becomes interactive |
 | Camera | Follows player, clamped to world | Dead zone, lead distance, smoothing |
-| Input | DOM owns keyboard while the sidebar is open | — |
+| Input | DOM owns keyboard while the drawer is open | — |
 
 ## Related
 
 - [`maps.md`](maps.md) — how maps and rooms are organized and loaded
-- [`ui-ux.md`](ui-ux.md) — the canvas/DOM split and the conversation sidebar
+- [`ui-ux.md`](ui-ux.md) — the canvas/DOM split and the conversation drawer
 - [`assets.md`](assets.md) — the art this design depends on
 - [`../planning/decisions.md`](../planning/decisions.md) — ADR-0010, ADR-0012, ADR-0013, ADR-0015
 - [`../project/requirements.md`](../project/requirements.md) — FR-001 to FR-016, FR-030, FR-031

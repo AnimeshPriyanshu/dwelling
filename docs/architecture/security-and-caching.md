@@ -118,8 +118,8 @@ SQL injection, not invalid or hostile content.
 
 **Already correct:**
 
-- `.env` is gitignored; `.env.example` documents keys with placeholder values
-  only.
+- `.env` is gitignored; `backend/.env.example` documents keys with placeholder
+  values only, and `JWT_SECRET` has no hardcoded fallback.
 - The backend loads configuration from a single module
   (`backend/src/config/env.js`).
 - CORS for sockets is restricted to a configured origin rather than `*`.

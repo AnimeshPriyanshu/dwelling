@@ -26,23 +26,25 @@ based on ADR (Architecture Decision Record).
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
 | [ADR-0001](#adr-0001--npm-workspace-monorepo-instead-of-separate-repositories) | npm-workspace monorepo instead of separate repositories | Accepted (inherited) | before 2026-09-20 |
-| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Accepted | before 2026-09-20 |
+| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Superseded by ADR-0016 | before 2026-09-20 |
 | [ADR-0003](#adr-0003--express--socketio-as-the-backend-transport) | Express + Socket.IO as the backend transport | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0004](#adr-0004--postgresql-with-prisma-for-persistence) | PostgreSQL with Prisma for persistence | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0005](#adr-0005--html-ui-around-the-canvas-rather-than-in-canvas) | HTML UI around the canvas rather than in-canvas | Accepted | 2026-10-17 |
 | [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Accepted | 2026-10-17 |
 | [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0008](#adr-0008--documentation-first-planning-system) | Documentation-first planning system | Accepted | 2026-10-17 |
-| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Accepted | 2026-10-17 |
+| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Superseded by ADR-0020 | 2026-10-17 |
 | [ADR-0010](#adr-0010--16-bit-pixel-art-top-down-with-a-slight-34-tilt-cozy-palette) | 16-bit pixel art, top-down with a slight 3/4 tilt, cozy palette | Accepted | 2026-10-17 |
 | [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0012](#adr-0012--interiors-as-one-shared-room-template-behind-a-door-trigger) | Interiors as one shared room template behind a door trigger | Accepted | 2026-10-17 |
 | [ADR-0013](#adr-0013--chat-is-a-docked-sidebar-with-explicitly-labelled-mock-data) | Chat is a docked sidebar with explicitly labelled mock data | Accepted | 2026-10-17 |
-| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted | 2026-10-17 |
-| [ADR-0016](#adr-0016--use-react-for-ui-components-and-application-shell) | Use React for UI components and application shell | Accepted | 2026-10-17 |
+| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted — Altars scheduled as Phase 12 | 2026-10-17 |
+| [ADR-0016](#adr-0016--react-as-the-ui-framework-with-phaser-for-the-2d-world) | React as the UI framework with Phaser for the 2D world | Accepted | 2026-10-17 |
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
 | [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
 | [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
+| [ADR-0020](#adr-0020--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
+| [ADR-0021](#adr-0021--five-model-messaging-core-extended-with-kind-for-altars) | Five-model messaging core, extended with `kind` for Altars | Accepted | 2026-11-13 |
 
 ---
 
@@ -322,7 +324,7 @@ marked `Done` only against verified acceptance criteria.
 
 ## ADR-0009 — No automated test runner during the frontend phase
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0020
 **Date:** 2026-10-17
 
 ### Context
@@ -560,40 +562,53 @@ task IDs are preserved so previously written references stay valid.
 
 ## ADR-0015 — Private 1:1 conversations; group conversations only in Altars
 
-**Status:** Accepted
-**Date:** 2026-10-17
+**Status:** Accepted — direct messages in Phases 0–11, Altars in Phase 12
+**Date:** 2026-10-17 (amended 2026-11-13)
 
 ### Context
 The owner stated the rule: a 1:1 conversation is only between those two people,
-and more than two people share a conversation only in a group space.
+and more than two people share a conversation only in a group space. The existing
+Prisma schema already supported this via `ConversationMember` and `Altar`/`AltarMembership`.
 
 ### Decision
-**A direct conversation has exactly two members and is private to them. Any
-conversation with more than two members belongs to an Altar.** This matches the
-existing Prisma schema, where `ConversationMember` already models arbitrary
-membership and `Altar`/`AltarMembership` model the shared space.
+Direct messages are strictly **one-to-one**: `Conversation` holds exactly two
+participants (`userOneId`, `userTwoId`) with canonical `userOneId < userTwoId`
+ordering. More than two people share a conversation **only inside an Altar**, and
+every group conversation belongs to an Altar.
+
+Timing, per [`plan.md`](plan.md):
+
+- **Phases 0–11** deliver direct messages on the five-model schema (`User`,
+  `Dwelling`, `Contact`, `Conversation`, `Message`). Altar behavior is not built
+  here.
+- **Phase 12 (PR-85…PR-92)** delivers Altars: `Altar` + `AltarMembership`, a
+group conversation per Altar, and `ConversationMember` for group participants.
+- The legacy `ConversationMember`/`Altar`/`AltarMembership` tables are dropped at
+  PR-15/PR-16 because their shape predates this decision; Phase 12 reintroduces
+  Altar support in a redesigned shape with its own migration. Nothing is lost —
+  no database or migration history exists.
 
 ### Alternatives considered
-- **Any conversation can gain a third member arbitrarily** — more flexible, but
-  then "who is this conversation with?" and "which dwelling opens it?" become
-  ambiguous.
+- **Drop Altars permanently** — rejected by the owner: Altars are part of the
+  product vision, not a discarded sketch.
+- **Keep the legacy tables unchanged through the five-model migration** —
+  rejected: they cannot express the canonical direct pair without ambiguity and
+  would ship unused tables into the direct-message phase.
+- **Build Altars before direct messages** — rejected: direct messages are the
+  first product milestone and the foundation for auth, contacts, and realtime.
 
 ### Consequences
-- ✅ The rule is simple enough to state in a demo and to enforce server-side.
-- ✅ No schema change is required — the data model already supports it (which is
-  notable, since the schema was written before this rule was stated).
-- ✅ Refines the previously **Proposed** alphabet-map work: a dwelling maps to a
-  direct conversation, an Altar to a group one.
-- ⚠️ **Privacy is enforced server-side, not in the UI.** Hiding a panel is not
-  access control — see
-  [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md).
-  Nothing is enforced yet because there is no backend work in this phase.
-- ⚠️ Not demonstrated this phase: the Altar is **scenery only**, so the group
-  behaviour is designed but unbuilt (FR-027, DW-B03).
+- ✅ Direct conversations need no join table; the pair is provably unique.
+- ✅ Altars stay on the roadmap with a concrete phase and PR range.
+- ⚠️ Phase 12 alters `Conversation` (kind discriminator, nullable columns) and
+  reintroduces `ConversationMember` for groups only.
+- ⚠️ Group messages require Altar-membership authorization; membership is checked
+  in the backend service, not by a database constraint.
+- ⚠️ Altars are outside the 84-PR direct-message scope and outside the MVP subset
+  in the plan's deadline note.
 
 ### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`../project/requirements.md`](../project/requirements.md), DW-B03.
+[`../project/requirements.md`](../project/requirements.md), [`../architecture/database.md`](../architecture/database.md), [`task-board.md`](task-board.md), [`plan.md`](plan.md).
 
 ---
 
@@ -663,7 +678,7 @@ The initial prototype used a fixed `max-width: 1200px` container with a permanen
 1. **Fullscreen edge-to-edge canvas:** The game canvas fills `100vw × 100vh` edge-to-edge without page margin, header box, or letterboxing bars.
 2. **Floating glass HUD:** Essential titles and interaction hints float minimally in the top-left using dark semi-transparent glassmorphism (`backdrop-filter: blur(12px)`).
 3. **Slide-out chat drawer on house interaction:** The conversation panel becomes an overlay drawer docked to the right edge (`position: fixed`). It is hidden by default (`transform: translateX(100%)`).
-4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) emits a `dwelling:open-chat` event that slides open the drawer populated with that dwelling's resident information.
+4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) publishes `dwelling:interact` on the bridge (ADR-0005), which slides open the drawer populated with that dwelling's resident information.
 5. **Dismissal & Focus:** The drawer can be dismissed by pressing `Escape` or clicking the close button (✕), immediately restoring keyboard focus to the game canvas for seamless movement.
 6. **Mock labelling preserved:** FR-033 is preserved with an amber banner explicitly stating mock data.
 
@@ -812,6 +827,133 @@ Use the supplied packs as the primary visual source:
 [`design/assets.md`](../design/assets.md),
 [`../../frontend/public/assets/CREDITS.md`](../../frontend/public/assets/CREDITS.md),
 FR-002, FR-009, FR-010, NFR-014.
+
+---
+
+## ADR-0020 — Adopt ESLint, Prettier, Vitest and CI
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+ADR-0009 deferred automated tests while the frontend was purely visual. By
+2026-11-13 the project had logic worth protecting — the Phaser ↔ DOM bridge,
+dwelling interaction routing, input blocking, and `validateEnv` — and PR-02 to
+PR-05 added tooling to both workspaces.
+
+### Decision
+1. **Vitest per workspace.** Frontend runs in `jsdom` with Testing Library;
+   backend runs in Node with Supertest. Tests live beside the code
+   (`frontend/src/**/*.test.{js,jsx}`) or in `backend/tests/**`.
+2. **ESLint flat config per workspace**, plus Prettier (backend config; the
+   frontend format scripts cover tests and config files only).
+3. **GitHub Actions CI** (`.github/workflows/ci.yml`) runs lint, format check,
+   tests, and the frontend build on pushes and pull requests.
+4. **Manual checks stay** for canvas rendering, camera feel, layout, and
+   frame-by-frame movement.
+
+### Alternatives considered
+- **Keep ADR-0009** — loses regression protection exactly where wiring is
+  easiest to break (bridge, event payloads, input focus).
+- **Playwright / canvas E2E first** — still brittle and slower than the manual
+  checklists for rendered output.
+
+### Consequences
+- ✅ Regressions in the bridge, interaction routing, and env validation fail CI.
+- ✅ "There are no tests" claims in the guides are removed.
+- ⚠️ Tests must not require a real database, Redis, or a browser canvas.
+- ⚠️ A committed secret is never a test fixture: tests pass `JWT_SECRET`
+  explicitly and the app has no default secret.
+- ⚠️ Supersedes ADR-0009.
+
+### Related
+[`development/testing.md`](../development/testing.md),
+[`development/coding-conventions.md`](../development/coding-conventions.md),
+[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml),
+[`task-board.md`](task-board.md).
+
+---
+
+## ADR-0021 — Five-model messaging core, extended with `kind` for Altars
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+
+The database sketch has seven models (`User`, `Dwelling`, `Contact`,
+`Conversation`, `ConversationMember`, `Message`, plus the legacy `Altar` and
+`AltarMembership`) that were written before the messaging model was designed. The
+project needs a small, correct core now, but Altars (ADR-0015) will later need
+group conversations over the same messages. Two designs were on the table:
+
+- **Option A** — one `Conversation`/`Message` system with a `kind` discriminator,
+  nullable pair columns, and a `ConversationMember` table for groups.
+- **Option B** — a separate `AltarMessage` model (and possibly a separate Altar
+  conversation table), leaving the direct-message tables untouched.
+
+The owner also required that direct conversations survive the Phase 12 extension,
+that contact removal be transactional and symmetric, and that deleting a user not
+silently destroy the other participant's history.
+
+### Decision
+
+1. **Five models for Phases 0–11:** `User`, `Dwelling`, `Contact`, `Conversation`,
+   `Message`. `ConversationMember` is not used before Phase 12. `Altar` and
+   `AltarMembership` return in Phase 12.
+2. **Option A for Phase 12:** `Conversation.kind` (`DIRECT` | `ALTAR`); `altarId`
+   nullable and unique (one group conversation per Altar); `userOneId`/`userTwoId`
+   nullable; `ConversationMember` for Altar membership. `Message` is unchanged.
+3. **Only current Altar members may read or send**, enforced in the backend on
+   every read and every send — not just on history endpoints and not only in the
+   UI. Membership is not duplicated into `Conversation`.
+4. **Direct pairs are canonically ordered** (`userOneId < userTwoId`) in app logic
+   **and** by a hand-written `CHECK`; `<>` alone would allow both `(a,b)` and
+   `(b,a)` to coexist. A partial unique index `WHERE kind = 'DIRECT'` replaces the
+   plain unique constraint in Phase 12.
+5. **`Contact` is a composite PK** `(userId, contactId)` (equivalent to the
+   requested `@@unique`), keeps `@@index([contactId])`, and has a `CHECK
+   ("userId" <> "contactId")`. Removal deletes both mirrored rows in one
+   transaction.
+6. **History FKs use `onDelete: Restrict`** (`Conversation` participants,
+   `Message.sender`), so a hard delete fails instead of silently erasing history.
+   `Dwelling.ownerId` still cascades.
+7. **Soft delete, approved in principle only.** No `deletedAt` column, no retention
+   code, and no UI yet; the proposed UX is
+   [`../design/ui-ux.md`](../design/ui-ux.md#deleted-accounts-proposed). Hard
+   deletion remains out of scope.
+8. **Legacy Altar tables are not dropped blindly.** PR-16 must count their rows
+   first and ask the owner if any contain data; no reset and no data loss without
+   explicit approval.
+
+### Alternatives considered
+
+- **Option B (separate `AltarMessage`)** — rejected: duplicates message logic,
+  pagination, and read paths, and would leave two sources of history.
+- **Membership stored only as pair columns** — cannot express groups.
+- **`@@unique` + app-only canonical ordering** — the database would still accept
+  both orderings, so a double conversation could be created by any path that
+  bypasses the service. Rejected in favour of the CHECK.
+- **Cascade-deleting conversations with a user** — destroys the other
+  participant's history. Rejected.
+- **Hard delete with a full model** — out of scope; soft delete is enough.
+
+### Consequences
+- ✅ Direct conversations and messages survive Phase 12 unchanged — the migration
+  adds a defaulted `kind`, relaxes the pair, and swaps one constraint for a
+  partial index.
+- ✅ One message pipeline for both direct and Altar chat.
+- ✅ The database rejects invalid states Prisma could not model on its own.
+- ⚠️ Some guarantees live only in hand-written migration SQL (CHECKs, partial
+  index); migrations must be reviewed and a regression test should query
+  `pg_constraint` / `pg_indexes`.
+- ⚠️ "Two or more members" cannot be a CHECK; it stays service-enforced and tested.
+- ⚠️ Phase 12 must add `conversationId` membership checks to every read and send.
+
+### Related
+[`../architecture/database.md`](../architecture/database.md),
+[`plan.md`](plan.md), [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars),
+[`../design/ui-ux.md`](../design/ui-ux.md#deleted-accounts-proposed).
 
 ---
 

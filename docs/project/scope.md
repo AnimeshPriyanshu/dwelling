@@ -6,7 +6,7 @@ explicitly not?**
 The current phase is **frontend development**, extended from seven days to
 **ten** during the requirements session (ADR-0014). The goal is a usable,
 navigable 2D world with a controllable character, placed dwellings, a shared
-interior, a visible Altar, and a working conversation sidebar — using a real
+interior, a visible Altar, and a working conversation drawer — using a real
 16-bit asset set.
 
 ---
@@ -29,10 +29,12 @@ interior, a visible Altar, and a working conversation sidebar — using a real
 - **A shared interior room** containing a fireplace, a kitchen area and a bed,
   with correct return to the door that was entered (FR-030, FR-031).
 - **Two alphabet maps** with a selector or portal, plus HUD identification.
-- A **docked conversation sidebar** replacing the Conversations panel, opened by
-  interaction, with **mock content visibly labelled as mock** (FR-032, FR-033).
-- The **Altar rendered as scenery**: visible, distinct, placed by map data, and
-  explicitly **not** interactive (FR-026).
+- A **slide-out conversation drawer** over the fullscreen canvas (ADR-0017),
+  opened by interaction, with **mock content visibly labelled as mock**
+  (FR-032, FR-033).
+- The **Altar rendered as scenery** visible and distinct, placed by map data.
+  It is **not interactive** this phase (FR-026). Group conversations are a
+  planned future feature (see Below).
 - A minimal HUD: current map name and interact prompt.
 - Screenshots and a demo script suitable for the graded report (DW-042).
 
@@ -59,10 +61,13 @@ to the backend or the database in this phase
 ([`../architecture/backend.md`](../architecture/backend.md)).
 
 ### Altar interaction and group conversations
-The rule is decided — 1:1 conversations are private, and more than two people
-share a conversation only in an Altar group space (ADR-0015) — but it is **not
-built**. The Altar is scenery, and group conversation delivery depends on the
-realtime phase (FR-027, DW-B03).
+**Direct messages only in this phase; Altars are Phase 12.** Altars stay part of
+the product vision ([`plan.md`](../planning/plan.md)): a group conversation
+always belongs to an Altar, membership persists, and `ConversationMember` returns
+for group participants in that later phase. The five-model schema used by Phases
+0–11 stays one-to-one; the legacy `Altar`/`AltarMembership` tables are dropped at
+PR-15/PR-16 and rebuilt in Phase 12 in a redesigned shape. In this phase the
+Altar is **scenery only**, with no prompt that promises a group chat.
 
 ### Personalised interiors
 Every dwelling opens the **same shared room** this phase (ADR-0012). Distinct
@@ -102,5 +107,7 @@ this stage.
   stage, or into the backlog in [`planning/task-board.md`](../planning/task-board.md)
   — not into the current day's task list.
 - Any scope change is recorded in [`planning/decisions.md`](../planning/decisions.md).
-- **Document nothing as working that is mock.** The conversation sidebar shows
+- **Document nothing as working that is mock.** The conversation drawer shows
   fake data by design and must say so on screen (FR-033).
+  The Altar is present as scenery but not functional; group chat arrives with
+  Altars in Phase 12 of [`plan.md`](../planning/plan.md).

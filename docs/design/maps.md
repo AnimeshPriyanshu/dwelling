@@ -257,7 +257,7 @@ Day 6 at the expense of the bridge (DW-035).
 - **Undecided:** whether Altars live inside alphabet maps, in separate shared
   maps, or both. The concept describes them as shared gathering places, which
   suggests they may not belong to any single letter range.
-- **Deferred:** Altar interaction (FR-027, DW-B03).
+- **Planned — Phase 12:** Altar interaction (FR-027, DW-B03, [`../planning/plan.md`](../planning/plan.md)).
 
 ---
 

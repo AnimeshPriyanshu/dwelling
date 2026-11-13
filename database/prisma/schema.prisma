@@ -8,63 +8,59 @@ datasource db {
 }
 
 model User {
-  id               String              @id @default(cuid())
-  displayName      String
-  createdAt        DateTime            @default(now())
-  dwelling         Dwelling?
-  memberships      ConversationMember[]
-  messages         Message[]
-  altarMemberships AltarMembership[]
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime @default(now())
+
+  dwelling           Dwelling?
+  contacts           Contact[]      @relation("ContactOwner")
+  addedBy            Contact[]      @relation("ContactTarget")
+  messages           Message[]
+  conversationsAsOne Conversation[] @relation("ConversationUserOne")
+  conversationsAsTwo Conversation[] @relation("ConversationUserTwo")
 }
 
 model Dwelling {
   id      String @id @default(cuid())
   title   String @default("Home")
   ownerId String @unique
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner   User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  userId    String
+  contactId String
+  createdAt DateTime @default(now())
+  user      User @relation("ContactOwner", fields: [userId], references: [id], onDelete: Cascade)
+  contact   User @relation("ContactTarget", fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([userId, contactId])
+  @@index([contactId])
 }
 
 model Conversation {
-  id        String              @id @default(cuid())
-  createdAt DateTime            @default(now())
-  members   ConversationMember[]
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userOneId String
+  userTwoId String
+  userOne   User     @relation("ConversationUserOne", fields: [userOneId], references: [id], onDelete: Restrict)
+  userTwo   User     @relation("ConversationUserTwo", fields: [userTwoId], references: [id], onDelete: Restrict)
   messages  Message[]
-}
 
-model ConversationMember {
-  conversationId String
-  userId         String
-  joinedAt       DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([conversationId, userId])
+  @@unique([userOneId, userTwoId])
+  @@index([userTwoId])
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   content        String
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime @default(now())
   conversationId String
   senderId       String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
 
   @@index([conversationId, createdAt])
-}
-
-model Altar {
-  id          String            @id @default(cuid())
-  name        String
-  memberships AltarMembership[]
-}
-
-model AltarMembership {
-  altarId  String
-  userId   String
-  joinedAt DateTime @default(now())
-  altar    Altar    @relation(fields: [altarId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([altarId, userId])
 }

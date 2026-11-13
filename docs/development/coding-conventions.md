@@ -200,11 +200,14 @@ try {
 
 ## Formatting and tooling
 
-- **There is no linter or formatter configured** (no ESLint/Prettier config, and no
-  `lint` script). Match the surrounding code by hand, and keep the diff minimal.
-- If a formatter is ever added, add it as an explicit decision in
-  [`../planning/decisions.md`](../planning/decisions.md) — and do not silently
-  reformat unrelated files.
+- **ESLint and Prettier are configured per workspace** — `frontend/eslint.config.js`,
+  `backend/eslint.config.js`, and `backend/.prettierrc.cjs`. Run the workspace's
+  `lint` and `format:check` scripts before committing.
+- **Frontend Prettier scope is narrow:** the `format`/`format:check` scripts cover
+  test files, `src/test-setup.js`, and config files — not `src/**` application
+  code. Match the surrounding style there and keep the diff minimal.
+- **No TypeScript.** Files are `.js`/`.jsx` and there is no type checker; write
+  plain JavaScript and let ESLint catch unused bindings and React mistakes.
 - **Keep changes focused.** A bug fix should not carry a style sweep; mixed diffs
   are hard to review.
 
@@ -219,6 +222,7 @@ try {
 - [ ] No swallowed errors.
 - [ ] No hard-coded sizes, speeds, or dwelling positions.
 - [ ] No secrets, and nothing added to a gitignored path by accident.
+- [ ] `npm run lint` and `npm test` pass in the changed workspace.
 - [ ] `npm run build` still passes.
 
 ## Related

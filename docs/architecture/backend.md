@@ -125,8 +125,12 @@ separation of messaging, presence, movement, and group interactions is in
   `backend/src/cache/index.js` respectively.
 - **Proposed:** as the surface grows, all environment reads should funnel through
   `config/env.js` so configuration is inspectable in one place.
-- **Required:** secrets stay out of source control (NFR-011). `.env` is
-  gitignored; `.env.example` documents the shape only.
+- **Required:** `JWT_SECRET` is checked by `config/validateEnv.js` before the
+  server listens; it has no default. `DATABASE_URL` and `REDIS_URL` are optional
+  until those features are used.
+- **Required:** secrets stay out of source control (NFR-011). The root `.env` is
+  gitignored; `backend/.env.example` (copied to the root) documents the shape with
+  placeholders only.
 
 See [`../development/setup.md`](../development/setup.md).
 
