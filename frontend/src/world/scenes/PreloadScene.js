@@ -1,18 +1,6 @@
 import Phaser from 'phaser'
-import { ASSET_MANIFEST, TEXTURES, loadAssets } from '../assets'
-
-/**
- * Directional walk animations for the Sprout Lands player sheet.
- *
- * The sheet is 4 columns × 4 rows of 48×48 frames, row-major. Each row is one
- * facing direction: down, up, right, left — verified by inspecting the frames.
- */
-const PLAYER_DIRECTIONS = [
-  { direction: 'down', row: 0 },
-  { direction: 'up', row: 1 },
-  { direction: 'right', row: 2 },
-  { direction: 'left', row: 3 },
-]
+import { ASSET_MANIFEST, loadAssets } from '../assets'
+import { registerPlayerAnimations } from '../animations'
 
 /**
  * Loads the asset manifest and shows progress.
@@ -53,8 +41,6 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   create() {
-    this.createPlayerAnimations()
-
     for (const asset of ASSET_MANIFEST) {
       if (this.textures.exists(asset.key)) continue
       if (asset.required) {
@@ -63,28 +49,8 @@ export default class PreloadScene extends Phaser.Scene {
         console.warn(`[assets] optional asset missing: ${asset.key} (${asset.path})`)
       }
     }
+
+    registerPlayerAnimations(this)
     this.scene.start('WorldScene')
-  }
-
-  /**
-   * Registers one four-frame walk cycle per facing. Animations belong to the
-   * global animation manager, so they are registered once here rather than in
-   * the player entity, which may be recreated on remount.
-   */
-  createPlayerAnimations() {
-    for (const { direction, row } of PLAYER_DIRECTIONS) {
-      const key = `player-walk-${direction}`
-      if (this.anims.exists(key)) continue
-
-      this.anims.create({
-        key,
-        frames: [0, 1, 2, 3].map((column) => ({
-          key: TEXTURES.playerWalk,
-          frame: row * 4 + column,
-        })),
-        frameRate: 8,
-        repeat: -1,
-      })
-    }
   }
 }

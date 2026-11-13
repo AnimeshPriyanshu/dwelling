@@ -392,7 +392,7 @@ plan: [`../design/asset-inventory.md`](../design/asset-inventory.md).
 - Inspected both packs completely (images, sprite grids, UI, metadata); no audio
   and no Tiled/JSON map files are present. Sprite grids were verified by cropping
   and viewing, not assumed: Sunnyside world 1024×1024 at 16 px (64×64 tiles);
-  Sprout Lands player 192×192 at 48×48, rows **down, up, right, left**;
+  Sprout Lands player 192×192 at 48×48, rows **down, up, left, right**;
   Sunnyside humans 96×64 per frame with **hair as a separate overlay layer**.
 - Recorded licences: Sunnyside is free/commercial (educational redistribution
   allowed with a link); Sprout Lands is **non-commercial, credit required** and

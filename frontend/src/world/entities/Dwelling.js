@@ -39,7 +39,7 @@ export default class Dwelling {
     this.y = config.y
     this.radius = config.radius || 64
 
-    this.isPromptVisible = false
+    this.isPromptVisible = false;
 
     // 1. The building itself, drawn at native pixel size.
     this.sprite = scene.add.image(this.x, this.y, config.sprite)
@@ -69,9 +69,9 @@ export default class Dwelling {
       .zone(this.x, this.y, this.width + 8, this.height)
       .setInteractive({ useHandCursor: true })
 
-    this.clickZone.on('pointerdown', () => {
-      this.interact()
-    })
+    this.clickZone.on("pointerdown", () => {
+      this.interact();
+    });
 
     // 4. Floating visual prompt badge ([E] Talk to Resident).
     this.createPromptBadge()
@@ -83,28 +83,28 @@ export default class Dwelling {
     this.promptContainer.setDepth(this.baseY + 60)
     this.promptContainer.setVisible(false)
 
-    const label = `[E] ${this.contact}`
-    const textWidth = Math.max(label.length * 7 + 16, 70)
+    const label = `[E] ${this.contact}`;
+    const textWidth = Math.max(label.length * 7 + 16, 70);
 
-    const bg = this.scene.add.rectangle(0, 0, textWidth, 20, 0x161c1a, 0.88)
-    bg.setStrokeStyle(1, 0x9ac96b, 0.9)
-    bg.setOrigin(0.5, 0.5)
+    const bg = this.scene.add.rectangle(0, 0, textWidth, 20, 0x161c1a, 0.88);
+    bg.setStrokeStyle(1, 0x9ac96b, 0.9);
+    bg.setOrigin(0.5, 0.5);
 
     const text = this.scene.add.text(0, 0, label, {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: '11px',
-      color: '#f4f5f1',
-      fontStyle: 'bold',
-    })
-    text.setOrigin(0.5, 0.5)
+      fontFamily: "system-ui, -apple-system, sans-serif",
+      fontSize: "11px",
+      color: "#f4f5f1",
+      fontStyle: "bold",
+    });
+    text.setOrigin(0.5, 0.5);
 
-    this.promptContainer.add([bg, text])
+    this.promptContainer.add([bg, text]);
   }
 
   setPromptVisible(visible) {
-    if (this.isPromptVisible === visible) return
-    this.isPromptVisible = visible
-    this.promptContainer.setVisible(visible)
+    if (this.isPromptVisible === visible) return;
+    this.isPromptVisible = visible;
+    this.promptContainer.setVisible(visible);
   }
 
   getInteractionData() {
@@ -114,21 +114,21 @@ export default class Dwelling {
       name: this.name,
       contact: this.contact,
       role: this.role,
-    }
+    };
   }
 
   interact() {
-    const data = this.getInteractionData()
+    const data = this.getInteractionData();
 
     // 1. Emit scene-level event
-    this.scene.events.emit('dwelling:interact', data)
+    this.scene.events.emit("dwelling:interact", data);
 
     // 2. Dispatch DOM event to open chat drawer in React shell
     window.dispatchEvent(
-      new CustomEvent('dwelling:open-chat', {
+      new CustomEvent("dwelling:open-chat", {
         detail: data,
-      })
-    )
+      }),
+    );
   }
 
   destroy() {

@@ -42,7 +42,7 @@ was verified by cropping, not an assumption.
 
 | Asset | File path | Type | Dimensions / frames | Intended use |
 | --- | --- | --- | --- | --- |
-| Basic character walk sheet | `Characters/Basic Charakter Spritesheet.png` | Character spritesheet | 192×192 = 4×4 frames of **48×48**. Rows: **down, up, right, left**; 4 walk frames per row | **Player** (all four facings) |
+| Basic character walk sheet | `Characters/Basic Charakter Spritesheet.png` | Character spritesheet | 192×192 = 4×4 frames of **48×48**. Rows: **down, up, left, right**; 4 walk frames per row | **Player** (all four facings) |
 | Character action sheet | `Characters/Basic Charakter Actions.png` | Character spritesheet | 96×576 = 2×12 frames of 48×48 | Not used this phase (watering/hoeing/axe actions) |
 | Tools | `Characters/Tools.png` | Props sheet | 96×96 | Not used yet (tool icons/animations) |
 | Chickens | `Characters/Free Chicken Sprites.png` | Character strip | 64×32 | Ambient animals (optional) |
@@ -270,8 +270,8 @@ Verified sheet layout: frames are row-major, four per row.
 | --- | --- | --- | --- | --- |
 | down | 0 | 0 | 0–3 | `player-walk-down` |
 | up | 1 | 4 | 4–7 | `player-walk-up` |
-| right | 2 | 8 | 8–11 | `player-walk-right` |
-| left | 3 | 12 | 12–15 | `player-walk-left` |
+| left | 2 | 8 | 8–11 | `player-walk-left` |
+| right | 3 | 12 | 12–15 | `player-walk-right` |
 
 - Frame rate 8 FPS, `repeat: -1`, played only while moving.
 - On stop the sprite is stopped and set to that direction's idle frame.

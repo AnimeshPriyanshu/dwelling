@@ -70,7 +70,7 @@ export const AVATAR_URLS = {
   spikeyhair: '/assets/ui/avatar-spikeyhair.png',
 }
 
-/** The player sheet is a 4×4 grid of 48×48 frames (rows = down, up, right, left). */
+/** The player sheet is a 4×4 grid of 48×48 frames (rows = down, up, left, right). */
 export const PLAYER_FRAME = { width: 48, height: 48 }
 
 /**
