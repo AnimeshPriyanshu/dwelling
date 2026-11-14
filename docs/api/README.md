@@ -39,6 +39,7 @@ forwards it to the backend, so no absolute URL or CORS setup is needed
 | 🟡 **Partial** | Exists, but not usable for its intended purpose. |
 | ▢ **Pending** | Planned, not implemented. The shape shown is a proposal. |
 | ⏸ **Deferred** | Out of the current phase. |
+| ⛔ **Not supported** | Ruled out by a decision; not planned at all. |
 
 ---
 
@@ -84,11 +85,13 @@ curl -i http://localhost:3000/api/health
 The authenticated user. Depends on authentication, which does not exist.
 
 ### `GET /api/contacts` ▢ Pending
-The current user's contacts. **Blocked on a product decision:** how contacts are
-modeled is undecided ([`../architecture/database.md`](../architecture/database.md)).
+The current user's contacts. Contact modeling is decided: a contact is a mutual
+relationship added immediately, with no request/accept state (ADR-0021 in
+[`../planning/decisions.md`](../planning/decisions.md)).
 
 ### `GET /api/conversations` ▢ Pending
-The user's conversations.
+The user's conversations. **One-to-one only:** every conversation has exactly two
+participants (ADR-0020).
 
 ### `GET /api/conversations/:id/messages` ▢ Pending
 Message history. Requirements to design: pagination, ordering, and a membership

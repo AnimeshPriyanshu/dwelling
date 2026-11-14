@@ -35,6 +35,13 @@ interior, a visible Altar, and a working conversation drawer — using a real
 - The **Altar rendered as scenery** visible and distinct, placed by map data.
   It is **not interactive** this phase (FR-026). Group conversations are a
   planned future feature (see Below).
+=======
+- **One-to-one conversations only** — exactly two participants between mutual
+  contacts; group conversations are not part of the product (ADR-0020).
+- A **docked conversation sidebar** replacing the Conversations panel, opened by
+  interaction, with **mock content visibly labelled as mock** (FR-032, FR-033).
+- The **Altar rendered as scenery**: visible, distinct, placed by map data, and
+  explicitly **not** interactive (FR-026).
 - A minimal HUD: current map name and interact prompt.
 - Screenshots and a demo script suitable for the graded report (DW-042).
 
@@ -68,6 +75,15 @@ for group participants in that later phase. The five-model schema used by Phases
 0–11 stays one-to-one; the legacy `Altar`/`AltarMembership` tables are dropped at
 PR-15/PR-16 and rebuilt in Phase 12 in a redesigned shape. In this phase the
 Altar is **scenery only**, with no prompt that promises a group chat.
+=======
+### Group conversations and Altar interaction
+**Not supported.** Conversations are one-to-one only: every conversation has
+exactly two participants, between mutual contacts, with no group chat and no group
+membership (ADR-0020, ADR-0021). The earlier allowance for group conversations at
+an Altar (ADR-0015) is withdrawn.
+
+The Altar stays **scenery** — visible, distinct and placed by map data, but never
+interactive (FR-026). FR-027 and DW-B03 are withdrawn with the group feature.
 
 ### Personalised interiors
 Every dwelling opens the **same shared room** this phase (ADR-0012). Distinct

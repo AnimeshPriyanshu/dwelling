@@ -12,9 +12,9 @@ Conceptually there is **one dwelling per contact**. In code this will become a
 `Dwelling` entity in the world scene, carrying a contact id.
 
 **Altar**
-A shared gathering location. Unlike a dwelling (one contact), an Altar is a
-common space that **many contacts can occupy at once**, intended as the entry
-point for group interaction. *Status: concept only — not designed or implemented.*
+A landmark in the world, placed by map data. Altars are **scenery only**: no
+interaction, no membership and no group conversation (ADR-0020). *Status: not
+implemented yet.*
 
 **Player**
 The character the current user controls. Distinct from a **contact**, who is
@@ -22,9 +22,15 @@ another person represented by a dwelling. The player moves with the keyboard;
 contacts do not move on screen in the current design.
 
 **Contact**
-Another person in the user's world. Represented by a dwelling (later, also by
-presence at Altars). Has a display name and an identity used to route
-interactions to the right conversation.
+Another person in the user's world. Represented by a dwelling. A contact
+relationship is **mutual and immediate**: if A has B as a contact then B has A as
+one, with no request or accept step (ADR-0021). Has a display name and an
+identity used to route interactions to the right conversation.
+
+**Conversation**
+A private exchange between **exactly two** contacts. Group conversations are not
+supported (ADR-0020), and a conversation can only exist between mutual contacts
+(ADR-0021).
 
 **Presence**
 Whether a contact is currently online / available. *Status: pending — planned

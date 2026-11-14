@@ -45,6 +45,8 @@ based on ADR (Architecture Decision Record).
 | [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
 | [ADR-0020](#adr-0020--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
 | [ADR-0021](#adr-0021--five-model-messaging-core-extended-with-kind-for-altars) | Five-model messaging core, extended with `kind` for Altars | Accepted | 2026-11-13 |
+| [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars) | One-to-one conversations only; no group conversations or Altars | Accepted | 2026-11-13 |
+| [ADR-0021](#adr-0021--contacts-are-mutual-add-pairs-with-no-requestaccept-flow) | Contacts are mutual-add pairs with no request/accept flow | Accepted | 2026-11-13 |
 
 ---
 
@@ -562,8 +564,13 @@ task IDs are preserved so previously written references stay valid.
 
 ## ADR-0015 — Private 1:1 conversations; group conversations only in Altars
 
-**Status:** Accepted — direct messages in Phases 0–11, Altars in Phase 12
-**Date:** 2026-10-17 (amended 2026-11-13)
+
+> **Superseded 2026-11-13.** Dwelling supports **one-to-one conversations
+> only**; there are no group conversations and an Altar is not a conversation
+> venue. The "more than two members belongs to an Altar" clause below therefore
+> no longer applies. The 1:1 privacy rule survives unchanged in
+> [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars).
+> The original text is kept so the history stays readable.
 
 ### Context
 The owner stated the rule: a 1:1 conversation is only between those two people,
@@ -830,130 +837,6 @@ FR-002, FR-009, FR-010, NFR-014.
 
 ---
 
-## ADR-0020 — Adopt ESLint, Prettier, Vitest and CI
-
-**Status:** Accepted
-**Date:** 2026-11-13
-
-### Context
-ADR-0009 deferred automated tests while the frontend was purely visual. By
-2026-11-13 the project had logic worth protecting — the Phaser ↔ DOM bridge,
-dwelling interaction routing, input blocking, and `validateEnv` — and PR-02 to
-PR-05 added tooling to both workspaces.
-
-### Decision
-1. **Vitest per workspace.** Frontend runs in `jsdom` with Testing Library;
-   backend runs in Node with Supertest. Tests live beside the code
-   (`frontend/src/**/*.test.{js,jsx}`) or in `backend/tests/**`.
-2. **ESLint flat config per workspace**, plus Prettier (backend config; the
-   frontend format scripts cover tests and config files only).
-3. **GitHub Actions CI** (`.github/workflows/ci.yml`) runs lint, format check,
-   tests, and the frontend build on pushes and pull requests.
-4. **Manual checks stay** for canvas rendering, camera feel, layout, and
-   frame-by-frame movement.
-
-### Alternatives considered
-- **Keep ADR-0009** — loses regression protection exactly where wiring is
-  easiest to break (bridge, event payloads, input focus).
-- **Playwright / canvas E2E first** — still brittle and slower than the manual
-  checklists for rendered output.
-
-### Consequences
-- ✅ Regressions in the bridge, interaction routing, and env validation fail CI.
-- ✅ "There are no tests" claims in the guides are removed.
-- ⚠️ Tests must not require a real database, Redis, or a browser canvas.
-- ⚠️ A committed secret is never a test fixture: tests pass `JWT_SECRET`
-  explicitly and the app has no default secret.
-- ⚠️ Supersedes ADR-0009.
-
-### Related
-[`development/testing.md`](../development/testing.md),
-[`development/coding-conventions.md`](../development/coding-conventions.md),
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml),
-[`task-board.md`](task-board.md).
-
----
-
-## ADR-0021 — Five-model messaging core, extended with `kind` for Altars
-
-**Status:** Accepted
-**Date:** 2026-11-13
-
-### Context
-
-The database sketch has seven models (`User`, `Dwelling`, `Contact`,
-`Conversation`, `ConversationMember`, `Message`, plus the legacy `Altar` and
-`AltarMembership`) that were written before the messaging model was designed. The
-project needs a small, correct core now, but Altars (ADR-0015) will later need
-group conversations over the same messages. Two designs were on the table:
-
-- **Option A** — one `Conversation`/`Message` system with a `kind` discriminator,
-  nullable pair columns, and a `ConversationMember` table for groups.
-- **Option B** — a separate `AltarMessage` model (and possibly a separate Altar
-  conversation table), leaving the direct-message tables untouched.
-
-The owner also required that direct conversations survive the Phase 12 extension,
-that contact removal be transactional and symmetric, and that deleting a user not
-silently destroy the other participant's history.
-
-### Decision
-
-1. **Five models for Phases 0–11:** `User`, `Dwelling`, `Contact`, `Conversation`,
-   `Message`. `ConversationMember` is not used before Phase 12. `Altar` and
-   `AltarMembership` return in Phase 12.
-2. **Option A for Phase 12:** `Conversation.kind` (`DIRECT` | `ALTAR`); `altarId`
-   nullable and unique (one group conversation per Altar); `userOneId`/`userTwoId`
-   nullable; `ConversationMember` for Altar membership. `Message` is unchanged.
-3. **Only current Altar members may read or send**, enforced in the backend on
-   every read and every send — not just on history endpoints and not only in the
-   UI. Membership is not duplicated into `Conversation`.
-4. **Direct pairs are canonically ordered** (`userOneId < userTwoId`) in app logic
-   **and** by a hand-written `CHECK`; `<>` alone would allow both `(a,b)` and
-   `(b,a)` to coexist. A partial unique index `WHERE kind = 'DIRECT'` replaces the
-   plain unique constraint in Phase 12.
-5. **`Contact` is a composite PK** `(userId, contactId)` (equivalent to the
-   requested `@@unique`), keeps `@@index([contactId])`, and has a `CHECK
-   ("userId" <> "contactId")`. Removal deletes both mirrored rows in one
-   transaction.
-6. **History FKs use `onDelete: Restrict`** (`Conversation` participants,
-   `Message.sender`), so a hard delete fails instead of silently erasing history.
-   `Dwelling.ownerId` still cascades.
-7. **Soft delete, approved in principle only.** No `deletedAt` column, no retention
-   code, and no UI yet; the proposed UX is
-   [`../design/ui-ux.md`](../design/ui-ux.md#deleted-accounts-proposed). Hard
-   deletion remains out of scope.
-8. **Legacy Altar tables are not dropped blindly.** PR-16 must count their rows
-   first and ask the owner if any contain data; no reset and no data loss without
-   explicit approval.
-
-### Alternatives considered
-
-- **Option B (separate `AltarMessage`)** — rejected: duplicates message logic,
-  pagination, and read paths, and would leave two sources of history.
-- **Membership stored only as pair columns** — cannot express groups.
-- **`@@unique` + app-only canonical ordering** — the database would still accept
-  both orderings, so a double conversation could be created by any path that
-  bypasses the service. Rejected in favour of the CHECK.
-- **Cascade-deleting conversations with a user** — destroys the other
-  participant's history. Rejected.
-- **Hard delete with a full model** — out of scope; soft delete is enough.
-
-### Consequences
-- ✅ Direct conversations and messages survive Phase 12 unchanged — the migration
-  adds a defaulted `kind`, relaxes the pair, and swaps one constraint for a
-  partial index.
-- ✅ One message pipeline for both direct and Altar chat.
-- ✅ The database rejects invalid states Prisma could not model on its own.
-- ⚠️ Some guarantees live only in hand-written migration SQL (CHECKs, partial
-  index); migrations must be reviewed and a regression test should query
-  `pg_constraint` / `pg_indexes`.
-- ⚠️ "Two or more members" cannot be a CHECK; it stays service-enforced and tested.
-- ⚠️ Phase 12 must add `conversationId` membership checks to every read and send.
-
-### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`plan.md`](plan.md), [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars),
-[`../design/ui-ux.md`](../design/ui-ux.md#deleted-accounts-proposed).
 
 ---
 

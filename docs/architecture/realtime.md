@@ -23,25 +23,22 @@ message delivery, no presence, no movement sync, and no group interaction.
 
 ---
 
-## The four realtime concerns
+## The three realtime concerns
 
-Dwelling has four distinct realtime needs. They have different reliability,
+Dwelling has three distinct realtime needs. They have different reliability,
 latency, and ordering requirements, and **splitting them is the core design rule
 of this document.**
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                        Socket.IO                            │
-├───────────────┬───────────────┬──────────────┬──────────────┤
-│   MESSAGING   │   PRESENCE    │   MOVEMENT   │    GROUP     │
-│               │               │              │              │
-│ durable       │ ephemeral     │ ephemeral,   │ durable      │
-│ ordered       │ last-write    │ high rate    │ state +      │
-│ must persist  │ wins          │ lossy ok     │ presence     │
-│               │               │              │              │
-│  ↳ rooms per  │  ↳ broadcast  │  ↳ ticks,    │  ↳ Altars    │
-│    conversation│   online set │    not saves │              │
-└───────────────┴───────────────┴──────────────┴──────────────┘
+┌──────────────────────────────┬───────────────┬───────────────┐
+│          MESSAGING           │    PRESENCE   │    MOVEMENT   │
+│                              │               │               │
+│      durable · ordered       │   ephemeral   │   ephemeral,  │
+│         must persist         │   last-write  │   high rate   │
+│                              │      wins     │    lossy ok   │
+│   ↳ rooms per conversation   │               │    ↳ ticks,   │
+│                              │  ↳ online set │   not saves   │
+└──────────────────────────────┴───────────────┴───────────────┘
 ```
 
 | Concern | Durability | Frequency | Ordering | Phase |
@@ -49,12 +46,14 @@ of this document.**
 | **Messaging** | Must persist (database) | Low | Strict, per conversation | Stage 4 |
 | **Presence** | Ephemeral | Low | Not important | Stage 5 |
 | **Movement** | Never persisted | High (per tick) | Interpolation, lossy is fine | Stage 5 |
-| **Group (Altars)** | Membership persists; activity is ephemeral | Medium | Medium | Stage 5 |
+
+**No group concern.** Conversations are one-to-one only, so there is no group
+room or group delivery to transport (ADR-0020).
 
 **Rule:** these must not share transport code paths. A movement tick must never
 be able to delay, duplicate, or corrupt a message. Concretely, this means
 separate event namespaces, separate handler modules, and separate client
-services — even though all four ride the same Socket.IO connection.
+services — even though all three ride the same Socket.IO connection.
 
 ---
 
@@ -65,7 +64,7 @@ services — even though all four ride the same Socket.IO connection.
   message, then broadcasts to the conversation's room.
 - **Why a room per conversation:** rooms give fan-out to exactly the members
   without the server tracking sockets per user by hand, and they map directly onto
-  `ConversationMember`.
+  a conversation's two participants.
 - **Ordering:** the **database timestamp is authoritative**, not the client's or
   the arrival order of socket events. Clients render by the stored `createdAt`,
   which the existing `Message` index `[conversationId, createdAt]` already
@@ -120,18 +119,14 @@ services — even though all four ride the same Socket.IO connection.
 
 ---
 
-## Group interaction / Altars (planned)
+## Group interaction / Altars — not supported
 
-- **Delivered as:** a mix of durable membership and ephemeral activity.
-- **What persists:** who belongs to an Altar (`AltarMembership` in the schema).
-- **What does not:** who is standing in it right now — that is presence.
-- **Why grouped rather than a separate transport:** an Altar is a room with
-  multiple users, so it composes established messaging + presence rather than
-  inventing a fourth protocol.
-- **Undecided:** whether an Altar always owns a conversation, and how a user
-  entering an Altar joins it.
+**Out of scope since ADR-0020.** Conversations are one-to-one only, so there is no
+group room, no group membership and no group message delivery to transport. The
+Altar remains scenery (FR-026) and FR-027 is not supported.
 
-**Pending:** deferred product feature (FR-026, FR-027).
+The former "durable state + presence" group concern is removed. Nothing was ever
+implemented for it.
 
 ---
 
@@ -169,10 +164,10 @@ follows from that.
 | Question | Status |
 | --- | --- |
 | Movement authority (server vs. client) | Undecided — decide before coding |
-| Presence audience (all users vs. contacts) | Undecided — blocked on contact modeling |
+| Presence audience (all users vs. contacts) | Undecided — contact modeling is now decided (ADR-0021) |
 | Delivery/ack semantics for messages | Undecided |
 | Message history pagination | Undecided |
-| How entering an Altar joins its room | Undecided |
+| How entering an Altar joins its room | Out of scope (ADR-0020) |
 | Authenticating socket connections | Deferred to Stage 6 |
 
 ## Related

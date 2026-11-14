@@ -539,7 +539,6 @@ and a seeded helper derives the obstacle list.
 
 ---
 
-## 2026-11-13 — Quality gates, input focus and the asset-pack merge
 
 **Status:** on track
 **Focus task(s):** PR #12 (asset integration), PR-02 – PR-07 (tooling, tests, CI), DW-038 groundwork
@@ -609,70 +608,6 @@ and a seeded helper derives the obstacle list.
 3. Reconcile the stale guides above and decide what to do with root `plan.md`.
 
 **Tasks moved to Done:** none — M7 has no verified acceptance run yet
-
----
-
-## 2026-11-13 — PR-08 bridge routing and documentation reconciliation
-
-**Status:** on track
-**Focus task(s):** DW-035 (PR-08), M7 acceptance, stale-guide cleanup
-**Commits:** not committed yet (working tree)
-
-### Completed
-- **PR-08 / DW-035 — dwelling interactions now go through the bridge.**
-  `Dwelling.interact()` calls `phaserPublish('dwellingInteract', …)`; the raw
-  `window` `CustomEvent` and the duplicate scene event are gone. Clicking a house
-  and pressing `E` share that one path, and the payload is the dwelling's
-  resident (`id`, `contactId`, `name`, `contact`, `role`).
-- **New tests:** `Dwelling.test.js` (bridge publication, no DOM event, click and
-  second-dwelling payloads) and `WorldScene.test.js` (`E` in/out of range, bridge
-  publication, input blocking). `App.test.jsx` now drives the real bridge and
-  asserts the removed `CustomEvent` is ignored.
-- **M7 marked done:** all four tasks (`DW-035`, `DW-036`, `DW-048`, `DW-038`)
-  and the milestone acceptance list are complete. The six criteria are covered by
-  the App/WorldScene/Dwelling tests except the docked layout, which is verified
-  from `style.css` and re-checked in M10.
-- **Secret regression removed.** The working tree had a real-looking
-  `JWT_SECRET` in `backend/.env.example` and a hardcoded fallback in `env.js`.
-  Restored a placeholder (with generation instructions), removed the unused
-  fallback, and documented that the backend requires `JWT_SECRET`.
-- **Guides reconciled with reality:** `testing.md`, `coding-conventions.md`,
-  `setup.md`, `folder-structure.md`, `architecture/overview.md`, the root
-  `README.md`, `task-board.md`, and `milestones.md` no longer claim there is no
-  runner/linter/CI or that the world is unimplemented. Added **ADR-0020** and
-  marked ADR-0009 (and the ADR-0002 index row) superseded.
-
-### Verified
-- `npm test --workspace=@dwelling/frontend` → 22/22 passing (4 files).
-- `npm test --workspace=@dwelling/backend` → 6/6 passing (2 files).
-- `npm run lint` in both workspaces exits 0.
-- `npm run format:check` in both workspaces exits 0 after the env fix.
-- `npm run build` exits 0 (pre-existing ~1,370 kB chunk warning only).
-
-### Problems encountered
-- **Duplicate test file:** `backend/src/config/validateEnv.test.js` duplicated
-  `backend/tests/config/validateEnv.test.js` and was never executed (Vitest only
-  includes `tests/**`). Removed.
-- **Root `plan.md`** still contradicts the docs and schema; left untouched and
-  still reported, not reconciled.
-- **M7 docked-layout check** was not run in a browser this session; automated
-  tests cover behaviour and `style.css` shows the right-edge drawer. Re-run the
-  M10 manual list before the demo.
-
-### Decisions made
-- **ADR-0020** — adopt ESLint, Prettier, Vitest and CI; supersedes ADR-0009.
-- M7 is `Done` on the strength of automated tests plus CSS review; the visual
-  pass is deferred to M10 rather than reopening the milestone.
-
-### Next day's priority
-1. **M8 — house interiors** (DW-049 to DW-054): door trigger, room format,
-   shared room, exterior ↔ interior switching, interior collision, exit spawn.
-2. Run the M7 and M8 manual checklists together once interiors exist.
-3. Decide the fate of root `plan.md` (archive or reconcile).
-
-**Tasks moved to Done:** DW-035, DW-036, DW-048, DW-038 (M7 complete)
-
----
 
 ## Upcoming entries
 

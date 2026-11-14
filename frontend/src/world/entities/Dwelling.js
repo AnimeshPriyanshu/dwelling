@@ -125,12 +125,5 @@ export default class Dwelling {
    */
   interact() {
     phaserPublish("dwellingInteract", this.getInteractionData());
-  }
-
-  destroy() {
-    if (this.sprite) this.sprite.destroy()
-    if (this.collider) this.collider.destroy()
-    if (this.clickZone) this.clickZone.destroy()
-    if (this.promptContainer) this.promptContainer.destroy()
-  }
+}
 }

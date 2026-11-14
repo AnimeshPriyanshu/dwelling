@@ -28,10 +28,9 @@ export const phaserEvents = {
     dwelling,
   }),
   playerMove: (dx, dy) => ({ type: EventType.PLAYER_MOVE, dx, dy }),
-  mapChanged: (map) => ({
-    type: EventType.MAP_CHANGED,
-    map: { id: map.id, name: map.name, range: map.range },
-  }),
+  // The world publishes the registry's map summary (`summarizeMap`), so the
+  // bridge carries the payload without knowing any map metadata itself.
+  mapChanged: (map) => ({ type: EventType.MAP_CHANGED, map }),
 }
 
 // React event names creators

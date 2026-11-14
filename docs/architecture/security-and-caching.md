@@ -50,16 +50,19 @@ the gaps below become real vulnerabilities. See Stage 6 in
 
 **Intended:** every read and write is checked against the caller's identity.
 
-The rules to enforce, derived from the existing schema
-([`database.md`](database.md)):
+The rules to enforce, derived from the data model (ADR-0020, ADR-0021,
+[`database.md`](database.md)):
 
 | Action | Rule |
 | --- | --- |
-| Read a conversation's messages | Caller must be a `ConversationMember` |
-| Send a message | Caller must be a `ConversationMember` **and** be the sender |
+| Create a conversation | Caller must be one of the pair, and the other participant must be a mutual contact |
+| Read a conversation's messages | Caller must be one of its **two** participants |
+| Send a message | Caller must be one of its two participants **and** be the sender |
 | Read a dwelling | Dwelling ownership is public by design (it is a place in the world), but the linked conversation is not |
-| Join an Altar | Membership rules are **undecided** |
 | Move a player | Depends on the movement-authority decision in [`realtime.md`](realtime.md) |
+
+**No group or Altar rule:** there is no group conversation and no Altar
+membership to authorize (ADR-0020).
 
 **Critical rule:** authorization is enforced **server-side on every request and
 event**. Hiding a button in the UI is not access control. The frontend may only
@@ -67,7 +70,7 @@ decide what to *show*, never what is *allowed*.
 
 **Common failure to avoid:** resolving a resource by client-supplied id without
 checking membership. `GET /conversations/:id/messages` must verify the caller is a
-member of *that* conversation — not merely that the conversation exists.
+participant of *that* conversation — not merely that the conversation exists.
 
 ---
 

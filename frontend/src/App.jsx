@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createGame } from "./world/game";
 import { EventType, requestMapSwitch, setChatOpen, subscribe } from "./bridge";
-import { getDefaultMap, listMaps } from "./world/maps";
+import { getDefaultMap, listMaps, summarizeMap } from "./world/maps";
 import { AVATAR_URLS } from "./world/assets";
 
 const RESIDENT_MESSAGES = {
@@ -148,24 +148,41 @@ const CONTACT_AVATARS = {
 };
 const DEFAULT_AVATAR = AVATAR_URLS.base;
 
+// The drawer's contact shape. Map data and bridge events both provide plain
+// dwelling data, so one projection keeps the drawer fields in one place.
+const contactFromDwelling = (dwelling) => ({
+  id: dwelling.id,
+  contactId: dwelling.contactId,
+  name: dwelling.name,
+  contact: dwelling.contact,
+  role: dwelling.role || "Resident",
+});
+
+// Fallback for an empty registry; the drawer stays closed until an interaction
+// names a resident.
+const EMPTY_CONTACT = {
+  id: "",
+  contactId: "",
+  name: "",
+  contact: "",
+  role: "",
+};
+
 const App = () => {
   const worldRef = useRef(null);
   const drawerRef = useRef(null);
   const closeButtonRef = useRef(null);
   const returnFocusRef = useRef(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeContact, setActiveContact] = useState({
-    id: "dwelling-redwood",
-    contactId: "contact-elowen",
-    name: "Redwood Cottage",
-    contact: "Elowen",
-    role: "Herbalist",
+  // Seed the drawer from map data rather than a copy of it, so map files stay
+  // the only place a dwelling is described.
+  const [activeContact, setActiveContact] = useState(() => {
+    const dwelling = getDefaultMap()?.dwellings?.[0];
+    return dwelling ? contactFromDwelling(dwelling) : EMPTY_CONTACT;
   });
   const [activeMap, setActiveMap] = useState(() => {
     const map = getDefaultMap();
-    return map
-      ? { id: map.id, name: map.name, range: map.range }
-      : { id: "", name: "No map", range: "" };
+    return map ? summarizeMap(map) : { id: "", name: "No map", range: "" };
   });
 
   // Close chat handler. Focus is returned to the world by the drawer's own
@@ -183,13 +200,25 @@ const App = () => {
 
   // Dwelling interactions arrive through the bridge (ADR-0005); the world
   // never reaches into React and React never reaches into the scene.
+  // Subscription lifetime is managed via unsubscribeRef, which is accessible
+  // from the Escape key useEffect cleanup since both effects share the same scope.
+  const unsubscribeRef = useRef();
+
+  // Subscribe to dwelling interact events and store unsubscribe ref
   useEffect(() => {
-    const unsubscribe = subscribe(EventType.DWELLING_INTERACT, (event) => {
+    unsubscribeRef.current = subscribe(EventType.DWELLING_INTERACT, (event) => {
       if (!event || !event.dwelling) return;
       setActiveContact(event.dwelling);
       setIsChatOpen(true);
     });
 
+    return unsubscribeRef.current;
+  }, []);
+
+  // Escape key handling. Uses a ref to access the unsubscribe function
+  // from the Dwelling interact useEffect cleanup, since each useEffect
+  // has its own scope in JavaScript/React.
+  useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
         handleCloseChat();
@@ -199,10 +228,15 @@ const App = () => {
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      unsubscribe();
+      unsubscribeRef.current?.();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [handleCloseChat]);
+
+  // Focus management for the drawer. While it is open, focus moves into it and
+  // Tab stays inside; when it closes — by button, Escape, or a map change —
+  // focus returns to whatever had it before, falling back to the game canvas
+  // so player controls respond immediately.
 
   // Focus management for the drawer. While it is open, focus moves into it and
   // Tab stays inside; when it closes — by button, Escape, or a map change —

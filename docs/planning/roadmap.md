@@ -10,7 +10,7 @@ Stage 1  Playable world          ▶ CURRENT — render, move, collide, interact
 Stage 2  Maps and rooms          ▶ data-driven maps, second map, shared interior (Days 6, 8)
 Stage 3  Interface integration   ▶ canvas ↔ HTML, conversation drawer        (Days 7, 9)
 Stage 4  Realtime messaging      ▢ sockets, message delivery, history
-Stage 5  Presence & Altars       ▢ online status, shared gathering spaces
+Stage 5  Presence                ▢ online status for contacts
 Stage 6  Activities              ▢ farms, working, achievements
 Stage 7  Accounts & security     ▢ auth, validation, rate limiting, caching
 Stage 8  Polish & delivery       ▢ performance, accessibility, deployment
@@ -98,6 +98,9 @@ Covers **Days 7 and 9**.
 - Conversation membership resolution, with **1:1 conversations private to their
   two members** (ADR-0015). Group conversations belong to Altars and arrive in
   Phase 12 of [`plan.md`](plan.md).
+=======
+- Conversation resolution between **mutual contacts only**, with every
+  conversation private to its **two** participants (ADR-0020, ADR-0021).
 - Persisting messages via Prisma — requires the first migration.
 - Loading history when a conversation opens, replacing the labelled mock data.
 
@@ -106,7 +109,7 @@ currently out of scope.
 
 ---
 
-## Stage 5 — Presence & Altars ▢
+## Stage 5 — Presence ▢
 
 > **📅 Scheduled — Phase 12 of [`plan.md`](plan.md).** Altars are part of the
 > product vision: one group conversation per Altar, persistent membership. The
@@ -114,14 +117,17 @@ currently out of scope.
 > migration; direct messages ship first.
 
 **Goal:** shared space becomes real.
+=======
+**Goal:** contacts visibly come and go.
 
 - Online/offline presence for contacts, replacing the static indication.
-- Altars become interactive, multi-user spaces (FR-027).
-- Group conversation entry points.
 - Shared player movement — the authority model is still **Undecided** (full
   authoritative movement versus lightweight presence).
 
 **Depends on:** Stage 4.
+
+**Not planned:** Altars and group conversation are out of scope (ADR-0020); the
+Altar stays scenery.
 
 ---
 
@@ -148,7 +154,7 @@ half-built. The design work — what "working" actually does — has not started
 **Goal:** the system is safe to open to more than one trusted user.
 
 - Authentication and session handling; a real player identity.
-- Authorization on conversations, dwellings and Altars, enforced server-side.
+- Authorization on contacts, conversations and dwellings, enforced server-side.
 - Input validation, rate limiting, secure configuration, and caching.
 
 See [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md).

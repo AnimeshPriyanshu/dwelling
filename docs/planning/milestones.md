@@ -26,7 +26,7 @@ Settled with the project owner during the requirements session. These are
 | Interiors | **In scope** — one **shared** interior template per dwelling (fireplace, kitchen, bed) |
 | Altar | **Scenery only** this phase |
 | Chat UI | **Slide-out overlay drawer** over fullscreen canvas, **mock content labelled as mock** (ADR-0017) |
-| Conversation model | 1:1 conversations are **private**; more than two people share a conversation only in an **Altar group space** |
+| Conversation model | **One-to-one only** — exactly two participants, between mutual contacts; group conversations are **not supported** (ADR-0020, ADR-0021) |
 | Extra UI | **Minimal HUD only** (map name + interact prompt) |
 | Devices | **Desktop-first**, layout stays usable on small screens |
 | Assets | **Hybrid** — CC0 packs for tiles/houses/furniture, code-authored art for Dwelling-specific pieces |
@@ -481,7 +481,7 @@ Make the Altar a visible, distinct landmark, and polish what already exists.
 
 ### Testing checklist
 - [ ] The Altar appears in both maps (or the one where it is placed) and at the right position.
-- [ ] Walking up to the Altar shows no prompt promising a group chat.
+- [ ] Walking up to the Altar shows no prompt at all — it must not imply an interaction.
 - [ ] Walk animation does not stutter when changing direction rapidly.
 - [ ] Prompts are legible against both grass and interior flooring.
 
@@ -492,8 +492,9 @@ not have, and the visuals are consistent enough to demo.
 ### Risks / blockers
 - **This is the schedule buffer.** If Days 1–8 overran, DW-055–DW-058 shrink; the
   Altar may then be bound to Day 10's fix budget rather than dropped.
-- **Silent scope creep.** Any temptation to make the Altar interactive belongs to
-  the next phase; note it in the roadmap instead.
+- **Silent scope creep.** Making the Altar interactive is **not** planned at all:
+  conversations are one-to-one only (ADR-0020), so there is nothing to defer it
+  to.
 
 ---
 
