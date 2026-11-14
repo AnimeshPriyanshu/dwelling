@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventType, phaserPublish, phaserEvents, setChatOpen, subscribe, unsubscribeAll } from "./index";
+import {
+  EventType,
+  phaserPublish,
+  phaserEvents,
+  setChatOpen,
+  subscribe,
+  unsubscribeAll,
+} from "./index";
 
 describe("bridge", () => {
   afterEach(() => {

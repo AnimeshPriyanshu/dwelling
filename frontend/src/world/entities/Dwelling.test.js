@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventType, phaserPublish, phaserEvents, setChatOpen, subscribe, unsubscribeAll } from "../../bridge";
+import {
+  EventType,
+  phaserPublish,
+  subscribe,
+  unsubscribeAll,
+} from "../../bridge";
 
 describe("Dwelling", () => {
   afterEach(() => {
@@ -47,7 +52,10 @@ describe("Dwelling", () => {
 
     phaserPublish("dwellingInteract", dwellingOne);
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledWith({ type: EventType.DWELLING_INTERACT, dwelling: dwellingOne });
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.DWELLING_INTERACT,
+      dwelling: dwellingOne,
+    });
 
     phaserPublish("dwellingInteract", dwellingTwo);
     expect(handler).toHaveBeenCalledTimes(2);

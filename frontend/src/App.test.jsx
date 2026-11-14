@@ -1,10 +1,12 @@
 import { render, cleanup } from "@testing-library/react";
-import { createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { subscribe, EventType, publishToSubscribers, setChatOpen } from "./bridge";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  subscribe,
+  EventType,
+  publishToSubscribers,
+  setChatOpen,
+} from "./bridge";
 import App from "./App";
-
-const { bridgeHandlers } = vi.hoisted(() => ({ bridgeHandlers: new Map() }));
 
 vi.mock("./world/game", () => ({
   createGame: vi.fn(() => ({
@@ -83,9 +85,15 @@ describe("App", () => {
   it("bridge map changed events", () => {
     const handler = vi.fn();
     const unsubscribe = subscribe(EventType.MAP_CHANGED, handler);
-    publishToSubscribers(EventType.MAP_CHANGED, { type: EventType.MAP_CHANGED, map: { id: "default" } });
+    publishToSubscribers(EventType.MAP_CHANGED, {
+      type: EventType.MAP_CHANGED,
+      map: { id: "default" },
+    });
     unsubscribe();
-    expect(handler).toHaveBeenCalledWith({ type: EventType.MAP_CHANGED, map: { id: "default" } });
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.MAP_CHANGED,
+      map: { id: "default" },
+    });
   });
 
   it("ui state changes propagate", () => {
