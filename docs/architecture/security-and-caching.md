@@ -2,10 +2,12 @@
 
 Responsibilities, rules, and what must never be committed.
 
-> **Nothing in this document is implemented.** There is no authentication, no
+> **None of these controls are implemented.** There is no authentication, no
 > authorization, no input validation, no rate limiting, and no functional
 > caching. This document records the *intent* so the requirements are not
-> forgotten — not so they are built now. See
+> forgotten — not so they are built now. Authentication is the exception in one
+> sense only: its **contract** is decided (ADR-0022) so the API can be defined;
+> the code still does not exist. See
 > [`../project/scope.md`](../project/scope.md).
 
 ---
@@ -18,6 +20,8 @@ Dwelling currently runs as a **single-user local development app**:
 - Socket connections are unauthenticated; a connecting client is sent
   `server:ready` and nothing else.
 - There is no session, cookie, token, or user identity anywhere in the codebase.
+  The contract for when there is one is in [Authentication](#authentication-decided-not-implemented)
+  and [`../api/README.md`](../api/README.md).
 - CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for
   Socket.IO. **Express has no CORS configuration**, because no browser code calls
   the API yet.
@@ -30,19 +34,58 @@ the gaps below become real vulnerabilities. See Stage 6 in
 
 ---
 
-## Authentication (not implemented)
+## Authentication (decided, not implemented)
 
-**Intended:** prove who a user is on both HTTP and socket connections.
+**Decided in ADR-0022**
+([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
+**No authentication code exists yet** — not the dependencies (PR-19), not the
+helpers (PR-21), not the middleware (PR-22).
 
-- **HTTP:** a session or token established at sign-in, sent with every request,
-  verified before any user-specific handler runs.
+**HTTP:** a signed JWT (`HS256`, `JWT_SECRET`) delivered in an `HttpOnly` cookie
+named `dwelling_session`. It is set at signup and login, sent automatically on
+every same-origin API request, and verified before any user-specific handler
+runs.
+
+| Cookie attribute | Value |
+| --- | --- |
+| `HttpOnly` | Yes — JavaScript cannot read it |
+| `SameSite` | `Lax` |
+| `Secure` | Yes when `NODE_ENV=production`, otherwise omitted for local HTTP |
+| `Path` | `/` |
+| `Max-Age` | Seven days, matching the JWT `exp` |
+
+- **Lifetime:** seven days, fixed at issue. No refresh token, no sliding session.
+- **Logout:** clears the cookie and always returns `204`. It does **not** revoke
+  the token. An already-issued JWT — including a copied one — remains valid until
+  `exp`; a denylist, token-version check, or password-change invalidation is not
+  built in v1 and needs its own decision.
 - **Socket:** the socket connection must be authenticated **at connection time**,
-  not on each event. An unauthenticated socket must not be placed in any room.
-- **Requirement:** identity comes from the server-side session, **never** from a
-  `userId` in the request body or event payload. A client-supplied id is a
-  claim, not a proof.
-- **Undecided:** session cookies vs. tokens, and the sign-up/sign-in flow itself.
-  Both are product decisions that have not been made.
+  not on each event, and an unauthenticated socket must not be placed in any
+  room. Reusing `dwelling_session` for the handshake is PR-60; origin checking
+  there is not yet specified (OQ-16).
+- **Identity:** always comes from the verified cookie. A `userId`, `senderId`, or
+  role in a request body or event payload is a claim, not a proof.
+- **Client:** the token is never exposed to JavaScript, never stored in
+  `localStorage`/`sessionStorage`, and never returned in a response body.
+
+### CSRF
+
+Cookie authentication is automatically attached by the browser, so state-changing
+requests need CSRF defenses that a bearer header would not.
+
+- **Required now:** `Content-Type: application/json` on every state-changing
+  request (HTML forms cannot send it), and an `Origin`/`Referer` check against
+  `CLIENT_ORIGIN` for requests that rely on the session cookie. Both are enforced
+  at the transport boundary (PR-27).
+- **`SameSite=Lax`** blocks cross-site form POSTs and subrequests, but it is a
+  layer, not the whole answer: same-site subdomains, XSS on the app's own origin,
+  and clients that ignore the attribute are not covered.
+- **No CSRF token in v1** — deferred, not denied (OQ-13).
+- **Cross-site deployment breaks the `Lax` assumption:** if the frontend and API
+  are on different sites, the cookie must become `SameSite=None; Secure`, which
+  removes the main built-in protection and makes a CSRF token mandatory. The
+  deployment topology is OQ-14 and must be settled before launch; the posture is
+  reassessed at PR-27.
 
 ---
 
@@ -55,7 +98,7 @@ The rules to enforce, derived from the data model (ADR-0020, ADR-0021,
 
 | Action | Rule |
 | --- | --- |
-| Create a conversation | Caller must be one of the pair, and the other participant must be a mutual contact |
+| Create a conversation | Caller must be one of the pair, and the other participant must be a mutual contact. Existing non-contact → `403 NOT_CONTACTS`; unknown user id → `404 USER_NOT_FOUND` (documented disclosure) |
 | Read a conversation's messages | Caller must be one of its **two** participants |
 | Send a message | Caller must be one of its two participants **and** be the sender |
 | Read a dwelling | Dwelling ownership is public by design (it is a place in the world), but the linked conversation is not |
@@ -67,6 +110,12 @@ membership to authorize (ADR-0020).
 **Critical rule:** authorization is enforced **server-side on every request and
 event**. Hiding a button in the UI is not access control. The frontend may only
 decide what to *show*, never what is *allowed*.
+
+**Non-participants get `404`.** Reading or writing a conversation the caller is
+not part of returns `404 CONVERSATION_NOT_FOUND`, with the same body as an
+unknown id, so the API does not confirm that a conversation exists. `403` is
+reserved for a caller who is known but not allowed to perform the specific
+operation — today only conversation creation against a non-contact.
 
 **Common failure to avoid:** resolving a resource by client-supplied id without
 checking membership. `GET /conversations/:id/messages` must verify the caller is a
@@ -82,14 +131,17 @@ participant of *that* conversation — not merely that the conversation exists.
   route parameters, and socket event payloads.
 - **Rule:** reject unknown/extra fields rather than silently ignoring them.
 - **Rule:** enforce explicit limits — maximum string lengths, array sizes,
-  pagination bounds. `Message.content` has no length limit in the schema today.
+  pagination bounds. Message pagination is fixed at a default of 50 and a maximum
+  of 100 (see [`../api/README.md`](../api/README.md#pagination)); message content
+  has no length limit in the schema today.
 - **Rule:** treat all client input as untrusted strings. Do not assume a value is
   a valid id because it is named one.
 - **Why boundary validation:** domain modules can then assume well-formed input
   and stay free of transport concerns
   ([`backend.md`](backend.md)).
-- **Undecided:** the validation approach (hand-written checks vs. a small schema
-  library). Any library must be added deliberately, not silently.
+- **Mechanics owned by PR-12:** the validation approach (hand-written checks vs.
+  a small schema library), the error envelope, and field-level rules. Any library
+  must be added deliberately, not silently. This document does not prescribe one.
 
 **Note:** a value being stored by Prisma does not make it safe. Prisma prevents
 SQL injection, not invalid or hostile content.
@@ -114,6 +166,8 @@ SQL injection, not invalid or hostile content.
   one endpoint.
 - **Storage:** counters are a natural fit for Redis, which is already available
   behind `backend/src/cache/` — see below.
+- **Status:** not implemented. The API contract reserves the `429 RATE_LIMITED`
+  code, but no limit, window, or `Retry-After` header is defined yet (PR-27).
 
 ---
 
@@ -203,13 +257,14 @@ workers, and client-side caching. None are designed.
 
 ## Client-side considerations
 
-- **Never** store credentials in `localStorage` or `sessionStorage` without a
-  deliberate decision — either is readable by any script on the page.
+- **Never** store credentials or session tokens in `localStorage` or
+  `sessionStorage` — either is readable by any script on the page.
+- **Decided:** the session lives only in the `HttpOnly` `dwelling_session` cookie
+  and is not readable by frontend code. There is no token-storage decision left
+  for the client (ADR-0022).
 - The frontend must not depend on a hidden DOM element or an unrendered panel for
   security. Anything the browser has received is visible to the user.
 - Any `VITE_*` value is public; treat it as published.
-- **Undecided:** the sign-in flow and token storage approach. Decide together with
-  authentication.
 
 ---
 

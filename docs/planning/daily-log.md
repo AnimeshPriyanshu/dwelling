@@ -609,6 +609,56 @@ and a seeded helper derives the obstacle list.
 
 **Tasks moved to Done:** none — M7 has no verified acceptance run yet
 
+## 2026-11-14 — Phase 2, PR-11: API contract
+
+**Status:** complete (documentation only; not committed)
+**Focus task(s):** PR-11
+
+### Completed
+- Defined **12 endpoints** in [`../api/README.md`](../api/README.md) — 4 auth
+  (signup, login, logout, `GET /api/auth/me`), 3 contacts (list, add, remove),
+  3 conversations (list, get-or-create, detail) and 2 messages (paginated read,
+  send). All are marked `▢ Defined`, not implemented.
+- Recorded **ADR-0022 — JWT authentication using an HttpOnly cookie**: cookie
+  `dwelling_session`, `HttpOnly`, `SameSite=Lax`, `Secure` in production,
+  seven-day lifetime, no refresh and no revocation.
+- Documented honestly that logout only clears the cookie, that a copied JWT stays
+  valid until `exp`, and that CSRF rests on JSON-only bodies plus `Origin`
+  validation rather than on `SameSite=Lax` alone. A cross-site deployment is
+  flagged as needing reassessment.
+- Fixed contract/plan drift: `/api/me` → `/api/auth/me`; contacts addressed by
+  the peer's `User.id`, not a `Contact` row id; message pagination uses only
+  `cursor` (default 50, maximum 100); non-participants get `404`.
+- Updated `security-and-caching.md` (cookie, CSRF, `403`/`404` rules),
+  `database.md` (peer `User.id` representation) and corrected PR-30's dependency
+  in `plan.md` to include PR-12's error envelope.
+- No application code, Prisma schema, migration, or dependency changed.
+
+### Problems encountered
+- The old API page claimed `API_PREFIX` was imported by both sides; only the
+  backend imports it, and the frontend makes no network calls. Corrected.
+- Authentication was documented as "cookies vs. tokens undecided" while
+  `JWT_SECRET` was already required at boot and the roadmap assumed a cookie.
+  Resolved by ADR-0022 rather than leaving the contradiction.
+- PR-30 builds error handling for the frontend but depended only on PR-11 and
+  PR-23; it now also depends on PR-12.
+
+### Decisions made
+- **ADR-0022** — JWT authentication using an HttpOnly cookie, seven-day TTL, no
+  refresh or revocation in v1.
+- Conversation creation: existing non-contact → `403 NOT_CONTACTS`; unknown user
+  → `404 USER_NOT_FOUND`, with the user-existence disclosure documented.
+- Contact removal's effect on an existing conversation remains **OQ-4**, and
+  last-message preview/list ordering remain **OQ-6/OQ-7** for PR-53.
+
+### Next day's priority
+1. PR-12 — shared validation and error envelope conventions.
+2. PR-15/PR-16 — five-model schema and the first migration.
+
+**Tasks moved to Done:** PR-11
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:

@@ -47,6 +47,7 @@ based on ADR (Architecture Decision Record).
 | [ADR-0021](#adr-0021--five-model-messaging-core-extended-with-kind-for-altars) | Five-model messaging core, extended with `kind` for Altars | Accepted | 2026-11-13 |
 | [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars) | One-to-one conversations only; no group conversations or Altars | Accepted | 2026-11-13 |
 | [ADR-0021](#adr-0021--contacts-are-mutual-add-pairs-with-no-requestaccept-flow) | Contacts are mutual-add pairs with no request/accept flow | Accepted | 2026-11-13 |
+| [ADR-0022](#adr-0022--jwt-authentication-using-an-httponly-cookie) | JWT authentication using an HttpOnly cookie | Accepted | 2026-11-14 |
 
 ---
 
@@ -837,6 +838,103 @@ FR-002, FR-009, FR-010, NFR-014.
 
 ---
 
+
+---
+
+## ADR-0022 — JWT authentication using an HttpOnly cookie
+
+**Status:** Accepted
+**Date:** 2026-11-14
+
+### Context
+
+Authentication was the largest open question in
+[`../architecture/security-and-caching.md`](../architecture/security-and-caching.md):
+"session cookies vs. tokens" was undecided while the approved roadmap already
+assumed a JWT (`JWT_SECRET` is required at boot in
+`backend/src/config/env.js`) and an httpOnly cookie (PR-19 and PR-21). The API
+contract could not define signup, login, logout, or `/api/auth/me` without
+settling where the credential lives.
+
+The two realistic options for a single-page frontend talking to the same Express
+backend are a bearer token held by JavaScript or a token in an `HttpOnly` cookie.
+JavaScript-held tokens are readable by any script on the page, so an XSS bug
+becomes full account takeover. Cookies are not readable by script, but they are
+sent automatically by the browser, which reintroduces CSRF.
+
+### Decision
+
+1. **The session credential is a signed JWT**, `HS256`, signed with `JWT_SECRET`
+   from the environment. Claims: `sub` (user id), `iat`, `exp`. No profile fields
+   or roles are stored in the token.
+2. **It is delivered only in an `HttpOnly` cookie** named `dwelling_session`,
+   with `SameSite=Lax`, `Secure` in production, `Path=/`, and `Max-Age` equal to
+   the token lifetime. JavaScript never reads or writes it, and it is never put
+   in `localStorage`, `sessionStorage`, or a response body.
+3. **The v1 lifetime is seven days**, fixed at issue. There is no refresh token
+   and no sliding expiration. Re-authenticating replaces the cookie.
+4. **Logout clears the cookie and does not revoke the token.** A stateless JWT
+   cannot be invalidated by deleting a cookie, so an already-issued token —
+   including a copied one — remains valid until `exp`. There is no denylist,
+   token-version column, or password-change invalidation in v1; revocation needs
+   its own decision and implementation.
+5. **CSRF is handled at the transport boundary, without a token in v1.**
+   Every state-changing request must use `Content-Type: application/json`, and a
+   request that relies on the session cookie must carry an `Origin`/`Referer`
+   matching `CLIENT_ORIGIN`; the server rejects everything else. `SameSite=Lax`
+   is an additional layer, **not** a complete defense: it
+   does not cover same-site subdomains or XSS, and it prevents the cookie from
+   being sent at all if the frontend and API are deployed on different sites.
+6. **A cross-site deployment requires reassessment.** Moving to
+   `SameSite=None; Secure` removes the built-in protection and makes a CSRF
+   token mandatory. The token mechanism is deferred (OQ-13), and the deployment
+   topology is unresolved (OQ-14); neither is silently assumed.
+7. **Identity always comes from the verified cookie.** A `userId`, `senderId`, or
+   role in a body or query is untrusted input, never proof of identity. Socket
+   authentication is not covered here; PR-60 reuses this cookie at handshake time
+   and must define origin checks.
+
+### Alternatives considered
+
+- **Bearer JWT in memory or `localStorage`** — rejected: any XSS can read the
+  token and exfiltrate a long-lived credential, and it contradicts PR-19/PR-21.
+- **Server-side sessions in Redis with an opaque cookie** — viable and would make
+  logout truly revocable, but it adds a session store and a lookup on every
+  request before any session exists; rejected for v1, and still possible later
+  by replacing the cookie's value without changing the HTTP contract.
+- **`SameSite=Strict`** — stronger against CSRF but blocks the cookie on ordinary
+  top-level navigations into the app, which makes "open a link while signed in"
+  behave as signed out.
+- **`SameSite=None; Secure` plus a CSRF token now** — the correct end state for a
+  split-origin deployment, but it hardens against a topology that is not decided
+  yet; deferred rather than guessed.
+- **Short-lived access token with refresh rotation** — more machinery than a
+  two-person-world v1 needs, and revocation still needs a store.
+
+### Consequences
+
+- ✅ The credential is unreadable by JavaScript, so an XSS bug cannot directly
+  steal the session cookie.
+- ✅ The HTTP contract has one identity mechanism (ADR-0022), consistent with
+  `JWT_SECRET` and the auth PRs in [`../../plan.md`](../../plan.md).
+- ✅ No token storage decision is left to frontend code.
+- ⚠️ **Logout is not revocation.** Closing a session on one device cannot end it
+  on another, and a stolen cookie works until `exp`. This is documented in
+  [`../api/README.md`](../api/README.md) rather than hidden.
+- ⚠️ CSRF protection depends on the JSON content type, the `Origin` check, and
+  `SameSite=Lax`; none alone is sufficient, and a cross-site deploy invalidates
+  the `Lax` assumption.
+- ⚠️ A password change does not invalidate existing sessions in v1.
+- ⚠️ Nothing is implemented: PR-19 adds the dependencies, PR-21 the token and
+  cookie helpers, PR-22 the middleware. The cookie name and attributes are fixed
+  now so the frontend and socket layers can be built against them.
+
+### Related
+
+[`../api/README.md`](../api/README.md) (auth contract),
+[`../architecture/security-and-caching.md`](../architecture/security-and-caching.md),
+[`../../plan.md`](../../plan.md) (PR-19–PR-29, PR-60),
+[`daily-log.md`](daily-log.md).
 
 ---
 

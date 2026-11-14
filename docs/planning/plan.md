@@ -192,7 +192,7 @@ Adding root `lint`/`test` aliases is an open improvement, not part of any PR abo
 
 | PR | Title | Lane | Depends on |
 | --- | --- | --- | --- |
-| 30 | Add a frontend API client with credentials and error handling | Frontend | 11, 23 |
+| 30 | Add a frontend API client with credentials and error handling | Frontend | 11, 12, 23 |
 | 31 | Add auth context and session bootstrap | Frontend | 30 |
 | 32 | Build login and signup screens | Frontend | 31 |
 | 33 | Protect the app shell and add logout | Frontend | 31, 32 |
