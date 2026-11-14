@@ -254,11 +254,7 @@ Day 6 at the expense of the bridge (DW-035).
 ## Altar and maps
 
 - **Confirmed:** the Altar is placed by map data and rendered as scenery (FR-026).
-- **Decided:** an Altar is map scenery like any other landmark, so it lives in the
-  map data that places it; there is no separate shared map (ADR-0020).
-- **Not supported:** Altar interaction and group conversation (FR-027 withdrawn by
-  ADR-0020).
-
+- **Planned — Phase 12:** Altar interaction (FR-027, DW-B03, `[../planning/plan.md`](../planning/plan.md)).\n
 ---
 
 ## Open questions

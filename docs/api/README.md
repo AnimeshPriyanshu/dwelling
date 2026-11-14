@@ -4,12 +4,10 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 
 > ## ⚠️ Almost nothing here exists yet
 >
-> **One endpoint is implemented:** `GET /api/health`.
+> **One endpoint is implemented:** `GET /api/health`. It is documented below.
 >
-> **Twelve endpoints are defined but not implemented.** They are marked
-> `▢ Defined` and are the agreed contract for Phases 3–7 of
-> [`../../plan.md`](../../plan.md). No route, middleware, validation, or database
-> query exists for any of them: every one returns Express's `404 text/html` today.
+> Everything else in this file is a **placeholder** marked `Pending`. Do not
+> build against a pending endpoint, and do not assume a pending endpoint's shape.
 >
 > The permitted sources of truth, in order: the code, then this file. If they
 > disagree, the code wins — and this file is wrong and must be fixed.
@@ -55,8 +53,7 @@ documented how to verify it.
 
 ## Authentication and sessions
 
-Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
-No authentication code exists yet; this is the contract.
+Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). No authentication code exists yet; this is the contract.
 
 ### Cookie
 
@@ -146,12 +143,6 @@ GET /api/health HTTP/1.1
   stays there while the route surface is small.
 - Touches no database, cache, or session — it proves the HTTP layer is up, nothing
   more.
-- The handler cannot fail. Any other method on the path, and any unknown path,
-  falls through to Express's default handler and returns `404 text/html`, not
-  JSON. A malformed JSON body returns `400 text/html` whose body includes a stack
-  trace while `NODE_ENV=test`; the PR-12 error envelope is what fixes this.
-- There is no CORS configuration for Express, so a browser on another origin
-  cannot call it today.
 
 **Verify**
 
@@ -164,17 +155,17 @@ curl -i http://localhost:3000/api/health
 ## Defined endpoints — not implemented
 
 The twelve endpoints below are the agreed Phase 2–7 contract. They are grouped by
-the PRs that implement them (`plan.md` Phases 3, 5, 7).
+the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 
-All of them:
-
-- require the session cookie unless the endpoint says otherwise;
-- resolve the caller from the cookie, **never** from a body or query value;
-- return JSON on success and on every defined error;
-- use the error codes in [Error format](#error-format), with the wire envelope
-  owned by PR-12.
+- **Auth:** session cookie required, unless the endpoint says otherwise
+- **Resolve the caller** from the cookie, never from a body or query value
+- **Return JSON** on success and on every defined error
+- **Use the error codes** in [Error format](#error-format), with the wire envelope
+  owned by PR-12
 
 ### Authentication (PR-19 – PR-29)
+
+All auth endpoints use session cookie authentication.
 
 #### `POST /api/auth/signup` ▢ Defined
 
@@ -187,10 +178,6 @@ Create an account and start a session.
 - **Notes:** signing up logs the user in. Email uniqueness, normalization, and
   password rules are validation mechanics and belong to PR-12/PR-23; this
   contract fixes only the field names. `displayName` uniqueness is **OQ-1**.
-
-```json
-{ "user": { "id": "clx0user1", "email": "ada@example.com", "displayName": "Ada", "createdAt": "2026-11-14T10:00:00.000Z" } }
-```
 
 #### `POST /api/auth/login` ▢ Defined
 
@@ -231,7 +218,7 @@ Return the authenticated user. The canonical replacement for the old
 - **Notes:** the only session-bootstrap endpoint. It reads `sub` from the JWT and
   loads the user; a token for a deleted user is `401`, not `500`. Used by PR-31.
 
-`User` = `{ id, email, displayName, createdAt }`. The email is returned only to
+**User** = `{ id, email, displayName, createdAt }`. The email is returned only to
 the user themselves; no other endpoint exposes it. `email` is part of the target
 schema and arrives with PR-15 — the current Prisma sketch has no email column, so
 nothing can be implemented against this shape yet.
@@ -295,7 +282,7 @@ Remove a contact relationship.
 Every conversation has exactly two participants, stored as a canonical ordered
 pair (ADR-0020). There is no group conversation and no conversation type.
 
-`Conversation` = `{ id, participants: [UserSummary, UserSummary], createdAt }`,
+`Conversation` = `{ id, participants: [UserSummary, UserSummary], createdAt}`,
 where `UserSummary` = `{ id, displayName }`. Participant array order carries **no
 meaning** and must not be used to identify the caller's peer by position; compare
 ids.
@@ -449,47 +436,30 @@ handler currently does exactly that for malformed JSON).
 
 ---
 
-## Realtime events
-
-**The only event in the codebase is `server:ready`.** It is emitted by
-`backend/src/sockets/index.js` when a client connects; nothing on the client
-listens for it. No client currently opens a socket connection.
-
-Design constraints for future events — separate namespaces per concern, small
-JSON payloads, server-side validation, and documentation here before shipping —
-are in [`../architecture/realtime.md`](../architecture/realtime.md).
-
-| Event | Direction | Status | Purpose |
-| --- | --- | --- | --- |
-| `server:ready` | server → client | 🟡 Partial | Emitted on connection. No client consumer exists. |
-| _Messaging events_ | both | ▢ Pending | Not named or designed yet. Socket auth reuses `dwelling_session` in PR-60. |
-| _Presence events_ | server → client | ⏸ Deferred | FR-029. |
-| _Movement events_ | both | ⏸ Deferred | Authority model is undecided. |
-| _Altar events_ | both | ⛔ Not supported | Group behavior is out of scope (ADR-0020). |
-
-**Do not invent event names in code before they are designed and documented
-here.** An undocumented event is an integration bug waiting to happen. HTTP
-message creation may later emit an event; the HTTP contract above does not
-promise one.
-
----
-
 ## Other planned endpoints
 
 These are **not** part of the PR-11 contract and remain unshaped.
 
 ### `GET /api/dwellings` ▢ Pending
+
 Dwelling data for the world. **Undecided:** whether dwelling positions come from
 the server at all, or live in frontend map data
 ([`../design/maps.md`](../design/maps.md)). The mock world identifies contacts by
 map-local ids such as `contact-elowen`; mapping those to `User.id` is **OQ-15**.
 
 ### `GET /api/maps` ▢ Pending
+
 Map definitions. **Undecided:** maps may never become server data.
 
-### `GET /api/altars` ⛔ Not supported
-Altars are scenery only and are not a conversation venue (ADR-0020); FR-027 is
-withdrawn.
+### `GET /api/altars` ▢ Planned — Phase 12
+
+Altar identity and membership (FR-026, FR-027). Group conversations belong to an
+Altar and arrive in Phase 12 of [`../../plan.md`](../../plan.md).
+
+**Do not invent event names in code before they are designed and documented
+here.** An undocumented event is an integration bug waiting to happen. HTTP
+message creation may later emit an event; the HTTP contract above does not
+promise one.
 
 ---
 
@@ -538,10 +508,11 @@ disclosure is documented.
    - if it emits or consumes a socket event, document the event here too.
 4. Keep the [Error format](#error-format) codes in sync with PR-12's envelope.
 
+---
+
 ## Related
 
 - [`../architecture/backend.md`](../architecture/backend.md) — backend layering
 - [`../architecture/realtime.md`](../architecture/realtime.md) — realtime design
 - [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md) — cookie, CSRF, authorization, validation
-- [`../architecture/database.md`](../architecture/database.md) — entities endpoints expose
 - [`../planning/decisions.md`](../planning/decisions.md) — ADR-0020, ADR-0021, ADR-0022

@@ -539,45 +539,75 @@ and a seeded helper derives the obstacle list.
 
 ---
 
-## 2026-11-13 — Phase 2, PR-10: one-to-one-only decisions
 
-**Status:** complete (documentation only; not committed)
-**Focus task(s):** PR-10
+**Status:** on track
+**Focus task(s):** PR #12 (asset integration), PR-02 – PR-07 (tooling, tests, CI), DW-038 groundwork
+**Commits:** `9e5fb3f`, `07fbc94`, `4b5a9b2`, `3adeee8`, `e7f9f6f`, `b865f14`, `169441f`, `918ee92`, `ae4c2c3`
 
 ### Completed
-- Approved the one-to-one-only rule as **ADR-0020**, superseding the
-  group-in-Altar allowance in ADR-0015. ADR-0015 is kept and marked
-  `Superseded by ADR-0020` rather than rewritten.
-- Recorded contact modeling as **ADR-0021**: contacts are mutual, added
-  immediately, with no request/accept state, and required before a conversation
-  exists.
-- Aligned the documents that referenced the old rule: `architecture/database.md`
-  (canonical pair, contact model, Altar removal, open questions),
-  `architecture/realtime.md` (group transport removed),
-  `architecture/security-and-caching.md` (participant checks),
-  `api/README.md`, `project/requirements.md` (FR-027 withdrawn, FR-034–FR-036
-  added), `project/scope.md`, `project/glossary.md`, `project/vision.md`,
-  `planning/roadmap.md`, `planning/milestones.md`, `planning/task-board.md`,
-  `design/game-world.md`, `design/ui-ux.md` and `design/maps.md`.
-- No application code, Prisma schema, migration, or dependency changed.
+- **PR-02 to PR-05 — quality gates now exist.** Backend gained ESLint, Prettier,
+  Vitest and Supertest (`9e5fb3f`); frontend gained ESLint, Prettier, Vitest and
+  Testing Library (`07fbc94`); `validateEnv` refuses to boot without `JWT_SECRET`
+  (`4b5a9b2`); GitHub Actions runs lint, format check and tests per workspace
+  (`3adeee8`).
+- **PR-06 — walk animations registered** (`e7f9f6f`): four directional animations
+  with idle frames, verified through real keyboard input.
+- **PR-07 — Phaser input blocked while the chat drawer is open** (`b865f14`):
+  opening the drawer publishes `ui:state` through the bridge and `WorldScene`
+  disables its keyboard, releasing held keys. Covered by new App and bridge tests.
+- **PR #12 — supplied asset packs merged into `main`** (`169441f`, merged through
+  `918ee92` and `ae4c2c3`): 48 files, +2,179/−424. World, houses, props and
+  portraits come from Sunnyside World; the player and farm rail come from Sprout
+  Lands. `world/terrain.js` and `world/farm.js` add paths, seeded woodland, dirt
+  roads and fenced crop plots as map data.
+- **Re-audit fixes** recorded in [`../design/asset-inventory.md`](../design/asset-inventory.md#9-re-audit--2026-11-13):
+  the two original pack folders are gitignored (P1), the duplicated path frame is
+  removed (P2), portrait paths moved out of `App.jsx` into `world/assets.js` (P4),
+  and the stale fence line in `CREDITS.md` was corrected (P5). P3, P6, P7 and P8
+  remain open by decision.
+
+### Verified
+- `npm test --workspace=@dwelling/backend` → 6/6 passing (health + env validation).
+- `npm test --workspace=@dwelling/frontend` → 7/7 passing (App 5, bridge 2).
+- `npm run lint` in both workspaces exits 0.
+- `npm run build` exits 0; the only warning is the pre-existing chunk-size warning
+  (1,370 kB minified, 375 kB gzip).
+- All 15 runtime asset paths resolve to files on disk (re-audit, read-only check).
 
 ### Problems encountered
-- ADR-0015 **explicitly allowed group conversations in Altars**, which conflicts
-  with the one-to-one-only requirement. Reported and resolved by supersession,
-  not by editing the accepted record.
+- **Milestone 7 is delivered in code but not marked `Done`.** The drawer, labelled
+  mock history, `Esc` close and input blocking all work, yet DW-035's criterion
+  "scenes never touch the DOM directly" still fails: `Dwelling.interact()`
+  dispatches a raw `window` `CustomEvent` instead of publishing through
+  `bridge/`. That routing is PR-08 and is the remaining blocker for M7.
+- **`task-board.md` is internally inconsistent:** the M6 rows and the per-milestone
+  counter say 4/4 `Done`, while the overall progress table says `0 / 4` `Not Started`.
+- **Root `plan.md` contradicts the docs and the schema.** It describes an 84-PR
+  plan with a five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`,
+  `Message`), no Altar/`ConversationMember`, Supabase hosting and cookie auth —
+  which conflicts with ADR-0015 and `database/prisma/schema.prisma`. Reported,
+  not reconciled.
+- **Several guides are now stale:** `development/testing.md` and
+  `development/coding-conventions.md` still say no test runner or linter exists,
+  `development/setup.md` still says "no test command / no CI",
+  `development/folder-structure.md` claims a root `.env.example` documenting
+  `DATABASE_URL` (the file is `backend/.env.example` and has no `DATABASE_URL`),
+  and `architecture/overview.md` still lists non-existent `WorldScene.jsx` /
+  `ChatScene.jsx` files and "no CI".
 
 ### Decisions made
-- **ADR-0020** — one-to-one conversations only; no group conversations or
-  Altars.
-- **ADR-0021** — contacts are mutual-add pairs with no request/accept flow.
+- None new. The asset re-audit changes are corrections to earlier notes; the
+  remaining items (unused `uiExpressionChat`, legacy Kenney files, Vite starter
+  leftovers, dwelling collider coupled to the terrain texture) stay open by
+  decision, not by oversight.
 
 ### Next day's priority
-1. PR-11 — API contract for auth, contacts, conversations and messages.
-2. PR-15/PR-16 — five-model schema and the first migration.
+1. **DW-035 / PR-08** — route dwelling interactions through `bridge/`, then run
+   the M7 acceptance checklist and update `task-board.md` honestly.
+2. **M8 — house interiors** (DW-049 to DW-054), the next unstarted milestone.
+3. Reconcile the stale guides above and decide what to do with root `plan.md`.
 
-**Tasks moved to Done:** PR-10
-
----
+**Tasks moved to Done:** none — M7 has no verified acceptance run yet
 
 ## 2026-11-14 — Phase 2, PR-11: API contract
 
@@ -641,7 +671,7 @@ Entries are added as the ten-day plan is executed:
 | Day 4 | 2026-10-17 | Collision and camera | Yes |
 | Day 5 | 2026-10-18 | Dwellings and interactions | Yes |
 | Day 6 | 2026-10-19 | Maps, second map and HUD | Yes |
-| Day 7 | _(fill in)_ | DOM bridge and conversation sidebar | No |
+| Day 7 | 2026-11-13 | DOM bridge and conversation sidebar | Yes |
 | Day 8 | _(fill in)_ | House interiors | No |
 | Day 9 | _(fill in)_ | Altar and polish | No |
 | Day 10 | _(fill in)_ | Integration and review | No |

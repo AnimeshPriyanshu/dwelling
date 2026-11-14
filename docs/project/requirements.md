@@ -69,9 +69,14 @@ requirements stay `Planned` until their milestone lands._
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-022 | The HTML UI around the canvas (header, panels) remains functional alongside the canvas. | Planned |
+| FR-022 | The HTML interface (floating HUD, map selector, conversation drawer) remains functional alongside the fullscreen canvas. | Done |
 | FR-023 | Interacting with a dwelling opens a conversation UI for that contact. | Done |
 | FR-024 | The conversation UI shows the contact's name. | Done |
+| FR-025 | The conversation UI can be closed and returns focus to the world. | Done |
+| FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** Group conversations belong to Altars and are scheduled as Phase 12 of [`plan.md`](../planning/plan.md). | Done |
+| FR-027 | An Altar supports interaction by multiple users in the same location. | Planned |
+| FR-028 | Users can send and receive messages in a conversation. | Planned |
+=======
 | FR-025 | The conversation UI can be closed and returns focus to the world. | Planned |
 | FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** | Planned |
 | FR-027 | An Altar supports interaction by multiple users in the same location. | Not supported |
@@ -88,12 +93,20 @@ requirements stay `Planned` until their milestone lands._
 | FR-030 | The player can enter a dwelling's interior and exit back to that dwelling's door, without a page reload. | Planned |
 | FR-031 | The shared interior contains a recognisable fireplace, kitchen area, and bed. | Planned |
 
-### Conversation sidebar
+### Conversation drawer
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-032 | The conversation UI opens as a docked sidebar beside the world, covering no part of the canvas. | Planned |
-| FR-033 | Any mock conversation content is visibly labelled as mock data, and no input field implies that sending works. | Planned |
+| FR-032 | The conversation UI opens as a slide-out overlay drawer on the right edge of the fullscreen canvas, and can be dismissed to restore the unobstructed world. | Done |
+| FR-033 | Any mock conversation content is visibly labelled as mock data, and no input field implies that sending works. | Done |
+
+> **FR-032 note (2026-11-13):** the original wording required a *docked sidebar
+> beside the world, covering no part of the canvas*. That layout was superseded by
+> ADR-0017 — a fullscreen `100vw × 100vh` canvas with a right-edge slide-out
+> drawer — which the owner confirmed on 2026-10-17. The requirement is reworded to
+> match the accepted design; because the drawer is an overlay by design, "covers
+> no part of the canvas" no longer applies. Implemented in `App.jsx` and
+> `style.css` (`.chat-drawer`), covered by `App.test.jsx`.
 
 ### Conversations and contacts
 
@@ -118,12 +131,20 @@ requirements stay `Planned` until their milestone lands._
 | NFR-007 | The latest stable Chrome, Firefox, and Safari are supported. | Planned |
 | NFR-008 | The layout remains usable down to 320px viewport width. | Planned |
 | NFR-009 | All raster assets are PNG or WebP and individually kept small (target ≤ 512 KB). | Done |
-| NFR-010 | DOM UI is reachable and operable by keyboard, with visible focus states. | Planned |
+| NFR-010 | DOM UI is reachable and operable by keyboard, with visible focus states. | In progress |
 | NFR-011 | No secret, credential, or environment-specific value is committed to source control. | Planned |
 | NFR-012 | Module boundaries are respected: transport code does not contain persistence logic, and vice versa. | Planned |
 | NFR-013 | Documentation is updated as part of each completed milestone. | Planned |
 | NFR-014 | Every third-party asset's pack, author, license and source URL is recorded in `frontend/public/assets/CREDITS.md`, and its license permits use and redistribution. | In progress |
 | NFR-015 | The app always starts in a working, demonstrable state — the frontend phase is graded partly on a live demonstration and a written report. | Planned |
+
+> **NFR-010 note (2026-11-13):** the DOM UI uses real, labelled controls (the map
+> `<select>` and the drawer's close button), and both have an explicit
+> `:focus-visible` outline. The closed drawer is `inert`, so its controls stay out
+> of the tab order; opening it moves focus to the close button and traps Tab
+> inside, and closing it returns focus to the world. Colour contrast is not yet
+> audited, so the requirement stays **In progress** until the palette pass
+> (DW-058).
 
 ---
 

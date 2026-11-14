@@ -20,11 +20,12 @@ frontend/
 ├── package.json          ✅  scripts: dev, build, preview · deps: phaser, react, react-dom, socket.io-client
 ├── public/
 │   ├── favicon.svg       ✅
-│   └── icons.svg         ✅
+│   ├── icons.svg         ✅
+│   └── assets/           ✅  tilesets, houses, interiors, props, characters, ui + CREDITS.md
 └── src/
     ├── main.js           ✅  creates the React root, renders App
-    ├── App.jsx           ✅  mounts the Phaser game; World panel + Conversations sidebar
-    ├── style.css         ✅  grid layout, responsive below 700px
+        ├── App.jsx            ✅  mounts the Phaser game; floating HUD + slide-out conversation drawer
+    ├── style.css          ✅  fullscreen shell, floating HUD, drawer (`.chat-drawer`)
     ├── assets/           🟡  Vite starter leftovers (unused)
     ├── world/
     │   ├── game.js       ✅  createGame(parent) — the only Phaser config (DW-003)

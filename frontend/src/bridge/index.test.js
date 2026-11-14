@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   EventType,
+  phaserPublish,
   phaserEvents,
   setChatOpen,
   subscribe,
@@ -21,6 +22,26 @@ describe("bridge", () => {
 
     expect(handler).toHaveBeenNthCalledWith(1, { chatOpen: true });
     expect(handler).toHaveBeenNthCalledWith(2, { chatOpen: false });
+  });
+
+  it("publishes a dwelling interaction with the full resident payload", () => {
+    const handler = vi.fn();
+    subscribe(EventType.DWELLING_INTERACT, handler);
+
+    const dwelling = {
+      id: "dwelling-redwood",
+      contactId: "contact-elowen",
+      name: "Redwood Cottage",
+      contact: "Elowen",
+      role: "Herbalist",
+    };
+    phaserPublish("dwellingInteract", dwelling);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.DWELLING_INTERACT,
+      dwelling,
+    });
   });
 
   it("carries the map summary published by the world", () => {

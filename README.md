@@ -172,34 +172,40 @@ The project combines a familiar communication system with a spatial 2D environme
 ## Project Structure
 
 ```text
-frontend/   Vite, Vanilla JavaScript, and Phaser 3
-backend/    Node.js, Express, and Socket.IO
-database/   Prisma schema and PostgreSQL migrations
+frontend/   Vite, React 18, and Phaser 3 (plain JavaScript/JSX — no TypeScript)
+backend/    Node.js, Express, Socket.IO, and Prisma
+database/   Prisma schema for PostgreSQL (no migrations generated yet)
 shared/     Small JavaScript contracts shared by workspaces
-tests/      Cross-workspace tests
+tests/      Cross-workspace tests (placeholder; workspace tests live with their code)
 docs/       Project documentation, planning, and architecture notes
-scripts/    Project maintenance scripts
+scripts/    Project maintenance scripts (placeholder)
 ```
 
-The frontend and backend are separate npm workspaces in one monorepo. The
-initial world and chat directories are boundaries for future features; the
-gameplay and messaging flows are not implemented yet.
+The frontend and backend are separate npm workspaces in one monorepo. The Phaser
+world (movement, maps, dwellings, camera) and the conversation drawer are
+implemented; `frontend/src/chat/` is still a boundary README, and real messaging
+is not implemented yet.
 
 ## Local Development
 
-Requirements: Node.js 20.19 or newer and PostgreSQL. Redis is optional until a
-feature needs caching.
+Requirements: Node.js 20.19 or newer. PostgreSQL is only needed for database
+work, and Redis is optional.
 
 1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and set `DATABASE_URL` for your local PostgreSQL database.
-3. Generate the Prisma client with `npm run db:generate`.
-4. Apply the initial schema with `npm run db:migrate`.
-5. Start the frontend with `npm run dev`.
-6. In a second terminal, start the API with `npm run dev:backend`.
+2. Create the root env file from the tracked template:
+   `cp backend/.env.example .env`, then set `JWT_SECRET` (the backend refuses to
+   boot without it). Add `DATABASE_URL` for database work and an optional
+   `REDIS_URL`.
+3. Start the frontend with `npm run dev` → `http://localhost:5173`.
+4. Start the API in a second terminal with `npm run dev:backend` →
+   `http://localhost:3000` (`GET /api/health`).
 
-The frontend runs at `http://localhost:5173`; the API health check is at
-`http://localhost:3000/api/health`. Leave `REDIS_URL` unset to run without
-Redis.
+Database work is optional: `npm run db:generate` builds the Prisma client, and
+`npm run db:migrate` needs a reachable PostgreSQL instance. **No migrations have
+been generated yet.** Leave `REDIS_URL` unset to run without Redis.
+
+Checks: `npm test --workspace=@dwelling/frontend`,
+`npm test --workspace=@dwelling/backend`, and `npm run build`.
 
 ## Documentation
 
@@ -208,9 +214,14 @@ intent, the current milestones and task board, world and UI design, architecture
 and development setup. See the [documentation index](docs/README.md) to find your
 way around.
 
+- **Canonical plan:** [docs/planning/plan.md](docs/planning/plan.md) — phases 0–11 for direct messages, plus phase 12 for Altars and group conversations
 - **Building now:** [docs/planning/milestones.md](docs/planning/milestones.md) (ten-day plan) and [docs/planning/task-board.md](docs/planning/task-board.md) (task tracking)
 - **Module boundaries:** [docs/architecture.md](docs/architecture.md)
 - **Local setup:** [docs/development/setup.md](docs/development/setup.md)
 
-> The gameplay and messaging flows are **not implemented yet**. The documents
-> above mark anything unbuilt as pending rather than describing it as finished.
+> The world (movement, maps, dwellings, camera) and the labelled mock
+> conversation drawer are implemented. Real messaging, house interiors, and
+> group conversations are still pending. The Altar is scenery today and becomes
+> an interactive group space in Phase 12 of the plan; the documents above mark
+> anything unbuilt as pending.
+> rather than describing it as finished.

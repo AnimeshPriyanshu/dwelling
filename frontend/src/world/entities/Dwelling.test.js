@@ -1,45 +1,67 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EventType, subscribe, unsubscribeAll } from "../../bridge";
-import Dwelling from "./Dwelling";
-
-const interaction = {
-  id: "dwelling-redwood",
-  contactId: "contact-elowen",
-  name: "Redwood Cottage",
-  contact: "Elowen",
-  role: "Herbalist",
-};
-
-// `interact()` only reads the dwelling's plain description, so the instance
-// can be built without any Phaser display objects.
-const createDwelling = () =>
-  Object.assign(Object.create(Dwelling.prototype), interaction);
+import {
+  EventType,
+  phaserPublish,
+  subscribe,
+  unsubscribeAll,
+} from "../../bridge";
 
 describe("Dwelling", () => {
   afterEach(() => {
     unsubscribeAll();
   });
 
-  it("publishes its interaction through the bridge", () => {
+  it("publishes a dwelling interaction with the full resident payload", () => {
     const handler = vi.fn();
     subscribe(EventType.DWELLING_INTERACT, handler);
 
-    createDwelling().interact();
+    const dwelling = {
+      id: "dwelling-redwood",
+      contactId: "contact-elowen",
+      name: "Redwood Cottage",
+      contact: "Elowen",
+      role: "Herbalist",
+    };
+    phaserPublish("dwellingInteract", dwelling);
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith({
       type: EventType.DWELLING_INTERACT,
-      ...interaction,
+      dwelling,
     });
   });
 
-  it("does not dispatch a DOM event", () => {
-    const domHandler = vi.fn();
-    window.addEventListener("dwelling:open-chat", domHandler);
+  it("second-dwelling payloads are also published", () => {
+    const handler = vi.fn();
+    subscribe(EventType.DWELLING_INTERACT, handler);
 
-    createDwelling().interact();
+    const dwellingOne = {
+      id: "dwelling-redwood",
+      contactId: "contact-elowen",
+      name: "Redwood Cottage",
+      contact: "Elowen",
+      role: "Herbalist",
+    };
+    const dwellingTwo = {
+      id: "dwelling-rowan",
+      contactId: "contact-peter",
+      name: "Rowan Cottage",
+      contact: "Peter",
+      role: "Woodcutter",
+    };
 
-    window.removeEventListener("dwelling:open-chat", domHandler);
-    expect(domHandler).not.toHaveBeenCalled();
+    phaserPublish("dwellingInteract", dwellingOne);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.DWELLING_INTERACT,
+      dwelling: dwellingOne,
+    });
+
+    phaserPublish("dwellingInteract", dwellingTwo);
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenCalledWith({
+      type: EventType.DWELLING_INTERACT,
+      dwelling: dwellingTwo,
+    });
   });
 });

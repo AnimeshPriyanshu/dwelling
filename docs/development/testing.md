@@ -2,10 +2,10 @@
 
 How work is verified in Dwelling.
 
-> **There are no automated tests, and no test runner is installed.** No
-> `package.json` in the repository has a `test` script. `tests/` contains only a
-> README. Verification is **manual** for now — that decision is recorded in
-> ADR-0009 ([`../planning/decisions.md`](../planning/decisions.md)).
+> **Automated tests, a linter, a formatter, and CI exist** in both workspaces.
+> ADR-0020 ([`../planning/decisions.md`](../planning/decisions.md)) supersedes
+> ADR-0009. Canvas rendering, camera feel, and layout still need the manual
+> checklists below.
 
 ---
 
@@ -13,10 +13,12 @@ How work is verified in Dwelling.
 
 | Check | Exists? | How |
 | --- | --- | --- |
-| Automated unit tests | ❌ No | — |
-| Automated integration/E2E tests | ❌ No | — |
-| Linter / formatter | ❌ No | — |
-| Type checking | ❌ No (plain JS) | — |
+| Frontend unit/component tests | ✅ Yes | `npm test --workspace=@dwelling/frontend` (Vitest + Testing Library) |
+| Backend unit/integration tests | ✅ Yes | `npm test --workspace=@dwelling/backend` (Vitest + Supertest) |
+| Linter | ✅ Yes | `npm run lint --workspace=@dwelling/<workspace>` (ESLint) |
+| Formatter | ✅ Yes | `npm run format:check --workspace=@dwelling/<workspace>` (Prettier) |
+| Type checking | ❌ No (plain JavaScript/JSX — no TypeScript) | — |
+| **CI** | ✅ Yes | `.github/workflows/ci.yml`: lint, format check, tests, build |
 | **Build check** | ✅ Yes | `npm run build` |
 | **Manual checklist** | ✅ Yes | Below |
 | **Backend endpoint check** | ✅ Yes | `curl http://localhost:3000/api/health` |
@@ -39,6 +41,28 @@ npm run dev:backend         # separate terminal, only if the API is involved
 - Keep the **Network tab** open when checking the API/proxy.
 - Note the browser and version; test in a second browser before closing a
   milestone that touches layout (NFR-007).
+
+## Automated checks
+
+Run before declaring any milestone complete:
+
+```bash
+npm test --workspace=@dwelling/frontend
+npm test --workspace=@dwelling/backend
+npm run lint --workspace=@dwelling/frontend
+npm run lint --workspace=@dwelling/backend
+npm run format:check --workspace=@dwelling/frontend
+npm run format:check --workspace=@dwelling/backend
+```
+
+| Test file | Covers |
+| --- | --- |
+| `frontend/src/App.test.jsx` | drawer open/close, correct resident, no legacy `CustomEvent`, one subscription per topic |
+| `frontend/src/bridge/index.test.js` | publish/subscribe and unsubscribe |
+| `frontend/src/world/entities/Dwelling.test.js` | interaction publishes through the bridge and dispatches no DOM event |
+| `frontend/src/world/scenes/WorldScene.test.js` | `E` interaction, range check, input blocking |
+| `backend/tests/health.test.js` | `GET /api/health` |
+| `backend/tests/config/validateEnv.test.js` | required `JWT_SECRET`, no secret leakage |
 
 ## The build check
 
@@ -131,7 +155,19 @@ step.
       (or the chosen focus rule is applied consistently).
 - [ ] The HUD shows the current map name and updates on map change.
 
-### M7 — Full regression
+### M7 — Bridge and conversation drawer
+
+- [ ] Interacting with a dwelling opens the drawer for the **correct** resident.
+- [ ] The drawer slides in from the right edge (ADR-0017); the world stays visible behind it and is not pushed aside or clipped.
+- [ ] `Esc` and the close button both close it and return keyboard control.
+      *(Automated in `App.test.jsx`: focus enters the drawer, `Tab`/`Shift+Tab`
+      stay inside, focus returns to the opener — or to the `tabindex="-1"` canvas
+      when nothing else had focus — and the closed drawer is `inert`.)*
+- [ ] Mock content is visibly labelled; no input pretends to work.
+- [ ] Movement keys do nothing while the drawer is open.
+- [ ] Scenes never touch the DOM — interactions arrive through `bridge/`.
+
+### M10 — Full regression
 
 Run **every checklist above** in a single session, plus:
 
@@ -177,24 +213,21 @@ canvas and the DOM.
 
 ---
 
-## When to add automated tests
+## Automated test coverage
 
-Revisit ADR-0009 when there is **logic that does not require a browser to verify**.
-The first two candidates are already on the plan:
+The runner is installed (ADR-0020), and new pure logic should ship with a test.
+Covered today: the bridge, dwelling interaction routing, scene `E` handling and
+input blocking, the App drawer, the health endpoint, and env validation.
+
+Good next candidates:
 
 - **Map data / registry (DW-032, DW-033)** — pure functions: given a name, which
   map id? Given an id, which data? Ideal for unit tests.
 - **Interaction resolution (DW-028)** — "which dwelling is active for this player
   position" is pure logic and is exactly the code most likely to regress silently.
 
-Not worth automating yet: canvas rendering, camera feel, and frame-by-frame
-movement — those are manual checks and will stay that way (see ADR-0009).
-
-**If/when a runner is added:**
-
-1. Add it as a real dependency and a `test` script in the owning workspace.
-2. Record a superseding ADR.
-3. Update this document — including removing the "no automated tests" warning.
+Not worth automating: canvas rendering, camera feel, and frame-by-frame movement.
+Those stay manual checks.
 
 ---
 

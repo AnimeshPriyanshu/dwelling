@@ -23,7 +23,10 @@ export const EventType = {
 // Phaser event names creators
 export const phaserEvents = {
   dwellingNear: (dwellingId) => ({ type: EventType.DWELLING_NEAR, dwellingId }),
-  dwellingInteract: (data) => ({ type: EventType.DWELLING_INTERACT, ...data }),
+  dwellingInteract: (dwelling) => ({
+    type: EventType.DWELLING_INTERACT,
+    dwelling,
+  }),
   playerMove: (dx, dy) => ({ type: EventType.PLAYER_MOVE, dx, dy }),
   // The world publishes the registry's map summary (`summarizeMap`), so the
   // bridge carries the payload without knowing any map metadata itself.

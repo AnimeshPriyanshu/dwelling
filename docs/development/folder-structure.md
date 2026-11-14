@@ -5,7 +5,7 @@ The actual repository layout, and what each directory is for.
 > **Keep this file current.** When you add or move a directory, update it in the
 > same change. A stale structure document is worse than none.
 >
-> Last verified against the repository: **2026-10-17**.
+> Last verified against the repository: **2026-11-13**.
 
 Status markers: ✅ exists and is used · 🟡 exists but unused or partial ·
 ▢ placeholder only (README, no code) · **planned** = proposed, not created.
@@ -19,14 +19,14 @@ dwelling/
 ├── package.json          ✅  root workspace manifest; scripts + engines (node >=20.19.0)
 ├── package-lock.json     ✅  single lockfile for all workspaces
 ├── .gitignore            ✅  ignores node_modules, .env, dist
-├── .env.example          ✅  documents PORT, CLIENT_ORIGIN, DATABASE_URL, REDIS_URL (no real values)
+├── .github/workflows/    ✅  CI: lint, format check, tests, build per workspace
 ├── README.md             ✅  project overview, concept, and local development
-├── frontend/             ✅  Vite + React + Phaser 3 browser app
+├── frontend/             ✅  Vite + React 18 + Phaser 3 browser app
 ├── backend/              ✅  Express + Socket.IO API
 ├── database/             ✅  Prisma schema (no migrations)
 ├── shared/               ✅  cross-workspace constants
 ├── docs/                 ✅  this documentation tree
-├── tests/                ▢   cross-workspace tests — README only
+├── tests/                ▢   cross-workspace tests — README only; workspace tests live beside the code
 ├── scripts/              ▢   maintenance scripts — README only
 └── dist/                 🟡  stray build output at the repo root — gitignored, safe to delete
 ```
@@ -46,7 +46,7 @@ application.
 frontend/
 ├── index.html            ✅  #root mount point, loads /src/main.js, references /favicon.svg and /icons.svg
 ├── vite.config.js        ✅  @vitejs/plugin-react; dev proxy: /api → :3000, /socket.io → :3000 (ws: true)
-├── package.json          ✅  dev/build/preview scripts; deps: phaser, react, react-dom, socket.io-client · devDeps: vite, @vitejs/plugin-react
+├── package.json          ✅  dev/build/preview/test/lint/format scripts; deps: phaser, react, react-dom, socket.io-client · devDeps: vite, @vitejs/plugin-react, vitest, Testing Library, ESLint, Prettier
 ├── public/
 │   ├── favicon.svg       ✅  served at /favicon.svg (linked from index.html)
 │   ├── icons.svg         ✅  served at /icons.svg
@@ -70,10 +70,11 @@ frontend/
 │   │   ├── constants.js  ✅   tile/viewport sizes shared by all maps (DW-008)
 │   │   ├── assets.js     ✅   texture keys, paths, manifest, loadAssets() (DW-046)
 │   │   ├── farm.js       ✅   farm plots: soil cells, fence pieces, crop frames
-│   │   ├── scenes/       ✅   BootScene, PreloadScene, WorldScene (DW-004, DW-005)
-│   │   ├── entities/     ✅   Player, Dwelling (DW-014, DW-026)
+│   │   ├── animations.js ✅   four-direction walk/idle animation keys (DW-047)
+│   │   ├── scenes/       ✅   BootScene, PreloadScene, WorldScene + WorldScene.test.js (DW-004, DW-005)
+│   │   ├── entities/     ✅   Player, Dwelling + Dwelling.test.js (DW-014, DW-026)
 │   │   ├── systems/      **planned**  movement, interaction resolution (DW-015, DW-028)
-│   │   └── maps/         ✅   format.js, a-c.js, s-u.js, index.js registry (DW-032/033; rooms in DW-050)
+│   │   └── maps/         ✅   format.js, terrain.js, a-c.js, s-u.js, index.js registry (DW-032/033; rooms in DW-050)
 │   ├── bridge/           ✅   React ↔ Phaser event bus (DW-035 groundwork)
 │   └── chat/             ▢   conversation UI — README only (DW-036 onward)
 └── dist/                 🟡  build output — gitignored, do not edit
@@ -100,11 +101,20 @@ alongside them rather than in a parallel system. Whether they end up in a
 
 ```text
 backend/
-├── package.json          ✅  dev (node --watch) / start scripts
+├── .env.example          ✅  tracked env template (PORT, CLIENT_ORIGIN, JWT_SECRET, DATABASE_URL, optional REDIS_URL)
+├── .prettierrc.cjs       ✅  Prettier: semicolons, single quotes, 80 columns
+├── eslint.config.js      ✅  flat ESLint config
+├── vitest.config.js      ✅  node environment; includes tests/**/*.test.js
+├── package.json          ✅  dev/start/test/lint/format scripts
+├── tests/
+│   ├── health.test.js    ✅  Supertest: GET /api/health
+│   └── config/validateEnv.test.js  ✅  required-env validation
 └── src/
-    ├── server.js         ✅  HTTP server + Socket.IO; registers handlers, connects cache, listens
+    ├── server.js         ✅  HTTP server + Socket.IO; validates env, registers handlers, connects cache, listens
     ├── app.js            ✅  Express app: json parsing + GET /api/health
-    ├── config/env.js     ✅  loads root .env; exports { port, clientOrigin }
+    ├── config/
+    │   ├── env.js        ✅  loads root .env; exports { port, clientOrigin }
+    │   └── validateEnv.js ✅  fail-fast JWT_SECRET check (used by server.js)
     ├── cache/
     │   ├── index.js      ✅  Redis get/set/close — no-ops when REDIS_URL is unset
     │   └── README.md     ▢   boundary note
@@ -121,13 +131,10 @@ backend/
   [`../architecture/backend.md`](../architecture/backend.md).
 - The health route lives in `app.js` on purpose while the API surface is tiny;
   `routes/README.md` says it moves out when real routes arrive.
-- Domain modules (when they exist) live in `backend/src/<domain>/`, not in `app.js` —
-  they receive plain values and return plain values, never `req`/`res` or socket objects.
-
-**Domain logic rule**: route handlers and socket handlers must not embed persistence.
-  They call domain/data modules. Domain modules take plain values and return plain
-  values — never `req`, `res`, or socket objects. This keeps business logic testable
-  and independent of transport.
+- **Domain logic rule:** route and socket handlers must not embed persistence. They
+  call domain/data modules, which take plain values and return plain values — never
+  `req`, `res`, or socket objects. This keeps business logic testable and
+  independent of transport.
 
 ---
 
@@ -185,11 +192,13 @@ backend module layering, while the folder holds the fuller documentation set.
 ## `tests/` and `scripts/`
 
 ```text
-tests/README.md      ▢  cross-workspace tests; no test runner is configured
+tests/README.md      ▢  reserved for cross-workspace tests; only a README today
 scripts/README.md    ▢  repeatable maintenance tasks; prefer workspace npm scripts
 ```
 
-Both contain **only a README**. Do not describe tests or scripts as existing.
+Both contain **only a README**. The actual tests live inside each workspace
+(`frontend/src/**/*.test.{js,jsx}` and `backend/tests/**/*.test.js`) and run with
+that workspace's Vitest config.
 
 ---
 
@@ -210,7 +219,8 @@ Both contain **only a README**. Do not describe tests or scripts as existing.
 | Domain logic | `backend/src/<domain>/` (**planned**) — not in `app.js` |
 | A constant used by both frontend and backend | `shared/src/` |
 | A schema change | `database/prisma/schema.prisma` + a migration |
-| Cross-workspace test | `tests/` (once a runner exists) |
+| A workspace test | Next to the code as `*.test.js` / `*.test.jsx` |
+| A cross-workspace test | `tests/` (no runner is wired there yet) |
 | A repeated maintenance task | `scripts/`, or a workspace npm script |
 
 **Never:**

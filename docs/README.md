@@ -21,6 +21,7 @@ as if it exists.
 | Know what is in/out of scope now | [`project/scope.md`](project/scope.md) |
 | Look up a term | [`project/glossary.md`](project/glossary.md) |
 | See the long-term plan | [`planning/roadmap.md`](planning/roadmap.md) |
+| **See the canonical implementation plan** | [`planning/plan.md`](planning/plan.md) |
 | **See the current ten-day milestones** | [`planning/milestones.md`](planning/milestones.md) |
 | **Find my next task / update status** | [`planning/task-board.md`](planning/task-board.md) |
 | Log today's work | [`planning/daily-log.md`](planning/daily-log.md) |
@@ -29,6 +30,7 @@ as if it exists.
 | Understand canvas + HTML UI split | [`design/ui-ux.md`](design/ui-ux.md) |
 | Understand alphabet maps | [`design/maps.md`](design/maps.md) |
 | Organize art/sound assets | [`design/assets.md`](design/assets.md) |
+| Audit the supplied asset packs | [`design/asset-inventory.md`](design/asset-inventory.md) |
 | See how the pieces fit | [`architecture/overview.md`](architecture/overview.md) |
 | Set up the project locally | [`development/setup.md`](development/setup.md) |
 | Know where files live | [`development/folder-structure.md`](development/folder-structure.md) |
@@ -44,7 +46,8 @@ boundaries for this phase, and the glossary of domain terms. Changes here are
 rare and should reflect product decisions, not daily task churn.
 
 ### `planning/`
-The living "when" and "what next": the staged [`roadmap.md`](planning/roadmap.md),
+The living "when" and "what next": the canonical
+[`plan.md`](planning/plan.md), the staged [`roadmap.md`](planning/roadmap.md),
 the **ten-day** [`milestones.md`](planning/milestones.md) with acceptance
 criteria, the checkable [`task-board.md`](planning/task-board.md), the dated
 [`daily-log.md`](planning/daily-log.md), and the ADR-style
@@ -64,7 +67,7 @@ and remains authoritative for those boundaries.
 
 ### `development/`
 Practical, code-facing guidance: local setup, the real repository layout, code
-conventions, and manual testing checklists.
+conventions, and testing (automated checks plus manual checklists).
 
 ### `api/`
 Reserved for HTTP endpoint and Socket.IO event documentation once the API grows

@@ -7,10 +7,11 @@ working session.**
   `DW-044`. IDs are stable labels, not sequence numbers.
 - IDs are defined next to their milestone in [`milestones.md`](milestones.md) —
   keep the two files synchronized.
-- **Milestones 1–2 are `Done`; every other task is still `Not Started`.** Statuses
-  change only when acceptance criteria have been verified by running the app (or
-  when the owner explicitly confirms it).
-- Current milestone: **Milestone 6 — Map structure, second map and HUD**.
+- **Milestones 1–7 are `Done`; Milestone 8 is next.** Statuses change only when
+  acceptance criteria have been verified by running the app or by automated
+  tests (or when the owner explicitly confirms it). M7's drawer layout was checked
+  by CSS review only; the browser regression runs again in M10.
+- Current milestone: **Milestone 8 — House interiors**.
 - The plan is **ten days**, extended from seven during the requirements session
   (ADR-0014 in [`decisions.md`](decisions.md)).
 
@@ -41,7 +42,7 @@ this phase · **Low** = nice to have, drop first under time pressure.
 | DW-003 | Create `world/game.js` with the Phaser game config (`parent: 'world'`) | High | Done | 1h | DW-002 |
 | DW-004 | Create `world/scenes/` with `BootScene` and `PreloadScene` stubs | High | Done | 1h | DW-003 |
 | DW-005 | Create a `WorldScene` stub and register scene order | High | Done | 1h | DW-003 |
-| DW-006 | Start the game from `main.js` without removing the sidebar | High | Done | 1h | DW-004, DW-005 |
+| DW-006 | Start the game from `main.js` without removing the conversation panel | High | Done | 1h | DW-004, DW-005 |
 | DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | Done | 30m | DW-006 |
 
 **Milestone 1 progress:** 7 / 7 done
@@ -113,16 +114,16 @@ this phase · **Low** = nice to have, drop first under time pressure.
 
 **Milestone 6 progress:** 4 / 4 done
 
-## Milestone 7 — DOM bridge and conversation sidebar (Day 7)
+## Milestone 7 — DOM bridge and conversation drawer (Day 7)
 
 | ID | Task | Priority | Status | Estimate | Dependencies |
 | --- | --- | --- | --- | --- | --- |
-| DW-035 | Add a Phaser ↔ DOM event bridge module | High | Not Started | 1h | DW-031 |
-| DW-036 | Add a conversation sidebar panel (replaces the Conversations panel) | High | Not Started | 1.5h | DW-035, DW-030 |
-| DW-048 | Add mock contacts and message history, visibly labelled as mock data | Medium | Not Started | 1h | DW-036 |
-| DW-038 | Decide and implement the input-focus rule (panel open = DOM owns the keyboard) | High | Not Started | 1h | DW-036 |
+| DW-035 | Add a Phaser ↔ DOM event bridge module | High | Done | 1h | DW-031 |
+| DW-036 | Add a slide-out conversation drawer (replaces the Conversations panel) | High | Done | 1.5h | DW-035, DW-030 |
+| DW-048 | Add mock contacts and message history, visibly labelled as mock data | Medium | Done | 1h | DW-036 |
+| DW-038 | Decide and implement the input-focus rule (panel open = DOM owns the keyboard) | High | Done | 1h | DW-036 |
 
-**Milestone 7 progress:** 0 / 4 done
+**Milestone 7 progress:** 4 / 4 done
 
 ## Milestone 8 — House interiors (Day 8)
 
@@ -172,12 +173,12 @@ this phase · **Low** = nice to have, drop first under time pressure.
 | 3 — Player movement | 7 / 7 | **Done** |
 | 4 — Collision and camera | 6 / 6 | **Done** |
 | 5 — Dwellings and interactions | 6 / 6 | **Done** |
-| 6 — Maps, second map and HUD | 0 / 4 | Not Started |
-| 7 — Bridge and conversation sidebar | 0 / 4 | Not Started |
+| 6 — Maps, second map and HUD | 4 / 4 | **Done** |
+| 7 — Bridge and conversation drawer | 4 / 4 | **Done** |
 | 8 — House interiors | 0 / 6 | Not Started |
 | 9 — Altar and polish | 0 / 4 | Not Started |
 | 10 — Integration and review | 0 / 6 | Not Started |
-| **Total** | **35 / 59** | |
+| **Total** | **39 / 59** | |
 
 ## Backlog (not scheduled)
 
@@ -188,12 +189,14 @@ Move an item into a milestone only when it is the right time; otherwise leave it
 | --- | --- | --- |
 | DW-B01 | Farms: travel to a farm, work there, and chat | Requested 2026-10-17. Needs the activity + reward design first. Depends on the interaction system (M5) and real messaging. |
 | DW-B02 | Achievements with unlock rules and a panel | Requested 2026-10-17. Display is cheap; the unlock rules and persistence need deciding. Local mock is acceptable. |
+| DW-B03 | Altar as an interactive group space | FR-027. **Planned — Phase 12 of [`plan.md`](plan.md) (PR-85…PR-92)**; needs Altar membership, a group conversation per Altar, and a >2-participant realtime design. |
+=======
 | DW-B03 | ~~Altar as an interactive group space~~ | Withdrawn: FR-027 is not supported and group conversations are out of scope (ADR-0020). The Altar stays scenery (DW-056). |
 | DW-B04 | Personalised interiors (a distinct room per contact) | The shared template (DW-051) is deliberate for this phase. |
 | DW-B05 | Player identity: name and a personal avatar | Currently a generic character. Needs an account concept. |
 | DW-B06 | Audio: footsteps, doors, ambient music | No audio assets exist and none are being sourced this phase. |
 | DW-B07 | Touch controls and a genuine mobile layout | Desktop-first was chosen; the layout stays usable on small screens only. |
-| DW-B08 | Automated test tooling (map data and interaction resolution are the first candidates) | No runner is configured; see ADR-0009. |
+| DW-B08 | Expanded automated test tooling (E2E/canvas tests, map registry) | Vitest + Testing Library + Supertest exist (ADR-0020); Playwright/canvas tests remain deferred. |
 | DW-B09 | Pixel font for the HUD instead of `system-ui` | Optional; needs a CC0/OFL font file added and credited. |
 | DW-B10 | Notifications and toasts | Low value until achievements exist (DW-B02). |
 

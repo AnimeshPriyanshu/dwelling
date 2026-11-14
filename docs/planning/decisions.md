@@ -26,23 +26,25 @@ based on ADR (Architecture Decision Record).
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
 | [ADR-0001](#adr-0001--npm-workspace-monorepo-instead-of-separate-repositories) | npm-workspace monorepo instead of separate repositories | Accepted (inherited) | before 2026-09-20 |
-| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Accepted | before 2026-09-20 |
+| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Superseded by ADR-0016 | before 2026-09-20 |
 | [ADR-0003](#adr-0003--express--socketio-as-the-backend-transport) | Express + Socket.IO as the backend transport | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0004](#adr-0004--postgresql-with-prisma-for-persistence) | PostgreSQL with Prisma for persistence | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0005](#adr-0005--html-ui-around-the-canvas-rather-than-in-canvas) | HTML UI around the canvas rather than in-canvas | Accepted | 2026-10-17 |
 | [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Accepted | 2026-10-17 |
 | [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0008](#adr-0008--documentation-first-planning-system) | Documentation-first planning system | Accepted | 2026-10-17 |
-| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Accepted | 2026-10-17 |
+| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Superseded by ADR-0020 | 2026-10-17 |
 | [ADR-0010](#adr-0010--16-bit-pixel-art-top-down-with-a-slight-34-tilt-cozy-palette) | 16-bit pixel art, top-down with a slight 3/4 tilt, cozy palette | Accepted | 2026-10-17 |
 | [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0012](#adr-0012--interiors-as-one-shared-room-template-behind-a-door-trigger) | Interiors as one shared room template behind a door trigger | Accepted | 2026-10-17 |
 | [ADR-0013](#adr-0013--chat-is-a-docked-sidebar-with-explicitly-labelled-mock-data) | Chat is a docked sidebar with explicitly labelled mock data | Accepted | 2026-10-17 |
-| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Superseded by ADR-0020 | 2026-10-17 |
+| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted — Altars scheduled as Phase 12 | 2026-10-17 |
 | [ADR-0016](#adr-0016--react-as-the-ui-framework-with-phaser-for-the-2d-world) | React as the UI framework with Phaser for the 2D world | Accepted | 2026-10-17 |
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
 | [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
 | [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
+| [ADR-0020](#adr-0020--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
+| [ADR-0021](#adr-0021--five-model-messaging-core-extended-with-kind-for-altars) | Five-model messaging core, extended with `kind` for Altars | Accepted | 2026-11-13 |
 | [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars) | One-to-one conversations only; no group conversations or Altars | Accepted | 2026-11-13 |
 | [ADR-0021](#adr-0021--contacts-are-mutual-add-pairs-with-no-requestaccept-flow) | Contacts are mutual-add pairs with no request/accept flow | Accepted | 2026-11-13 |
 | [ADR-0022](#adr-0022--jwt-authentication-using-an-httponly-cookie) | JWT authentication using an HttpOnly cookie | Accepted | 2026-11-14 |
@@ -325,7 +327,7 @@ marked `Done` only against verified acceptance criteria.
 
 ## ADR-0009 — No automated test runner during the frontend phase
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0020
 **Date:** 2026-10-17
 
 ### Context
@@ -563,8 +565,6 @@ task IDs are preserved so previously written references stay valid.
 
 ## ADR-0015 — Private 1:1 conversations; group conversations only in Altars
 
-**Status:** Superseded by ADR-0020 (2026-11-13)
-**Date:** 2026-10-17
 
 > **Superseded 2026-11-13.** Dwelling supports **one-to-one conversations
 > only**; there are no group conversations and an Altar is not a conversation
@@ -575,35 +575,48 @@ task IDs are preserved so previously written references stay valid.
 
 ### Context
 The owner stated the rule: a 1:1 conversation is only between those two people,
-and more than two people share a conversation only in a group space.
+and more than two people share a conversation only in a group space. The existing
+Prisma schema already supported this via `ConversationMember` and `Altar`/`AltarMembership`.
 
 ### Decision
-**A direct conversation has exactly two members and is private to them. Any
-conversation with more than two members belongs to an Altar.** This matches the
-existing Prisma schema, where `ConversationMember` already models arbitrary
-membership and `Altar`/`AltarMembership` model the shared space.
+Direct messages are strictly **one-to-one**: `Conversation` holds exactly two
+participants (`userOneId`, `userTwoId`) with canonical `userOneId < userTwoId`
+ordering. More than two people share a conversation **only inside an Altar**, and
+every group conversation belongs to an Altar.
+
+Timing, per [`plan.md`](plan.md):
+
+- **Phases 0–11** deliver direct messages on the five-model schema (`User`,
+  `Dwelling`, `Contact`, `Conversation`, `Message`). Altar behavior is not built
+  here.
+- **Phase 12 (PR-85…PR-92)** delivers Altars: `Altar` + `AltarMembership`, a
+group conversation per Altar, and `ConversationMember` for group participants.
+- The legacy `ConversationMember`/`Altar`/`AltarMembership` tables are dropped at
+  PR-15/PR-16 because their shape predates this decision; Phase 12 reintroduces
+  Altar support in a redesigned shape with its own migration. Nothing is lost —
+  no database or migration history exists.
 
 ### Alternatives considered
-- **Any conversation can gain a third member arbitrarily** — more flexible, but
-  then "who is this conversation with?" and "which dwelling opens it?" become
-  ambiguous.
+- **Drop Altars permanently** — rejected by the owner: Altars are part of the
+  product vision, not a discarded sketch.
+- **Keep the legacy tables unchanged through the five-model migration** —
+  rejected: they cannot express the canonical direct pair without ambiguity and
+  would ship unused tables into the direct-message phase.
+- **Build Altars before direct messages** — rejected: direct messages are the
+  first product milestone and the foundation for auth, contacts, and realtime.
 
 ### Consequences
-- ✅ The rule is simple enough to state in a demo and to enforce server-side.
-- ✅ No schema change is required — the data model already supports it (which is
-  notable, since the schema was written before this rule was stated).
-- ✅ Refines the previously **Proposed** alphabet-map work: a dwelling maps to a
-  direct conversation, an Altar to a group one.
-- ⚠️ **Privacy is enforced server-side, not in the UI.** Hiding a panel is not
-  access control — see
-  [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md).
-  Nothing is enforced yet because there is no backend work in this phase.
-- ⚠️ Not demonstrated this phase: the Altar is **scenery only**, so the group
-  behaviour is designed but unbuilt (FR-027, DW-B03).
+- ✅ Direct conversations need no join table; the pair is provably unique.
+- ✅ Altars stay on the roadmap with a concrete phase and PR range.
+- ⚠️ Phase 12 alters `Conversation` (kind discriminator, nullable columns) and
+  reintroduces `ConversationMember` for groups only.
+- ⚠️ Group messages require Altar-membership authorization; membership is checked
+  in the backend service, not by a database constraint.
+- ⚠️ Altars are outside the 84-PR direct-message scope and outside the MVP subset
+  in the plan's deadline note.
 
 ### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`../project/requirements.md`](../project/requirements.md), DW-B03.
+[`../project/requirements.md`](../project/requirements.md), [`../architecture/database.md`](../architecture/database.md), [`task-board.md`](task-board.md), [`plan.md`](plan.md).
 
 ---
 
@@ -673,7 +686,7 @@ The initial prototype used a fixed `max-width: 1200px` container with a permanen
 1. **Fullscreen edge-to-edge canvas:** The game canvas fills `100vw × 100vh` edge-to-edge without page margin, header box, or letterboxing bars.
 2. **Floating glass HUD:** Essential titles and interaction hints float minimally in the top-left using dark semi-transparent glassmorphism (`backdrop-filter: blur(12px)`).
 3. **Slide-out chat drawer on house interaction:** The conversation panel becomes an overlay drawer docked to the right edge (`position: fixed`). It is hidden by default (`transform: translateX(100%)`).
-4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) emits a `dwelling:open-chat` event that slides open the drawer populated with that dwelling's resident information.
+4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) publishes `dwelling:interact` on the bridge (ADR-0005), which slides open the drawer populated with that dwelling's resident information.
 5. **Dismissal & Focus:** The drawer can be dismissed by pressing `Escape` or clicking the close button (✕), immediately restoring keyboard focus to the game canvas for seamless movement.
 6. **Mock labelling preserved:** FR-033 is preserved with an amber banner explicitly stating mock data.
 
@@ -825,128 +838,6 @@ FR-002, FR-009, FR-010, NFR-014.
 
 ---
 
-## ADR-0020 — One-to-one conversations only; no group conversations or Altars
-
-**Status:** Accepted
-**Date:** 2026-11-13
-**Supersedes:** ADR-0015 (the group-in-Altar allowance)
-
-### Context
-ADR-0015 allowed a conversation with more than two members inside an Altar. The
-approved product scope has no group chat: a conversation exists between two
-contacts, and an Altar is not a place a conversation can happen. Keeping the
-allowance would keep an arbitrary-membership shape that no feature uses, and it
-would leave "who is this conversation with?" ambiguous on the server as well as
-in the UI. Before this record, the rule was split between an ADR that permitted
-groups and product documents that treated Altars as scenery only.
-
-### Decision
-1. **Every conversation has exactly two participants.** A conversation is never
-   created with zero, one, three or more participants.
-2. **Group conversations are not supported.** There is no group chat, no group
-   membership, and no group message delivery.
-3. **The pair is structural, not a convention.** A conversation stores its two
-   participants directly as `userOneId` and `userTwoId`, canonically ordered
-   (`userOneId` < `userTwoId`) so a pair always resolves to the same row, with a
-   uniqueness constraint on the pair, an index on `userTwoId`, and a database
-   check that the two ids differ.
-4. **The backend and the data model enforce it.** Conversation creation accepts
-   exactly one other participant; membership checks test the caller against the
-   stored pair. The UI may only decide what to show, never what is allowed.
-5. **A conversation requires a mutual contact.** Both participants must already
-   be contacts of each other (ADR-0021).
-6. **Altars are scenery only.** Altar interaction, Altar membership and
-   Altar-based conversations are out of scope, and `Altar` and
-   `AltarMembership` are not part of the target data model.
-
-### Alternatives considered
-- **Keep group conversations for Altars (ADR-0015)** — withdrawn: no group UX,
-  group delivery, or shared presence is planned, and the allowance complicated
-  the conversation model for a feature that is out of scope.
-- **Keep a membership table and validate the member count at runtime** — an
-  arbitrary-membership shape leaves "exactly two" as a rule that a bug can
-  violate; the pair as columns makes it unrepresentable.
-- **Enforce the rule only in the UI or only in domain code** — rejected for the
-  same reason as privacy: hiding or checking in one layer is not enforcement, and
-  the database would still accept invalid rows.
-
-### Consequences
-- ✅ A group conversation cannot be represented, so the constraint cannot
-  silently regress.
-- ✅ One canonical row per pair: get-or-create is a lookup on the ordered pair,
-  and message history has exactly one home.
-- ✅ The target model set is five models — `User`, `Dwelling`, `Contact`,
-  `Conversation`, `Message` — so `ConversationMember`, `Altar` and
-  `AltarMembership` are removed.
-- ⚠️ Requires a schema revision and the first migration (Phase 2 schema work);
-  the current Prisma sketch still shows `ConversationMember` and both Altar
-  models, and it must not be treated as the target until then.
-- ⚠️ A group space would need a new ADR and a migration; it is not a
-  configuration change.
-- ⚠️ Nothing is enforced yet: this is a decision, not code.
-
-### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`../architecture/security-and-caching.md`](../architecture/security-and-caching.md),
-[`../project/requirements.md`](../project/requirements.md) (FR-034–FR-036),
-[`roadmap.md`](roadmap.md) (Stage 4).
-
----
-
-## ADR-0021 — Contacts are mutual-add pairs with no request/accept flow
-
-**Status:** Accepted
-**Date:** 2026-11-13
-
-### Context
-[`../architecture/database.md`](../architecture/database.md) called contact
-modeling "the biggest open question in the data model": the schema had no
-contacts table, and the documents left open whether contacts are bidirectional
-friendships, one-way follows, or simply "every other user". Conversations
-require a definite answer, because "may these two people talk?" has to be
-answerable server-side before a conversation exists (ADR-0020).
-
-### Decision
-1. **A contact relationship is mutual and symmetric.** If A has B as a contact,
-   B has A as a contact. There is no half-relationship and no follower model.
-2. **Adding is immediate.** A contact is created in one step — no invitation,
-   pending request, or accept state. Adding a user who is already a contact is a
-   no-op, and adding yourself is rejected.
-3. **A conversation requires mutual contact.** Conversation creation is rejected
-   unless both users are contacts of each other, and the check is performed by
-   the backend, not inferred from the request body.
-4. **The relationship is stored as data.** A `Contact` model is part of the
-   target five-model schema; "my contacts" is not derived from "all users".
-
-### Alternatives considered
-- **One-way follows** — makes "can we talk?" depend on direction and allows
-  unsolicited conversations; rejected.
-- **Request/accept (friend requests)** — needs an extra pending state,
-  notifications, and UI that the approved scope does not include; rejected.
-- **Every other user is implicitly a contact** — no relationship boundary at
-  all, so a "private" conversation would be open to any user; rejected.
-- **Two mirrored rows, one per direction** — workable, but a symmetric
-  relationship is usually modeled once; the exact representation is left to the
-  schema work.
-
-### Consequences
-- ✅ "Can these two people talk?" has one server-side answer before any
-  conversation is created.
-- ✅ The UI can add and remove contacts without a pending/failed state.
-- ✅ Seed and demo users (Phase 2) create pairs mutually by construction, so the
-  world and the chat always agree on who is reachable.
-- ⚠️ `Contact` does not exist in the current Prisma sketch; it arrives with the
-  schema revision and first migration.
-- ⚠️ Removing a contact is decided, but what happens to that pair's existing
-  conversation is **not** decided by this record; the messaging phase must
-  decide it before implementing removal.
-- ⚠️ Nothing is implemented or enforced yet.
-
-### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`../project/requirements.md`](../project/requirements.md) (FR-035, FR-036),
-[`../api/README.md`](../api/README.md) (contacts endpoints),
-[`roadmap.md`](roadmap.md) (Stages 4–5).
 
 ---
 
