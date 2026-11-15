@@ -20,7 +20,7 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 | --- | --- | --- |
 | Base path | `/api` | `API_PREFIX` in `shared/src/index.js` — imported by the backend only |
 | Base URL (dev) | `http://localhost:3000` (backend), reached as `/api` from `http://localhost:5173` | `backend/src/config/env.js`, `frontend/vite.config.js` |
-| Format | JSON request and response bodies | `express.json()` in `backend/src/app.js` |
+| Format | JSON request and response bodies | `express.json()` in `backend/src/app.js`; Content-Type enforcement by middleware in PR-12 |
 | Realtime path | `/socket.io` on the same port | `backend/src/server.js` |
 | Authentication | Session JWT in an HttpOnly cookie — see below | ADR-0022 |
 | Versioning | **None in v1** — no `/v1` segment, no version header | This contract; no versioning PR exists in `plan.md` |
@@ -406,14 +406,12 @@ requirement. This contract states the read pattern; it does not design indexes.
 
 ## Error format
 
-**The status codes and error codes below are part of this contract. The JSON
-envelope itself is owned by PR-12 and is not decided here.**
+**PR-12 defines the JSON error envelope as `{ "code": "...", "message": "..." }`.**
+The status code and the stable *code string* are part of the contract (PR-11);
+PR-12 fixes the response body shape.
 
-PR-12 fixes the body shape, field names, validation details, and the
-error-handling middleware. Until it lands, clients must not assume a body shape —
-only the status code and the stable code string. No response may contain a stack
-trace, an absolute file path, SQL, or other internal detail (the default Express
-handler currently does exactly that for malformed JSON).
+No response may contain a stack trace, an absolute file path, SQL, or other
+internal detail.
 
 | Code | Status | Meaning |
 | --- | --- | --- |
@@ -429,7 +427,14 @@ handler currently does exactly that for malformed JSON).
 | `CONVERSATION_NOT_FOUND` | `404` | No such conversation **or** caller is not a participant — deliberately indistinguishable. |
 | `EMAIL_TAKEN` | `409` | Signup with an already-registered email. |
 | `RATE_LIMITED` | `429` | Reserved; rate limiting is PR-27 and not implemented. |
+| `BAD_REQUEST` | `400` | Malformed JSON or unsupported Content-Type for state‑changing requests. |
 | `INTERNAL` | `500` | Reserved for unexpected failures; no details in the body. |
+
+Error responses always use the envelope `{ code, message }`, for example:
+
+```json
+{ "code": "VALIDATION_FAILED", "message": "'email' is required" }
+```
 
 `GET /api/health` has no error responses. `POST /api/auth/logout` has none either
 — it always succeeds.
