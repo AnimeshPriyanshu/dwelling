@@ -547,3 +547,114 @@ that decision needs explicit owner approval and a dump first.
 - [`../design/maps.md`](../design/maps.md) — where dwelling placement currently lives
 - [`../development/setup.md`](../development/setup.md) — `DATABASE_URL` and Prisma commands
 - [`../project/glossary.md`](../project/glossary.md) — Contact, Dwelling, Altar
+
+## Approved Demo Dataset
+
+The following dataset is validated by the Prisma schema, ADR-0021, and the
+approved Contact model (`@@id([userId, contactId])` composite primary key). It
+is deterministic, idempotent, and safe for seed script implementation (PR-17).
+
+### Entity counts
+- **7 users**, 7 dwellings, **12 Contact rows** (6 mutual Alex-resident
+  relationships × 2 mirrored rows), **6 conversations**, **18 messages**.
+
+### Demo users and dwellings
+| User | Dwelling |
+| --- | --- |
+| Alex | Alex's Home |
+| Elowen | Redwood Cottage |
+| Rowan | Cobalt Haven |
+| Kael | Amber Hearth |
+| Lyra | Verdant Rest |
+| Sable | Sunhollow Cottage |
+| Tomas | Tidewood Lodge |
+
+### Deterministic ID lists (approved, exact)
+- **Users**: `demo-alex`, `demo-elowen`, `demo-rowan`, `demo-kael`, `demo-lyra`, `demo-sable`, `demo-tomas`
+- **Dwellings**: `demo-alex-home`, `demo-elowen-cottage`, `demo-rowan-haven`, `demo-kael-hearth`, `demo-lyra-rest`, `demo-sable-cottage`, `demo-tomas-lodge`
+- **Conversations**: `demo-alex-elowen`, `demo-alex-rowan`, `demo-alex-kael`, `demo-alex-lyra`, `demo-alex-sable`, `demo-alex-tomas`
+- **Messages**: `demo-alex-{resident}-{1|2|3}` pattern per the 6 conversations; Contact identity is the composite primary key `[userId, contactId]` — no separate Contact IDs invented.
+
+### Exact 18-message dataset (base date `2024-01-15`, deterministic UTC ISO 8601 timestamps with `Z` suffix, seconds `00`)
+| Conv ID | Msg ID | Sender | Content | UTC Timestamp | Display Order |
+| --- | --- | --- | --- | --- | --- |
+| demo-alex-elowen | demo-alex-elowen-1 | inbound | Welcome to Redwood Cottage! Pull up a chair by the hearth. | `2024-01-15T10:42:00Z` | 1 |
+| demo-alex-elowen | demo-alex-elowen-2 | outbound | Thanks! The herbs outside smell wonderful. | `2024-01-15T10:43:00Z` | 2 |
+| demo-alex-elowen | demo-alex-elowen-3 | inbound | That would be the wild lavender. Take some if you need it! | `2024-01-15T10:45:00Z` | 3 |
+| demo-alex-rowan | demo-alex-rowan-1 | inbound | Greetings! Mind the woodchips on the doorstep. | `2024-01-15T11:15:00Z` | 1 |
+| demo-alex-rowan | demo-alex-rowan-2 | outbound | Working on a new project? | `2024-01-15T11:16:00Z` | 2 |
+| demo-alex-rowan | demo-alex-rowan-3 | inbound | Carving cedar benches for the town square. Stop by anytime! | `2024-01-15T11:18:00Z` | 3 |
+| demo-alex-kael | demo-alex-kael-1 | inbound | The forge is glowing bright today! Keep your distance from the anvil. | `2024-01-15T13:20:00Z` | 1 |
+| demo-alex-kael | demo-alex-kael-2 | outbound | Do you have any reinforced nails for fence repairs? | `2024-01-15T13:22:00Z` | 2 |
+| demo-alex-kael | demo-alex-kael-3 | inbound | Plenty in the barrel out back. Take what you need. | `2024-01-15T13:24:00Z` | 3 |
+| demo-alex-lyra | demo-alex-lyra-1 | inbound | Welcome traveler! Come warm your hands by the stove. | `2024-01-15T14:05:00Z` | 1 |
+| demo-alex-lyra | demo-alex-lyra-2 | outbound | Do you have hot spiced cider ready? | `2024-01-15T14:07:00Z` | 2 |
+| demo-alex-lyra | demo-alex-lyra-3 | inbound | A fresh kettle is simmering right now. Have a seat! | `2024-01-15T14:08:00Z` | 3 |
+| demo-alex-sable | demo-alex-sable-1 | inbound | Welcome to Sunhollow! Mind the tide charts on the table. | `2024-01-15T09:10:00Z` | 1 |
+| demo-alex-sable | demo-alex-sable-2 | outbound | Did you chart the southern shoals yet? | `2024-01-15T09:12:00Z` | 2 |
+| demo-alex-sable | demo-alex-sable-3 | inbound | Only the near side. The far side needs a calm morning. | `2024-01-15T09:14:00Z` | 3 |
+| demo-alex-tomas | demo-alex-tomas-1 | inbound | The tide is turning — the nets are already out. | `2024-01-15T06:40:00Z` | 1 |
+| demo-alex-tomas | demo-alex-tomas-2 | outbound | Any luck with the silver catch? | `2024-01-15T06:42:00Z` | 2 |
+| demo-alex-tomas | demo-alex-tomas-3 | inbound | Two baskets full. Come by the lodge and I will show you. | `2024-01-15T06:44:00Z` | 3 |
+
+### Contact model
+- Uses `@@id([userId, contactId])` composite primary key, not `@@unique([userId, contactId])`.
+- Two mirrored rows per mutual relationship: `(userId=A, contactId=B)` and
+  `(userId=B, contactId=A)`.
+- No resident-to-resident contacts outside the approved 6 Alex-resident pairs.
+- Mutual add: writing both rows in one transaction.
+- Mutual removal: deleting both rows in one transaction.
+- CHECK constraint `userId <> contactId`; service also rejects self-add before
+  touching the database.
+
+### Conversations
+- **6 one-to-one conversations**, all involving Alex as one participant:
+  - Alex ↔ Elowen
+  - Alex ↔ Rowan
+  - Alex ↔ Kael
+  - Alex ↔ Lyra
+  - Alex ↔ Sable
+  - Alex ↔ Tomas
+- Canonical ordering: `userOneId < userTwoId` (application-normalized).
+- Unique constraint: `@@unique([userOneId, userTwoId])` enforced in migration.
+- Both relations use `onDelete: Restrict`; conversation history must not disappear
+  because one account is removed (account removal is a soft delete).
+
+### Messages
+- **18 messages total**: exactly 3 messages per conversation, in display order.
+- Message content, sender direction, and display order come from
+  `frontend/src/App.jsx` under `RESIDENT_MESSAGES`.
+- Fixed synthetic UTC ISO 8601 timestamps from base date `2024-01-15` with
+  seconds `00` and suffix `Z` (e.g. `2024-01-15T00:00:00Z`).
+- No arbitrary or variable timestamps; all 18 timestamps are deterministic.
+
+### Password and authentication
+- Shared demo password read from `DEMO_PASSWORD` in local `.env.local`
+  (placeholder `DEMO_PASSWORD=placeholder-only-never-commit` in
+  `.env.example`).
+- Dependency order: **PR-19** (install bcryptjs) → **PR-20** (shared `hash()`
+  and `compare()` implementation) → **PR-17** (seed script using shared
+  implementation). PR-17 depends on both PR-19 and PR-20; bcryptjs alone is
+  insufficient.
+- For an existing seeded user's password: use `compare(DEMO_PASSWORD, existing.passwordHash)` — never compare raw bcrypt hash strings because salts differ. If verification fails, abort; never overwrite the existing hash.
+- Seed execution must be explicit CLI execution, never application startup.
+- Abort when `NODE_ENV=production`. Do not expose the demo password in logs or errors.
+- The actual `DEMO_PASSWORD` belongs only in a local ignored environment file.
+- No production seeding or automatic deployment seeding.
+
+### Idempotency and collision safety
+- **Preflight both User ID and email**: if an ID exists with the wrong email, or an email exists with the wrong ID, abort. If both resolve to different records, abort.
+- **Verify existing records against all expected data**: never silently adopt or overwrite unrelated records.
+- **Use actual schema unique constraints for each entity** as final protection against concurrent races.
+- **All preflight checks, existing-record verification, and writes occur inside one Prisma interactive transaction callback using the transaction-scoped `tx` client**. Do not use the global Prisma client for operations inside the transaction.
+- **Database constraints remain the final concurrency protection** against races.
+- **A correctly seeded rerun verifies and no-ops**: any mismatch or error rolls back the complete transaction.
+- **Never reset, truncate, or drop the database** during seeding.
+- Use deterministic IDs and actual schema unique constraints as the foundation.
+
+### Environment and execution safety
+- Seed execution must be explicit CLI execution, never application startup.
+- Abort when `NODE_ENV=production`.
+- Do not expose the demo password in logs or errors.
+- The actual `DEMO_PASSWORD` belongs only in a local ignored environment file.
+- No production seeding or automatic deployment seeding.

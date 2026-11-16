@@ -43,8 +43,8 @@ based on ADR (Architecture Decision Record).
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
 | [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
 | [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
-| [ADR-0020](#adr-0020--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
-| [ADR-0021](#adr-0021--five-model-messaging-core-extended-with-kind-for-altars) | Five-model messaging core, extended with `kind` for Altars | Accepted | 2026-11-13 |
+| [ADR-0023](#adr-0023--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
+| [ADR-0024](#adr-0024--five-model-direct-messaging-core-proposed-phase-12-altar-extension) | Five-model direct messaging core; proposed Phase 12 Altar extension | Accepted | 2026-11-13 |
 | [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars) | One-to-one conversations only; no group conversations or Altars | Accepted | 2026-11-13 |
 | [ADR-0021](#adr-0021--contacts-are-mutual-add-pairs-with-no-requestaccept-flow) | Contacts are mutual-add pairs with no request/accept flow | Accepted | 2026-11-13 |
 | [ADR-0022](#adr-0022--jwt-authentication-using-an-httponly-cookie) | JWT authentication using an HttpOnly cookie | Accepted | 2026-11-14 |
@@ -327,7 +327,7 @@ marked `Done` only against verified acceptance criteria.
 
 ## ADR-0009 — No automated test runner during the frontend phase
 
-**Status:** Superseded by ADR-0020
+**Status:** Superseded by ADR-0023
 **Date:** 2026-10-17
 
 ### Context
@@ -841,6 +841,64 @@ FR-002, FR-009, FR-010, NFR-014.
 
 ---
 
+## ADR-0020 — One-to-one conversations only; no group conversations or Altars
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+Dwelling supports one-to-one conversations only, as confirmed by the project owner. There are no group conversations and an Altar is not a conversation venue. This decision enforces strict 1:1 direct messaging with canonical pair ordering.
+
+### Decision
+Direct messages are strictly **one-to-one**: `Conversation` holds exactly two participants (`userOneId`, `userTwoId`) with canonical `userOneId < userTwoId` ordering. A conversation is legal only when both participants are mutual contacts (ADR-0021). Creating a conversation requires both users to be each other's contacts.
+
+### Alternatives considered
+- **Group conversations** — rejected: the owner confirmed one-to-one only (ADR-0020).
+- **Altar as a conversation venue** — rejected: Altars are separate group spaces, not conversation venues.
+
+### Consequences
+- ✅ Direct conversations need no join table; the pair is provably unique.
+- ✅ The five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) is sufficient for direct messaging without legacy `ConversationMember` ambiguity.
+- ⚠️ Phase 12 alters `Conversation` (kind discriminator, nullable columns) and reintroduces `ConversationMember` for groups only.
+- ⚠️ Group messages require Altar-membership authorization; membership is checked in the backend service, not by a database constraint.
+- ⚠️ Altars are outside the 84-PR direct-message scope and outside the MVP subset in the plan's deadline note.
+- ✅ The 1:1 privacy rule survives unchanged from ADR-0015.
+
+---
+
+## ADR-0021 — Contacts are mutual-add pairs with no request/accept flow
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+Contacts are symmetric: if A has B as a contact then B has A as a contact. Adding is immediate — there is no pending request or accept state — and adding yourself is rejected. This mutual-add behavior is the foundation for legal conversations: a conversation is permitted only when both participants are mutual contacts.
+
+### Decision
+**Contacts are mutual-add pairs with no request/accept flow**:
+- Adding a contact writes **two mirrored rows** in one transaction: `(userId = A, contactId = B)` and `(userId = B, contactId = A)`.
+- The schema uses `@@id([userId, contactId])` composite primary key, not `@@unique([userId, contactId])`.
+- `@@index([contactId])` so the reverse lookup is cheap.
+- CHECK constraint `userId <> contactId`; the service also rejects self-add before touching the database.
+- Mutual removal: deleting a contact deletes both rows in one transaction. This is the intended mutual-contact behaviour: a contact list is not one-way, and a half-deleted pair would leave one user seeing a dwelling they can no longer converse with.
+- **Service is the only writer.** A future reconciliation job could repair a half-deleted pair, but with a single writer and a transaction it should never occur.
+- Trade-off recorded: mirrored rows double the storage and require transactional writes, but "my contacts" becomes a single indexed read with no ordering logic, and the unique index makes duplicates impossible.
+
+### Alternatives considered
+- **One canonical row per pair** — would require the application to track both directions and duplicate logic, increasing complexity.
+- **Pending request/accept flow** — rejected: the owner confirmed immediate mutual add without a request state.
+- **Separate Contact IDs** — rejected: the composite primary key `[userId, contactId]` is the identity; no surrogate id is needed.
+
+### Consequences
+- ✅ Mutual add is atomic and consistent; no pending state to manage.
+- ✅ "My contacts" is a single indexed read with no ordering logic needed.
+- ✅ The unique index makes duplicates impossible.
+- ⚠️ Mirrored rows double the storage compared to a single canonical row.
+- ⚠️ Application code must ensure both rows are written in one transaction.
+- ⚠️ A half-deleted pair (one row deleted, one remains) would be inconsistent; the service must always delete both.
+
+---
+
 ## ADR-0022 — JWT authentication using an HttpOnly cookie
 
 **Status:** Accepted
@@ -937,6 +995,79 @@ sent automatically by the browser, which reintroduces CSRF.
 [`daily-log.md`](daily-log.md).
 
 ---
+
+## ADR-0023 — Adopt ESLint, Prettier, Vitest and CI
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+The project currently lacks ESLint, Prettier, Vitest, and CI tooling. Code quality, formatting, and automated testing are deferred to ensure the critical path stays unblocked, but these tools must be adopted before the project ships.
+
+### Decision
+Adopt ESLint, Prettier, Vitest and CI:
+- **ESLint** with recommended config for JavaScript/React, configured in `frontend/` and `backend/`. Enforce consistent style and catch common errors.
+- **Prettier** for code formatting, configured in `frontend/` and `backend/`. Run as a pre-commit hook and npm script.
+- **Vitest** as the test framework, configured in `frontend/` and `backend/`. Vitest provides fast unit tests with ES module support and JSX transform.
+- **CI** via GitHub Actions, running `npm run lint`, `npm test`, and `npm run build` on every PR. The workflow is defined in `.github/workflows/ci.yml`.
+
+### Alternatives considered
+- **No tooling** — deferred for the critical path, but code quality and test coverage would be insufficient for shipping.
+- **Jest** — widely used but Vitest was chosen for its ES module support, speed, and Vite integration.
+- **StandardJS** — would require additional configuration on top of ESLint; ESLint alone covers the needed linting rules.
+
+### Consequences
+- ✅ ESLint catches common errors and enforces style before code is merged.
+- ✅ Prettier eliminates formatting bikeshedding and ensures consistent code across the codebase.
+- ✅ Vitest provides fast unit test feedback in the developer workflow.
+- ✅ CI guarantees that lint, tests, and build pass before merge.
+- ⚠️ Initial setup cost: adding config files, npm scripts, and GitHub Actions workflow.
+- ⚠️ Existing code may need formatting fixes when Prettier is integrated.
+- ⚠️ Test writing requires discipline; Vitest is only effective if tests are actually written.
+- ⚠️ CI adds pipeline maintenance overhead.
+
+---
+
+## ADR-0024 — Five-model direct messaging core; proposed Phase 12 Altar extension
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+The five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) serves direct conversations only. The current implemented schema contains exactly five models: User, Dwelling, Contact, Conversation, and Message. The Conversation model supports direct one-to-one conversations only.
+
+### Decision
+**Five-model messaging core for direct conversations only.** The current implemented schema contains exactly five models: User, Dwelling, Contact, Conversation, and Message. The Conversation model supports direct one-to-one conversations only.
+
+- Exactly five Prisma models: `User`, `Dwelling`, `Contact`, `Conversation`, `Message`
+- `Conversation` supports direct one-to-one conversations only
+- No Altar-related models or group-conversation fields are currently implemented in this schema
+- Single message table, one pagination contract, one conversation list
+
+### Future Phase 12 extension (proposed)
+These are FUTURE proposals, not currently implemented:
+- `Conversation.kind` discriminator (`DIRECT` / `ALTAR`) on the `Conversation` model
+- Nullable `userOneId` / `userTwoId` and nullable `altarId` columns on `Conversation`
+- `ConversationMember` returns for `ALTAR` conversations only
+- `Altar` (`id`, `name`, `createdAt`) and `AltarMembership` (`altarId`, `userId`, `joinedAt`, `@@unique([altarId, userId])`, `@@index([userId])`)
+- Partial unique index on `(userOneId, userTwoId) WHERE kind = 'DIRECT'` (hand-written SQL migration; Prisma cannot express partial indexes)
+- CHECK constraints for the discriminated shapes are hand-written; Prisma does not model them
+- Service-layer validation required for "two or more members" since a CHECK cannot count rows
+- Only current Altar members may read or send messages; membership must be checked on the backend for every read and every write
+
+### Alternatives considered
+- **Option B — a separate group-conversation model** — stronger compile-time 1:1 typing but duplicates message storage, pagination, realtime delivery, and conversation-list code. Rejected in favor of Option A for code-sharing efficiency.
+
+### Consequences
+Current implementation consequences:
+- ✅ One `Conversation` and one `Message` model serve direct conversations only; no second message table.
+- ✅ Single conversation list, one pagination contract, one realtime delivery path.
+
+Future Phase 12 consequences (proposed):
+- ⚠️ Partial unique index requires hand-written SQL migration; review every later migration and re-add if a generated diff tries to drop it.
+- ⚠️ CHECK constraints for the discriminated shapes are hand-written; Prisma does not model them.
+- ⚠️ Service-layer validation is required for "two or more members" since a CHECK cannot count rows.
+- ⚠️ Future Phase 12 authorization: only current Altar members may read or send messages; membership must be checked on the backend for every read and every write.
 
 ## Adding an ADR
 

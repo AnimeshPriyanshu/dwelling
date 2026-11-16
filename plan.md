@@ -135,9 +135,23 @@ npm run build
 | 12 | Define shared validation and error envelope conventions | Backend | 11 |
 | 13 | Add an isolated test database strategy | Data/QA | 04 |
 | 14 | Define seed data and demo users | Data | 13 |
+
+
+**PR-14 — Approved design (documentation only, no implementation)**
+
+- **Entity counts:** 7 users, 7 dwellings, 12 Contact rows (6 mutual Alex-resident relationships × 2 mirrored rows), 6 conversations, 18 messages
+- **Deterministic ID lists** (approved, exact): Users: `demo-alex`, `demo-elowen`, `demo-rowan`, `demo-kael`, `demo-lyra`, `demo-sable`, `demo-tomas`. Dwellings: `demo-alex-home`, `demo-elowen-cottage`, `demo-rowan-haven`, `demo-kael-hearth`, `demo-lyra-rest`, `demo-sable-cottage`, `demo-tomas-lodge`. Conversations: `demo-alex-elowen`, `demo-alex-rowan`, `demo-alex-kael`, `demo-alex-lyra`, `demo-alex-sable`, `demo-alex-tomas`. Messages: `demo-alex-{resident}-{1|2|3}` pattern per the 6 conversations; Contact identity is the composite primary key `[userId, contactId]` — no separate Contact IDs invented.
+- **Conversations:** Six one-to-one conversations, all involving Alex as one participant: Alex↔Elowen, Alex↔Rowan, Alex↔Kael, Alex↔Lyra, Alex↔Sable, Alex↔Tomas. Canonical ordering `userOneId < userTwoId` with `@@unique([userOneId, userTwoId])`.
+- **Messages:** Exact existing message content, sender direction (inbound = resident, outbound = Alex), and display order from `frontend/src/App.jsx` under `RESIDENT_MESSAGES`. Three messages per conversation, 18 total. Fixed synthetic UTC timestamps from base date `2024-01-15` with seconds `00` and suffix `Z` — no arbitrary or variable timestamps.
+- **Password and authentication:** Shared demo password read from `DEMO_PASSWORD` in local `.env.local` (placeholder `DEMO_PASSWORD=placeholder-only-never-commit` in `.env.example`). Dependency order: PR-19 (install bcryptjs) → PR-20 (shared `hash()` and `compare()` implementation) → PR-17 (seed script using shared implementation). PR-17 depends on PR-14, PR-16, PR-19, and PR-20; bcryptjs alone is insufficient. For an existing seeded user's password: use `compare(DEMO_PASSWORD, existing.passwordHash)` — never compare raw bcrypt hash strings because salts differ. If verification fails, abort; never overwrite the existing hash.
+- **Idempotency and collision safety:** Use deterministic IDs and actual schema unique constraints. **Preflight both User ID and email**: if an ID exists with the wrong email, or an email exists with the wrong ID, abort. If both resolve to different records, abort. **Verify existing records against all expected data**: never silently adopt or overwrite unrelated records. **Use actual schema unique constraints for each entity** as final protection against concurrent races. **All preflight checks and writes occur inside one Prisma `$transaction`** for every operation. **Database constraints remain the final concurrency protection**. **A correctly seeded rerun verifies and no-ops**: any mismatch or error rolls back the entire transaction. **Never reset, truncate, or drop the database**.
+- **Environment and execution safety:** Seed execution must be explicit CLI execution, never application startup. Abort when `NODE_ENV=production`. Do not expose the demo password in logs or errors. The actual `DEMO_PASSWORD` belongs only in a local ignored environment file. No production seeding or automatic deployment seeding.
+- **All other PR-14 design decisions remain unchanged:** Five-model Prisma schema, deterministic demo IDs, fixed synthetic UTC timestamps (base date 2024-01-15), shared local demo password (DEMO_PASSWORD in .env.local, .env.example placeholder), hash verification via bcryptjs `compare()` not raw string comparison, atomic collision handling via Prisma `$transaction`, no production seeding, documentation-only PR-14.
+
+
 | 15 | Finalize the five-model Prisma schema and canonical conversation pair | Data | 10, 11 |
 | 16 | Generate and review the initial migration with pair check and indexes | Data | 15 |
-| 17 | Implement an idempotent seed script | Data | 14, 16 |
+| 17 | Implement an idempotent seed script | Data | 14, 16, 19, 20 |
 | 18 | Update database architecture documentation | Data | 15, 16 |
 
 ## Phase 3: Backend Authentication
