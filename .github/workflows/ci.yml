@@ -73,6 +73,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npm run generate --workspace=@dwelling/database
+
       - name: Verify TEST_DATABASE_URL is set
         run: |
             if [ -z "$TEST_DATABASE_URL" ]; then
