@@ -5,4 +5,4 @@ export const API_PREFIX = '/api'
  * Uses bcryptjs for secure password hashing and comparison.
  */
 
-export { hash, compare } from './password'
+export { hash, compare } from './password.js'
