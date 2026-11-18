@@ -1,5 +1,7 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import { API_PREFIX } from '@dwelling/shared';
+import { env } from './config/env.js';
 
 const app = express();
 
@@ -72,6 +74,11 @@ app.use((_request, _response, next) => {
 const jsonParser = express.json({ limit: '10kb', strict: true });
 app.use(jsonParser);
 
+// 2b. Cookie parser — populates `request.cookies` so the auth middleware can
+//     read the HttpOnly session cookie (ADR-0022). It only parses; it does not
+//     authenticate anything by itself.
+app.use(cookieParser());
+
 // 3. Health check — independent route, registered before the 404 catch-all
 //    so it never falls through to the unknown-route handler.
 app.get(`${API_PREFIX}/health`, (_request, response) => {
@@ -100,7 +107,7 @@ export function errorHandler(err, _request, _response, next) {
   const message = 'Internal server error';
 
   // Log the full error server‑side only (development only).
-  if (process.env.NODE_ENV !== 'production') {
+  if (!env.isProduction) {
     console.error('Unhandled error:', err);
   }
 
