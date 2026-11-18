@@ -61,22 +61,22 @@ describe('password compare()', () => {
     expect(result).toBe(false)
   })
 
-  it('throws for empty/whitespace-only password', async () => {
-    await expect(compare('', '$2a$10$hash')).rejects.toThrow(
-      'Password must be a non-empty string'
-    )
-    await expect(compare('   ', '$2a$10$hash')).rejects.toThrow(
-      'Password must be a non-empty string'
-    )
-    await expect(compare(null, '$2a$10$hash')).rejects.toThrow(
-      'Password must be a non-empty string'
-    )
-    await expect(compare(undefined, '$2a$10$hash')).rejects.toThrow(
-      'Password must be a non-empty string'
-    )
-    await expect(compare(123, '$2a$10$hash')).rejects.toThrow(
-      'Password must be a non-empty string'
-    )
+  it('returns false for empty/whitespace-only password', async () => {
+    const hashValue = await hash('my-password')
+    await expect(compare('', hashValue)).resolves.toBe(false)
+    await expect(compare('   ', hashValue)).resolves.toBe(false)
+  })
+
+  it('returns false for null, undefined, and non-string passwords', async () => {
+    const hashValue = await hash('my-password')
+    await expect(compare(null, hashValue)).resolves.toBe(false)
+    await expect(compare(undefined, hashValue)).resolves.toBe(false)
+    await expect(compare(123, hashValue)).resolves.toBe(false)
+  })
+
+  it('returns false for unusable password and hash together without throwing', async () => {
+    await expect(compare('', '$2a$10$hash')).resolves.toBe(false)
+    await expect(compare(null, null)).resolves.toBe(false)
   })
 
   it('propagates bcrypt errors from comparison', async () => {
