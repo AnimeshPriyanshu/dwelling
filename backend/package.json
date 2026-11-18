@@ -4,14 +4,21 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "test:integration": "node -e \"if (!process.env.TEST_DATABASE_URL) { console.error('TEST_DATABASE_URL is required for integration tests'); process.exit(1) }\" && vitest run tests/integration"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.0",
     "@dwelling/shared": "*",
+    "@prisma/client": "^6.19.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "redis": "^4.7.0",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.2",
+    "vitest": "^5.1.1"
   }
 }

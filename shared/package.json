@@ -4,5 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
   }
 }
