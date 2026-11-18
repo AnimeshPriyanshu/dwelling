@@ -2,6 +2,8 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
+import { authRouter } from './routes/auth.js';
+import { EmailTakenError, ValidationError } from './auth/errors.js';
 
 const app = express();
 
@@ -79,6 +81,8 @@ app.use(jsonParser);
 //     authenticate anything by itself.
 app.use(cookieParser());
 
+app.use(API_PREFIX, authRouter);
+
 // 3. Health check — independent route, registered before the 404 catch-all
 //    so it never falls through to the unknown-route handler.
 app.get(`${API_PREFIX}/health`, (_request, response) => {
@@ -99,6 +103,20 @@ export function errorHandler(err, _request, _response, next) {
       message: 'Malformed JSON request body',
     });
     return;
+  }
+
+  if (err instanceof ValidationError) {
+    return _response.status(400).json({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid input',
+    });
+  }
+
+  if (err instanceof EmailTakenError) {
+    return _response.status(409).json({
+      code: 'EMAIL_TAKEN',
+      message: err.message,
+    });
   }
 
   // Always 500 with INTERNAL code; never forward err.message, stack, or err.code.

@@ -31,6 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npm run generate --workspace=@dwelling/database
+
       - name: Lint backend
         run: npm run lint --workspace=@dwelling/backend
 
