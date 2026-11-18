@@ -286,11 +286,12 @@ the Altar's thread. Two shapes were considered; **Option A is approved (ADR-0021
   realtime delivery, and conversation-list code.
 
 **Implications of the change from today:** the legacy `Altar`/`AltarMembership`
-are dropped at PR-16 and recreated here with a conversation link. Nothing is
-migrated because no database exists yet; if one exists by then, PR-16's drop must
-be cancelled or the rows exported first. `ConversationMember` is reintroduced for
-groups only; direct messages never use it. `Altar` stores identity and membership
-only — world position stays in frontend map data.
+were dropped at PR-15/PR-16 and are recreated here with a conversation link.
+Nothing was migrated: the initial migration creates only the five-model schema
+(`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) and no legacy rows
+existed. `ConversationMember` is reintroduced for groups only; direct messages
+never use it. `Altar` stores identity and membership only — world position stays
+in frontend map data.
 
 ### Phase 12 schema sketch (not applied)
 

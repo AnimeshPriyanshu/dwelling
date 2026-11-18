@@ -254,7 +254,9 @@ Day 6 at the expense of the bridge (DW-035).
 ## Altar and maps
 
 - **Confirmed:** the Altar is placed by map data and rendered as scenery (FR-026).
-- **Planned — Phase 12:** Altar interaction (FR-027, DW-B03, `[../planning/plan.md`](../planning/plan.md)).\n
+- **Planned — Phase 12:** Altar interaction (FR-027, DW-B03,
+  [`../planning/plan.md`](../planning/plan.md)).
+
 ---
 
 ## Open questions

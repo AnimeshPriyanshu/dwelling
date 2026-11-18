@@ -717,8 +717,10 @@ and a seeded helper derives the obstacle list.
 - `compare()` in `shared/src/password.js` now returns `false` for null, empty and
   whitespace passwords instead of throwing; `hash()` still rejects unusable
   input. Tests updated (shared suite: 15 passed).
-- Shared tests now run in CI (see `.github/workflows/ci.yml`), so the job fails on
-  a shared regression instead of silently skipping it.
+- Added a `Shared checks` job to `.github/workflows/ci.yml` and a `test` script to
+  `shared/package.json`, so a shared regression fails CI instead of going
+  unexecuted. The script passes locally (15 tests); **no GitHub Actions run has
+  executed the new job yet** — these commits are still local.
 
 ### Problems encountered
 - The docs merge kept both competing versions of several sections and deleted
@@ -736,6 +738,51 @@ and a seeded helper derives the obstacle list.
 1. PR-23 — signup with validation and duplicate-email handling.
 
 **Tasks moved to Done:** none (stabilization only)
+
+---
+
+## 2026-11-18 — Stabilization review, documentation sweep
+
+**Status:** complete
+**Focus task(s):** review of `d34b125`
+
+### Completed
+- Reviewed the whole CI workflow: the `shared` job mirrors the backend job
+  (checkout, Node 22, `npm ci` from the root lockfile, `npm test
+  --workspace=@dwelling/shared`) and fails the job when a test fails. It needs no
+  environment variables — the package only imports `bcryptjs`.
+- Swept the rest of `docs/`, not just the four repaired files, and corrected what
+  still contradicted `plan.md` or the code:
+  - `realtime.md`, `milestones.md`, `game-world.md`, `ui-ux.md` and
+    `security-and-caching.md` said group/Altar interaction was "not supported";
+    they now say Phase 12.
+  - `security-and-caching.md` and `api/README.md` claimed no auth code existed;
+    they now describe the merged helpers and the missing routes.
+  - `setup.md` and `database.md` claimed no migration existed; both now describe
+    `20261113220000_initial_migration`.
+  - Two ADR consequence lines in `decisions.md` were reworded to stay true without
+    changing the decision.
+  - Removed three literal `\n` remnants and fixed two broken links in `maps.md`,
+    `game-world.md` and `ui-ux.md`.
+- Re-ran the full check set: backend format, lint and tests (48 passed, 1 skipped),
+  frontend tests (27 passed) and lint, shared tests (15 passed), root build exit 0
+  with the pre-existing chunk-size warning. The workflow parses as YAML with jobs
+  `backend`, `shared`, `database-test`, `frontend`.
+
+### Problems encountered
+- The first repair stopped at the four files that held `=======` markers; the same
+  bad merge left stale prose, literal `\n` and broken links in other docs.
+
+### Decisions made
+- Keep the ADRs otherwise intact: only consequence lines that had become false
+  were reworded.
+- No history rewrite to drop the Codebuff trailer already in `d34b125`; commits
+  from here on carry no AI attribution.
+
+### Next day's priority
+1. PR-23 — signup with validation and duplicate-email handling.
+
+**Tasks moved to Done:** none
 
 ---
 

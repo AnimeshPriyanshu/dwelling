@@ -172,8 +172,9 @@ migrations are managed from the `database` workspace.
 
 ### Consequences
 - ✅ Generated client gives typed-ish access and a single schema source.
-- ⚠️ **No migrations have been generated yet**; the first migration is required
-  before any real data work.
+- ⚠️ **No migrations had been generated when this was decided**; the initial
+  migration landed later at PR-15/PR-16, and it is required before any real data
+  work.
 - ⚠️ Local development requires a running PostgreSQL instance (see
   [`development/setup.md`](../development/setup.md)).
 
@@ -593,8 +594,9 @@ Timing, per [`plan.md`](plan.md):
 group conversation per Altar, and `ConversationMember` for group participants.
 - The legacy `ConversationMember`/`Altar`/`AltarMembership` tables are dropped at
   PR-15/PR-16 because their shape predates this decision; Phase 12 reintroduces
-  Altar support in a redesigned shape with its own migration. Nothing is lost —
-  no database or migration history exists.
+  Altar support in a redesigned shape with its own migration. Nothing was lost —
+  no database or migration history existed at the time, and the initial migration
+  creates only the five-model schema.
 
 ### Alternatives considered
 - **Drop Altars permanently** — rejected by the owner: Altars are part of the

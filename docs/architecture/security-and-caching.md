@@ -2,12 +2,12 @@
 
 Responsibilities, rules, and what must never be committed.
 
-> **None of these controls are implemented.** There is no authentication, no
-> authorization, no input validation, no rate limiting, and no functional
-> caching. This document records the *intent* so the requirements are not
-> forgotten — not so they are built now. Authentication is the exception in one
-> sense only: its **contract** is decided (ADR-0022) so the API can be defined;
-> the code still does not exist. See
+> **These controls are largely not implemented.** The authentication *helpers*
+> exist — password hashing (PR-20), JWT issue/verify and the session cookie
+> (PR-21), and the auth middleware (PR-22) — but no route issues or clears the
+> cookie yet. Authorization, input validation beyond the JSON/Content-Type
+> guards in `app.js`, rate limiting, and functional caching are still not built.
+> This document records the *intent* so the requirements are not forgotten. See
 > [`../project/scope.md`](../project/scope.md).
 
 ---
@@ -19,14 +19,17 @@ Dwelling currently runs as a **single-user local development app**:
 - The only endpoint, `GET /api/health`, returns a constant and touches no data.
 - Socket connections are unauthenticated; a connecting client is sent
   `server:ready` and nothing else.
-- There is no session, cookie, token, or user identity anywhere in the codebase.
-  The contract for when there is one is in [Authentication](#authentication-decided-not-implemented)
-  and [`../api/README.md`](../api/README.md).
+- The session helpers exist, but nothing issues a cookie yet: no route calls
+  `setSessionCookie`, so an incoming request carries no identity and `requireAuth`
+  is only exercised in tests. The contract is in
+  [Authentication](#authentication-helpers-implemented-routes-pending) and
+  [`../api/README.md`](../api/README.md).
 - CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for
   Socket.IO. **Express has no CORS configuration**, because no browser code calls
   the API yet.
-- There is no error-handling middleware, so an unhandled error would fall through
-  to Express's default handler.
+- Errors pass through a centralized handler: unhandled failures always answer
+  `500 INTERNAL` with a sanitized body, malformed JSON answers `400 BAD_REQUEST`,
+  and unknown routes answer JSON `404 NOT_FOUND`.
 
 **Consequence:** the app is safe *because* it is inert. As soon as real data flows,
 the gaps below become real vulnerabilities. See Stage 6 in
@@ -34,12 +37,15 @@ the gaps below become real vulnerabilities. See Stage 6 in
 
 ---
 
-## Authentication (decided, not implemented)
+## Authentication (helpers implemented, routes pending)
 
 **Decided in ADR-0022**
 ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
-**No authentication code exists yet** — not the dependencies (PR-19), not the
-helpers (PR-21), not the middleware (PR-22).
+**The helpers are merged; the routes are not.** `backend/src/auth/` provides
+`signSessionToken`/`verifySessionToken` (PR-21), `setSessionCookie` /
+`clearSessionCookie` (PR-21), and `requireAuth` (PR-22). Signup, login, logout and
+`GET /api/auth/me` do not exist yet, so nothing in a running server issues a
+session.
 
 **HTTP:** a signed JWT (`HS256`, `JWT_SECRET`) delivered in an `HttpOnly` cookie
 named `dwelling_session`. It is set at signup and login, sent automatically on
@@ -104,8 +110,9 @@ The rules to enforce, derived from the data model (ADR-0020, ADR-0021,
 | Read a dwelling | Dwelling ownership is public by design (it is a place in the world), but the linked conversation is not |
 | Move a player | Depends on the movement-authority decision in [`realtime.md`](realtime.md) |
 
-**No group or Altar rule:** there is no group conversation and no Altar
-membership to authorize (ADR-0020).
+**No group or Altar rule yet:** direct conversations stay one-to-one (ADR-0020);
+Altar membership and its group conversation arrive in Phase 12, and that phase
+must add the matching authorization rule.
 
 **Critical rule:** authorization is enforced **server-side on every request and
 event**. Hiding a button in the UI is not access control. The frontend may only
