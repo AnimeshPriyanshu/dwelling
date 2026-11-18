@@ -60,16 +60,16 @@ npm run db:generate   # prisma generate → Prisma client into node_modules
 npm run db:migrate    # prisma migrate dev → creates/applies migrations
 ```
 
-- ⚠️ **No migrations have been generated yet.** There is no
-  `database/prisma/migrations/` directory, so `db:migrate` would create the first
-  one and requires a reachable PostgreSQL database.
+- ⚠️ **One migration exists** — `20261113220000_initial_migration`, which creates
+  the five-model schema. `db:migrate` applies pending migrations and requires a
+  reachable PostgreSQL database.
 - ⚠️ The Prisma CLI does not read the root `.env` when run from the `database`
   workspace. Export `DATABASE_URL` in your shell (or pass it inline) before
   `db:migrate`; `db:generate` needs no database.
 - ⚠️ `db:generate` must succeed for `backend/src/db/prisma.js` to import
   `@prisma/client` at all.
-- **Neither command is needed to work on the frontend.** The frontend does not
-  talk to the database, and the current ten-day plan is frontend-only
+- **Neither command is needed for frontend work.** The frontend does not talk to
+  the database, and the current phase is frontend-facing
   ([`../project/scope.md`](../project/scope.md)).
 
 ## Run

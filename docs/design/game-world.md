@@ -162,7 +162,10 @@ interior has a window showing the exterior.
 - **Confirmed:** it is **scenery only** — no interaction, no prompt (ADR-0020).
 - **Proposed:** its silhouette (a stone platform with a brazier) should read as a
   landmark from across the map, clearly different from a dwelling.
-- **Planned — Phase 12:** group interaction at the Altar (FR-027, DW-B03, `[../planning/plan.md`](../planning/plan.md)).\n---
+- **Planned — Phase 12:** group interaction at the Altar (FR-027, DW-B03,
+  [`../planning/plan.md`](../planning/plan.md)).
+
+---
 
 ## Camera
 
@@ -209,7 +212,7 @@ interior has a window showing the exterior.
 | Collision | Obstacles and edges solid; explicit bodies; interiors collide | Exact body sizes |
 | Interaction | House zone + smaller door zone, `E` to act, prompt, correct contact | Zone rectangle sizes |
 | Interiors | Shared template, fireplace/kitchen/bed, return to the entered door | Room size, furniture layout, window |
-| Altar | Visible, distinct, from map data, non-interactive | Nothing — group interaction is not supported (ADR-0020) |
+| Altar | Visible, distinct, from map data, non-interactive | Nothing — group interaction is Phase 12 (ADR-0020) |
 | Camera | Follows player, clamped to world | Dead zone, lead distance, smoothing |
 | Input | DOM owns keyboard while the drawer is open | — |
 

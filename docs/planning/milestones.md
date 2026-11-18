@@ -26,7 +26,7 @@ Settled with the project owner during the requirements session. These are
 | Interiors | **In scope** — one **shared** interior template per dwelling (fireplace, kitchen, bed) |
 | Altar | **Scenery only** this phase |
 | Chat UI | **Slide-out overlay drawer** over fullscreen canvas, **mock content labelled as mock** (ADR-0017) |
-| Conversation model | **One-to-one only** — exactly two participants, between mutual contacts; group conversations are **not supported** (ADR-0020, ADR-0021) |
+| Conversation model | **One-to-one only** this phase — exactly two participants, between mutual contacts; group conversations are **Phase 12** (ADR-0020, ADR-0021) |
 | Extra UI | **Minimal HUD only** (map name + interact prompt) |
 | Devices | **Desktop-first**, layout stays usable on small screens |
 | Assets | **Hybrid** — CC0 packs for tiles/houses/furniture, code-authored art for Dwelling-specific pieces |

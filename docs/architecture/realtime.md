@@ -119,14 +119,17 @@ services — even though all three ride the same Socket.IO connection.
 
 ---
 
-## Group interaction / Altars — not supported
+## Group interaction / Altars — Phase 12
 
-**Out of scope since ADR-0020.** Conversations are one-to-one only, so there is no
-group room, no group membership and no group message delivery to transport. The
-Altar remains scenery (FR-026) and FR-027 is not supported.
+**Not built; scheduled as Phase 12 of [`../planning/plan.md`](../planning/plan.md)
+(PR-85…PR-92).** Direct conversations are one-to-one only (ADR-0020), so there is
+no group room, no group membership and no group message delivery to transport in
+Phases 0–11. The Altar remains scenery (FR-026) until Phase 12 makes it
+interactive (FR-027).
 
-The former "durable state + presence" group concern is removed. Nothing was ever
-implemented for it.
+No group transport code exists. The intended shape — one group conversation per
+Altar with persistent membership — is sketched in [`database.md`](database.md)
+and in the Phase 12 section of `plan.md`.
 
 ---
 
