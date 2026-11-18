@@ -758,8 +758,9 @@ and a seeded helper derives the obstacle list.
     they now say Phase 12.
   - `security-and-caching.md` and `api/README.md` claimed no auth code existed;
     they now describe the merged helpers and the missing routes.
-  - `setup.md` and `database.md` claimed no migration existed; both now describe
-    `20261113220000_initial_migration`.
+  - `setup.md`, `database.md` and `folder-structure.md` claimed no migration
+    existed; they now describe `20261113220000_initial_migration`, and the schema
+    sections list the committed five models instead of a seven-model sketch.
   - Two ADR consequence lines in `decisions.md` were reworded to stay true without
     changing the decision.
   - Removed three literal `\n` remnants and fixed two broken links in `maps.md`,

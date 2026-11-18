@@ -144,12 +144,12 @@ backend/
 database/
 ├── package.json               ✅  generate (prisma generate) / migrate (prisma migrate dev)
 ├── README.md                  ✅  states the schema captures core entities and should evolve
-└── prisma/schema.prisma       ✅  7 models: User, Dwelling, Conversation, ConversationMember,
-                                    Message, Altar, AltarMembership — PostgreSQL
+├── prisma/schema.prisma       ✅  5 models: User, Dwelling, Contact, Conversation, Message
+└── prisma/migrations/         ✅  20261113220000_initial_migration — PostgreSQL
 ```
 
-- ⚠️ **No `prisma/migrations/` directory exists.** The schema has never been
-  migrated ([`../architecture/database.md`](../architecture/database.md)).
+- ✅ The initial migration exists and `prisma migrate status` reports the local
+  database up to date ([`../architecture/database.md`](../architecture/database.md)).
 - The generated Prisma client is written into `node_modules`, not into the repo.
 
 ---
