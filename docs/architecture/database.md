@@ -2,17 +2,16 @@
 
 The conceptual data model for Dwelling.
 
-> **Status: approved, not implemented.** The model below was approved on
-> 2026-11-13, including **Option A** for Phase 12. The Prisma schema in
-> `database/prisma/schema.prisma` is still the original seven-model sketch: it has
-> **never been migrated**, there is no `database/prisma/migrations/` directory, and
-> no application code reads or writes it. **No schema file or migration has been
-> changed yet.**
+> **Status: approved; schema and initial migration committed.** The model below was
+> approved on 2026-11-13, including **Option A** for Phase 12. The five-model schema
+> is in `database/prisma/schema.prisma` with one migration,
+> `20261113220000_initial_migration`. No application code reads or writes it yet —
+> there is no query in the repository — so the schema can still change as later PRs
+> land.
 >
-> **This is not a finalized schema.** A Prisma schema already exists in
-> `database/prisma/schema.prisma` as a starting point, but it has **never been
-> migrated** and no application code reads or writes it. Treat it as a sketch
-> that will change, not a contract.
+> Sections below that refer to "the sketch" and to a pending schema revision are the
+> pre-migration design record: the revision they describe is the committed
+> five-model schema.
 
 ---
 
@@ -21,51 +20,50 @@ The conceptual data model for Dwelling.
 ```text
 database/
 ├── package.json              ✅  scripts: generate (prisma generate), migrate (prisma migrate dev)
-└── prisma/schema.prisma      ✅  generator + datasource(PostgreSQL) + 7 models
+├── prisma/schema.prisma      ✅  generator + datasource(PostgreSQL) + 5 models
+└── prisma/migrations/        ✅  20261113220000_initial_migration
 ```
 
 - **Provider:** PostgreSQL, URL from the `DATABASE_URL` environment variable.
-- **Migrations:** **none generated.** No `database/prisma/migrations/` directory
-  exists, so there is no migration history for the current schema.
-- **Tables:** none in any live database. `npm run db:migrate` has not been run.
+- **Migrations:** one — `20261113220000_initial_migration` creates the five-model
+  schema. `prisma migrate status` reports the local database up to date; there is
+  no seed script.
 - **Generated client:** `backend/src/db/prisma.js` instantiates `PrismaClient`,
-  but **no query is executed anywhere** in the repository.
+  but **no query is executed anywhere** in the repository yet.
 
-**Consequence:** the messaging phase cannot begin until a first migration exists
-and the client is generated.
+**Consequence:** the data layer is ready for the auth and messaging routes; those
+routes are still to be written.
 
 ---
 
-## Existing models (as sketched)
+## Existing models
 
-The current schema defines seven models:
+The committed schema defines five models:
 
-| Model | Fields (as sketched) | Represents |
+| Model | Fields | Represents |
 | --- | --- | --- |
-| `User` | `id`, `displayName`, `createdAt` | A person using Dwelling |
+| `User` | `id`, `email` (unique), `passwordHash`, `displayName`, `createdAt` | A person using Dwelling |
 | `Dwelling` | `id`, `title` (default `"Home"`), `ownerId` (unique) | A user's place in the world |
-| `Conversation` | `id`, `createdAt` | A private conversation between exactly two contacts (ADR-0020) |
-| `ConversationMember` | `conversationId`, `userId`, `joinedAt` | Membership join table — **not the target** (ADR-0020) |
+| `Contact` | `userId`, `contactId`, `createdAt`, composite primary key | A contact edge between two users (ADR-0021) |
+| `Conversation` | `id`, `createdAt`, `userOneId`, `userTwoId` | A private conversation between exactly two contacts (ADR-0020) |
 | `Message` | `id`, `content`, `createdAt`, `conversationId`, `senderId` | A single message |
-| `Altar` | `id`, `name` | Out of scope — scenery only, removed in the target model (ADR-0020) |
-| `AltarMembership` | `altarId`, `userId`, `joinedAt` | Out of scope — removed in the target model (ADR-0020) |
 
-**Target model set:** five models — `User`, `Dwelling`, `Contact`, `Conversation`,
-`Message` (ADR-0020, ADR-0021). The sketch still contains seven until the schema
-revision; note that `Contact` does not exist yet.
+This is the target five-model set (ADR-0020, ADR-0021). The legacy
+`ConversationMember`, `Altar` and `AltarMembership` tables were dropped at
+PR-15/PR-16; Phase 12 reintroduces Altar support in a redesigned shape.
 
 Notable design points already expressed in the schema:
 
 - `Dwelling.ownerId` is **`@unique`** and the relation `User.dwelling` is
   **optional** — encoding "one dwelling per contact" (matching the glossary and
   [`../design/game-world.md`](../design/game-world.md)).
-- `ConversationMember` and `AltarMembership` use **composite primary keys**
-  (`@@id([conversationId, userId])`), so duplicates are impossible. Both models
-  are **not the target**: a conversation is a canonical pair and Altars are
-  removed (ADR-0020).
+- `Contact` uses a **composite primary key** (`@@id([userId, contactId])`) plus an
+  index on `contactId`, so duplicate edges are impossible and "who added me" is a
+  cheap lookup.
 - `Message` has `@@index([conversationId, createdAt])`, which matches the
   "load a conversation in time order" read pattern.
-- Deletes **cascade** from `User`, `Conversation`, and `Altar`.
+- Deletes **cascade** from `User` to `Dwelling`/`Contact` and from `Conversation`
+  to `Message`; a user who owns a conversation or sent a message is `Restrict`ed.
 - `id` values default to `cuid()`.
 
 ---
@@ -86,15 +84,14 @@ immediate — there is no pending request or accept state — and adding yoursel
 rejected. "My contacts" is a query over that relationship, not a view of every
 user.
 
-**Decided, not yet in the sketch:** the current schema has no contacts table. A
-`Contact` model is part of the target five-model set and arrives with the schema
-revision; the exact row shape (one canonical pair row versus mirrored rows) is a
-schema detail.
+**Committed:** `Contact` is part of the schema, one row per direction
+(`userId` → `contactId`), so a mutual add writes both rows. The exact row shape
+can still change.
 
 **API representation:** the contacts endpoints identify a contact by the
 **peer's `User.id`**, never by a `Contact` row id. `POST /api/contacts` takes
 `{ userId }` and `DELETE /api/contacts/:id` takes that same peer id, so the API
-never exposes a contact row and the row shape stays free for the schema revision
+never exposes a contact row, so the row shape stays an implementation detail
 ([`../api/README.md`](../api/README.md#contacts-pr-36--pr-42)).
 
 Contacts are what make a conversation legal: creating one requires **both**
@@ -117,12 +114,12 @@ conversations are not supported, so there is no conversation type to
 distinguish: a single kind of conversation exists and a `type` field is **not
 needed**.
 
-**Decided, not yet in the sketch:** the target model stores the pair directly as
-`userOneId` and `userTwoId`, canonically ordered (`userOneId` < `userTwoId`) so a
-pair always resolves to the same row, with a uniqueness constraint on the pair,
-an index on `userTwoId`, and a database check that the two ids differ. The current
-sketch's `ConversationMember` — arbitrary membership — is **not** the target and
-is removed with the schema revision.
+**Implemented in the schema:** the pair is stored directly as `userOneId` and
+`userTwoId`, canonically ordered (`userOneId` < `userTwoId`) so a pair always
+resolves to the same row, with a unique constraint on the pair, an index on
+`userTwoId`, and the hand-written `Conversation_canonical_pair` check in the
+initial migration that enforces the ordering. `ConversationMember` — arbitrary
+membership — is gone (ADR-0020).
 
 ### Message
 
@@ -136,8 +133,9 @@ edit/delete semantics, and read receipts. None are designed.
 
 **Out of scope** (ADR-0020). An Altar is scenery in the world — a visible landmark
 positioned by map data — with no interaction, no membership and no conversation.
-The sketch's `Altar` and `AltarMembership` models are removed with the schema
-revision and are not part of the target data model.
+The legacy `Altar` and `AltarMembership` tables were removed at PR-15/PR-16 and
+are not part of the current data model; Phase 12 adds redesigned Altar tables
+with their own migration.
 
 ### Map
 
