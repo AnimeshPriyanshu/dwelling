@@ -1,3 +1,4 @@
+
 {
   "name": "@dwelling/backend",
   "private": true,
@@ -6,13 +7,20 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "vitest run",
-    "test:integration": "node -e \"if (!process.env.TEST_DATABASE_URL) { console.error('TEST_DATABASE_URL is required for integration tests'); process.exit(1) }\" && vitest run tests/integration"
+    "test:integration": "node -e \"if (!process.env.TEST_DATABASE_URL) { console.error('TEST_DATABASE_URL is required for integration tests'); process.exit(1) }\" && vitest run tests/integration",
+    "lint": "eslint . --ext .js,.ts",
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"eslint.config.js\" \"vitest.config.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"eslint.config.js\" \"vitest.config.js\""
   },
   "dependencies": {
     "@dwelling/shared": "*",
     "@prisma/client": "^6.19.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "redis": "^4.7.0",
     "socket.io": "^4.8.1"

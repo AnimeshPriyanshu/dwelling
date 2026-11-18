@@ -21,19 +21,25 @@ exists today versus what is only planned.**
 
 ```text
 ✅  npm-workspace monorepo        root package.json (node >=20.19.0)
-🟡  frontend/  Vite + React + Phaser 3  React UI + Phaser world;
-          React components render panels, Phaser canvas renders world
-🟡  backend/   Express + Socket.IO  /api/health works; sockets emit server:ready
+✅  frontend/  Vite + React + Phaser 3  React shell + implemented Phaser world
+          (movement, maps, dwellings, camera) and the conversation drawer
+🟡  backend/   Express + Socket.IO  /api/health + env validation; sockets emit server:ready
 🟡  database/  Prisma schema      models defined; NO migrations generated
 ✅  shared/    API_PREFIX only     single exported constant
 ✅  docs/      documentation       this tree
-▢   tests/                        placeholder README; no test runner configured
+✅  tests/    workspace unit/component tests (Vitest, Testing Library, Supertest)
+✅  CI        .github/workflows/ci.yml — lint, format check, tests, build
 ▢   scripts/                      placeholder README; no scripts
 ```
 
-**Key reality check:** the frontend now has React UI panels and a Phaser world
-canvas. The starting point of the ten-day plan is integrating these two layers
-through the DOM bridge.
+**Key reality check:** M1–M7 are implemented — React renders the HUD and drawer,
+Phaser renders the world, and the two communicate only through
+`frontend/src/bridge/`. House interiors (M8) are planned. The Altar and
+conversation architecture follow [`plan.md`](../planning/plan.md)'s five-model schema
+(`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) supporting only
+one-to-one conversations; group conversations belong to Altars and are scheduled
+as Phase 12 of the plan. Real messaging is pending beyond the current ten-day
+frontend phase.
 
 ---
 
@@ -68,15 +74,17 @@ through the DOM bridge.
 
 ```text
 ┌─────────────────────────── Browser ────────────────────────────┐
-│   App.jsx  →  React root, mounts App component                 │
-│             →  React UI panels + Phaser world canvas           │
-│   WorldScene.jsx  →  Phaser world scene                      │
-│   ChatScene.jsx   →  Phaser chat scene                       │
-│              no manual DOM queries — bridge handles events      │
+│   main.js → App.jsx (React shell: HUD, map selector, drawer)   │
+│   world/game.js → BootScene → PreloadScene → WorldScene        │
+│   world/entities/ (Player, Dwelling) · world/maps/ (data)      │
+│   world/assets.js · world/animations.js                        │
+│            ▲                              ▲                    │
+│            └──── bridge/ (publish · subscribe) ────┘           │
 └────────────────────────────────────────────────────────────────┘
-                             ✗  nothing connects fully yet
-┌──────────────────────── Backend (runs, but unused by the UI) ──┐
+           ✓ interactions and map changes flow over the bridge
+┌──────────────────────── Backend (runs; UI does not call it) ───┐
 │   app.js     GET /api/health  →  { status: 'ok' }              │
+│   config/    validateEnv → JWT_SECRET required                 │
 │   sockets/   on connection    →  emit 'server:ready'           │
 │   cache/     no-ops unless REDIS_URL is set                    │
 │   db/        PrismaClient singleton (nothing queries it)       │
@@ -163,8 +171,11 @@ they need. This keeps them testable and prevents circular imports.
 - **Confirmed:** root `.env` is loaded by the backend via
   `backend/src/config/env.js`, which reads `PORT` and `CLIENT_ORIGIN`
   (defaults `3000` and `http://localhost:5173`).
-- **Confirmed:** `.env.example` documents `PORT`, `CLIENT_ORIGIN`, `DATABASE_URL`,
-  and an optional `REDIS_URL`.
+- **Confirmed:** `backend/.env.example` is the tracked template — copy it to the
+  repository root as `.env`. It documents `PORT`, `CLIENT_ORIGIN`, the required
+  `JWT_SECRET`, `DATABASE_URL`, and an optional `REDIS_URL`.
+- **Required:** `JWT_SECRET` must be set or `validateEnv()` stops the backend
+  before it listens.
 - **Confirmed:** the frontend does **not** read any environment variable today.
   Any `VITE_*` variable would be new, and must be documented when introduced.
 - **Required:** secrets never enter source control (NFR-011).
@@ -175,9 +186,10 @@ See [`../development/setup.md`](../development/setup.md) for the real commands.
 
 ## Deployment
 
-**Out of scope.** There is no deployment configuration, no CI, and no hosting
-decision. The project currently targets local development only (see
-[`../project/scope.md`](../project/scope.md)).
+**Out of scope.** There is no deployment or hosting decision. GitHub Actions
+(`.github/workflows/ci.yml`) runs lint, format checks, tests, and the build on
+pushes and pull requests, but nothing is deployed. The project targets local
+development only (see [`../project/scope.md`](../project/scope.md)).
 
 ---
 

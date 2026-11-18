@@ -1,127 +1,130 @@
 # Asset Credits
 
-Third-party assets used by Dwelling. Every file under `public/assets/` that did
-not originate in this repository must be listed here with its pack, author,
-license and source. Licenses were checked at the source pages on **2026-10-17**.
+Provenance for every third-party file under `public/assets/` (NFR-014). Files
+that are processed copies record both the source pack and the transformation.
+
+> **Licence summary**
+>
+> - **Sunnyside World** (Daniel Diggle) — free/commercial use, modification
+>   allowed, credit appreciated. Redistribution is allowed as part of
+>   educational material with a link to the itch.io page. No resale/repackaging,
+>   no NFTs, no AI training.
+> - **Sprout Lands Basic Pack** (Cup Nooble) — **non-commercial** use,
+>   modification allowed, **credit required**. The pack may not be redistributed
+>   or resold on its own. No NFTs, no AI training.
+> - **Kenney Tiny Town / Tiny Dungeon** — CC0 1.0; no longer loaded (superseded).
 
 ---
 
-## Kenney Tiny Town
+## Sunnyside World V2.1
 
-- **Pack:** Tiny Town
-- **Author:** Kenney (Kenney.nl)
-- **License:** CC0 1.0 Universal (Public Domain Dedication) —
-  <https://creativecommons.org/publicdomain/zero/1.0/>
-- **Source pages:**
-  - <https://kenney.nl/assets/tiny-town>
-  - <https://opengameart.org/content/tiny-town>
-- **Downloaded from:** <https://opengameart.org/sites/default/files/kenney_tiny-town.zip>
-- **Archive SHA-256:** `9768692dccff1d706408a5aedd6ca4f6cd1409506cbc84cb2f862919764be977`
-- **Files used:**
-  - `tilesets/tiny-town.png` — the pack's `Tilemap/tilemap_packed.png`
-    (192×176, 12×11 tiles of 16×16, no spacing). SHA-256
-    `3a54d99ecde790d4fdea207a3644cf130fc56fa838f1beb1507c185a95b8e902`
-- **Used for:** ground layer (tile index 0 = plain grass) and, in later
-  milestones, house exteriors, trees and props sliced from the same sheet.
-- **Attribution note:** Kenney requests credit ("Kenney.nl") but does not require
-  it under CC0. Recorded here regardless.
+- **Pack:** Sunnyside World (V2.1)
+- **Author:** Daniel Diggle (`@DanielDiggle`)
+- **Licence:** Sunnyside World licence V1 — free and commercial use permitted;
+  modification permitted; credit appreciated but not required; redistribution
+  permitted as part of tutorials/educational courses **with a link** to
+  <https://danieldiggle.itch.io/sunnyside>; no repackaging/resale; no NFTs; no AI
+  training.
+- **Source page:** <https://danieldiggle.itch.io/sunnyside>
+- **Supplied location:** `Sunnyside_World_ASSET_PACK_V2.1/Sunnyside_World_Assets/`
+- **Files copied verbatim:**
+  - `tilesets/sunnyside-world.png` ← `Tileset/spr_tileset_sunnysideworld_16px.png`
+    (1024×1024, 64×64 tiles of 16×16, no spacing)
+  - `ui/expression-chat.png` ← `UI/expression_chat.png` (9×9)
+- **Processed copies** (originals untouched; source pixel rectangles recorded):
+  - `houses/cottage-blue.png` ← tileset crop 32×56 at (520, 168), then 2×
+    nearest-neighbour to 64×112
+  - `houses/cottage-green.png` ← tileset crop 32×56 at (520, 296), then 2× to
+    64×112
+  - `houses/cottage-orange.png` ← tileset crop 32×56 at (520, 424), then 2× to
+    64×112
+  - `houses/cottage-red.png` ← tileset crop 32×56 at (520, 552), then 2× to
+    64×112
+  - `houses/cottage-purple.png` ← tileset crop 32×56 at (520, 680), then 2× to
+    64×112
 
----
-
-## Kenney Tiny Dungeon
-
-- **Pack:** Tiny Dungeon
-- **Author:** Kenney (Kenney.nl)
-- **License:** CC0 1.0 Universal (Public Domain Dedication) —
-  <https://creativecommons.org/publicdomain/zero/1.0/>
-- **Source pages:**
-  - <https://kenney.nl/assets/tiny-dungeon>
-  - <https://opengameart.org/content/tiny-dungeon>
-- **Downloaded from:** <https://opengameart.org/sites/default/files/kenney_tinydungeon.zip>
-- **Archive SHA-256:** `c109438ab06f65fd80f9b2686a4cf9c7c11dc64444b47333ec71d602f8bb5fc7`
-- **Files used:**
-  - `tilesets/tiny-dungeon.png` — the pack's `Tilemap/tilemap_packed.png`
-    (192×176, 12×11 tiles of 16×16, no spacing). SHA-256
-    `d24e60a41e4ac7a745c0304dfde121143688557f40215f23221c29cfe683825f`
-- **Used for:** interior furniture and furnishings (Milestone 8). Loaded as an
-  *optional* asset — the world renders even if it is absent.
-- **Attribution note:** same as above.
-
----
-
-## Adding a new asset pack
-
-1. Confirm the license at the **original source page** — do not assume a site's
-   assets are CC0.
-2. Download and record: pack name, author, license (with URL), source URL, the
-   archive SHA-256, and the exact files copied.
-3. Copy only the files you actually use into the matching
-   `public/assets/<category>/` folder.
-4. Add an entry for the pack above with the reason it is used.
-5. Register the file in `src/world/assets.js`.
-
-## Original project art
-
-- **File:** `characters/player-walk.png`
-- **Description:** 4-direction, 3-frame walk sprite sheet for the player entity
-- **Created:** 2026-10-17 via Python script (`zlib` + `struct`, no image editor dependencies)
-- **License:** Original to the Dwelling project
-- **License:** Listed for completeness and provenanceility record in CREDITS.md per NFR-014
-- **Size:** 64×72 pixels, 12 frames (4 directions × 3 frames), 16×24px per frame
-- **Used by:** `frontend/src/world/entities/Player.js` for walk animations
+    The upscale only doubles each pixel (no interpolation, no distortion) so the
+    cottages read as full houses next to the player; the 1× crops are reproducible
+    from the coordinates above.
+  - `props/tree-01.png` ← `Elements/Plants/spr_deco_tree_01_strip4.png`, frame 0
+    (32×34 crop at 0, 0)
+  - `props/tree-02.png` ← `Elements/Plants/spr_deco_tree_02_strip4.png`, frame 0
+    (28×43 crop at 0, 0)
+  - `props/rock-01.png` ← tileset crop 26×25 at (787, 340)
+  - `props/rock-02.png` ← tileset crop 26×25 at (787, 372)
+  - `ui/avatar-base.png` ← `Characters/Human/IDLE/base_idle_strip9.png`, frame 0
+    (20×26 crop at 38, 18)
+  - `ui/avatar-{bowlhair,curlyhair,longhair,mophair,shorthair,spikeyhair}.png` ←
+    the matching hair layer in `Characters/Human/IDLE/` composited over
+    `base_idle_strip9.png`, frame 0, then the same 20×26 crop
+- **Used for:** world ground, cottage dwellings, trees, rocks, contact portraits,
+  chat icon. Furniture tiles are reserved for interiors (Milestone 8).
 
 ---
 
-## Kenney Tiny Town
+## Sprout Lands — Sprites — Basic pack
 
-- **Pack:** Tiny Town
-- **Author:** Kenney (Kenney.nl)
-- **b:** CC0 1.0 Universal (Public Domainbication) —
-  <https://creativecommons.org/publicdomain/zero/1.0/>
-- **Source pages:**
-  - <https://kenney.nl/assets/tiny-town>
-  - <https://opengameart.org/content/tiny-town>
-- **Downloaded from:** <https://opengameart.org/sites/default/files/kenney_tiny-town.zip>
-- **Archive SHA-256:** `9768692dccff1d706408a5aedd6ca4f6cd1409506cbc84cb2f862919764be977`
-- **Files used:**
-  - `bets/tiny-town.png` — the pack's `Tilemap/tilemap_png`
-    (192×176, 12×11 tiles of 16×16, no spacing). SHA-256
-    `3a54d99ecde790d4fdea207a3644cf130fc56fa838f1beb1507c185a95b8e902`
-- **Used for:** ground layer (tile index 0 = plain grass) and, in later
-  milestones, house exteriors, trees and props from the same sheet.
-- **Attribution note:** Kenney requests credit ("Kenney.nl") but does not require
-  it under CC0. Recorded here regardless.
-
----
-
-## Kenney Tiny Dungeon
-
-- **Pack:** Tiny Dungeon
-- **Author:** Kenney (Kenney.nl)
-- **b:** CC0 1.0 Universal (Public Domainbication) —
-  <https://creativecommons.org/publicdomain/zero/1.0/>
-- **Source pages:**
-  - <https://kenney.nl/assets/tiny-dungeon>
-  - <https://opengameart.org/content/tiny-dungeon>
-- **Downloaded from:** <https://opengameart.org/sites/default/files/kenney_tinydungeon.zip>
-- **Archive SHA-256:** `c109438ab06f65fd80f9b2686a4cf9c7c11dc64444b47333ec71d602f8bb5fc7`
-- **Files used:**
-  - `bets/tiny-dungeon.png` — the pack's `Tilemap/tilemap_png`
-    (192×176, 12×11 tiles of 16×16, no spacing). SHA-256
-    `d24e60a41e4ac7a745c0304dfde121143688557f40215f23221c29cfe683825f`
-- **Used for:** interior furniture and furnishings (Milestone 8). Loaded as an
-  *optional* asset — the world renders even if it is absent.
-- **Attribution note:** same as above.
+- **Pack:** Sprout Lands — Basic Pack
+- **Author:** Cup Nooble
+- **Licence (from `read_me.txt`):** may be modified; may be used in **any kind of
+  non-commercial project**; the asset pack itself may not be redistributed or
+  resold, even modified; NFTs and AI training are not allowed; **credit is
+  required** ("Assets – From: Sprout Lands – By: Cup Nooble"). Projects made with
+  the assets, including open-source projects, may be distributed with a note
+  naming Cup Nooble and the licence terms.
+- **Author links:** <https://cupnooble.itch.io/> · `cupnooble.carrd.co`
+- **Supplied location:** `Sprout Lands - Sprites - Basic pack/`
+- **Files copied verbatim:**
+  - `characters/player-sprout.png` ← `Characters/Basic Charakter Spritesheet.png`
+    (192×192, 4×4 frames of 48×48; rows = down, up, right, left)
+  - `props/fences.png` ← `Tilesets/Fences.png` (64×64, 4×4 tiles of 16×16)
+  - `props/crops.png` ← `Objects/Basic_Plants.png` (verbatim; 96×32, 6×2
+    frames of 16×16: wheat and root crop growth stages)
+- **Processed copies** (originals untouched):
+  - `tilesets/sprout-dirt.png` ← `Tilesets/Tilled_Dirt_v2.png` (176×112, 11×7
+    tiles of 16×16). Tone-matched to the Sunnyside grass palette with
+    `colorchannelmixer=rr=0.82:gg=0.70:bb=0.58`; every other pixel and the tile
+    grid are unchanged. The fully opaque fill tiles, verified by cropping each
+    frame and checking alpha, are frames 12, 55, 56, 67 and 68: one plain tile
+    and four distinct speckle variants. The path layer draws from those, and the
+    farm soil layer uses the same sheet.
+- **Used for:** the player character (four-facing walk animation), the dirt
+  roads/trails rendered under the player, the farm plot soil (same sheet), the
+  farm rail built from the fence tiles, and the crops on the farm plots.
+- **Attribution:** Assets – From: Sprout Lands – By: Cup Nooble.
 
 ---
 
-## Adding a new asset pack
+## Kenney Tiny Town (superseded)
 
-1. Confirm the license at the **original source page** — do not assume a site's
-   assets are CC0.
-2. Download and record: pack name, author, license (with URL), source URL, the
-   archive SHA-256, and the exact files copied.
-3. Copy only the files you actually use into the matching
-   `public/assets/<category>/` folder.
-4. Add an entry for the pack above with the reason it is used.
-5. Register the file in `src/world/assets.js`.
+- **Pack:** Tiny Town · **Author:** Kenney (Kenney.nl)
+- **Licence:** CC0 1.0 Universal — <https://creativecommons.org/publicdomain/zero/1.0/>
+- **Source:** <https://kenney.nl/assets/tiny-town> ·
+  <https://opengameart.org/content/tiny-town>
+- **Files:** `tilesets/tiny-town.png` (192×176)
+- **Status:** previously used for ground, dwellings and obstacles. **No longer
+  loaded** after the supplied packs were integrated. Kept on disk so the change
+  is reversible; remove before release if unused.
+
+---
+
+## Kenney Tiny Dungeon (unused)
+
+- **Pack:** Tiny Dungeon · **Author:** Kenney (Kenney.nl)
+- **Licence:** CC0 1.0 Universal — <https://creativecommons.org/publicdomain/zero/1.0/>
+- **Source:** <https://kenney.nl/assets/tiny-dungeon> ·
+  <https://opengameart.org/content/tiny-dungeon>
+- **Files:** `tilesets/tiny-dungeon.png` (192×176)
+- **Status:** never loaded by any map; reserved originally for interiors.
+
+---
+
+## Adding a new asset
+
+1. Confirm the licence at the **original source page**; record whether
+   commercial use and redistribution are allowed.
+2. Add the file under the matching `public/assets/<category>/` folder.
+3. If it is processed, keep the original pack file untouched and record the exact
+   crop/frame here.
+4. Register it in `frontend/src/world/assets.js`.
+5. Add an entry above with pack, author, licence, URL and files used.

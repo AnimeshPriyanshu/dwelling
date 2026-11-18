@@ -69,6 +69,8 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
   pointer-events: none;
   user-select: none;
 }
@@ -79,6 +81,46 @@ body,
   font-weight: 700;
   letter-spacing: -0.02em;
   color: #f4f5f1;
+}
+
+.floating-hud .hud-map {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.floating-hud .hud-map-name {
+  font-weight: 600;
+  color: #f4f5f1;
+}
+
+.floating-hud .hud-map-range {
+  color: #9ac96b;
+}
+
+.map-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  pointer-events: auto;
+}
+
+.map-picker select {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: #f4f5f1;
+  font: inherit;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.map-picker select:focus-visible {
+  outline: 2px solid #9ac96b;
+  outline-offset: 2px;
 }
 
 .floating-hud .hud-hint {
@@ -104,11 +146,19 @@ body,
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Hidden drawers stay out of sight and, with `inert`, out of the tab order. */
+  visibility: hidden;
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.28s;
 }
 
 .chat-drawer.open {
   transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s;
 }
 
 /* Drawer Header */
@@ -118,6 +168,32 @@ body,
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.drawer-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Pixel portraits composited from the supplied Sunnyside character pack. */
+.contact-avatar {
+  width: 40px;
+  height: 52px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px;
+  flex: none;
 }
 
 .drawer-title-group h2 {
@@ -151,6 +227,11 @@ body,
 .drawer-close-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.3);
+}
+
+.drawer-close-btn:focus-visible {
+  outline: 2px solid #9ac96b;
+  outline-offset: 2px;
 }
 
 /* Visible Mock Data Notice Banner (FR-033 / ADR-0013) */

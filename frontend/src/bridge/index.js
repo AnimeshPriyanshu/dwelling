@@ -16,20 +16,28 @@ export const EventType = {
   // React → Phaser
   PLAYER_INPUT: 'player:input',
   UI_ACTION: 'ui:action',
+  UI_STATE: 'ui:state',
+  MAP_SWITCH: 'map:switch',
 }
 
 // Phaser event names creators
 export const phaserEvents = {
   dwellingNear: (dwellingId) => ({ type: EventType.DWELLING_NEAR, dwellingId }),
-  dwellingInteract: (dwellingId) => ({ type: EventType.DWELLING_INTERACT, dwellingId }),
+  dwellingInteract: (dwelling) => ({
+    type: EventType.DWELLING_INTERACT,
+    dwelling,
+  }),
   playerMove: (dx, dy) => ({ type: EventType.PLAYER_MOVE, dx, dy }),
-  mapChanged: (mapName) => ({ type: EventType.MAP_CHANGED, mapName }),
+  // The world publishes the registry's map summary (`summarizeMap`), so the
+  // bridge carries the payload without knowing any map metadata itself.
+  mapChanged: (map) => ({ type: EventType.MAP_CHANGED, map }),
 }
 
 // React event names creators
 export const reactEvents = {
   setPlayerPosition: (x, y) => ({ type: 'set-player-position', x, y }),
   toggleChat: () => ({ type: 'toggle-chat' }),
+  switchMap: (mapId) => ({ type: EventType.MAP_SWITCH, mapId }),
 }
 
 // Subscription map for the bridge
@@ -56,6 +64,16 @@ export function publish(topic, payload) {
   }
 }
 
+// UI → Phaser helper. Keeps React modules away from the event shape.
+export function requestMapSwitch(mapId) {
+  publish(EventType.MAP_SWITCH, { mapId })
+}
+
+// UI → Phaser helper. Tells the world whether a DOM panel owns the input.
+export function setChatOpen(open) {
+  publish(EventType.UI_STATE, { chatOpen: Boolean(open) })
+}
+
 // Unsubscribe all listeners for a topic (or all topics)
 export function unsubscribeAll(topic) {
   if (topic) {
@@ -77,6 +95,8 @@ export default {
   phaserEvents,
   reactEvents,
   phaserPublish,
+  requestMapSwitch,
+  setChatOpen,
   subscribe,
   publish,
   unsubscribeAll,

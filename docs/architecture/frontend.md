@@ -20,27 +20,32 @@ frontend/
 ├── package.json          ✅  scripts: dev, build, preview · deps: phaser, react, react-dom, socket.io-client
 ├── public/
 │   ├── favicon.svg       ✅
-│   └── icons.svg         ✅
+│   ├── icons.svg         ✅
+│   └── assets/           ✅  tilesets, houses, interiors, props, characters, ui + CREDITS.md
 └── src/
     ├── main.js           ✅  creates the React root, renders App
-    ├── App.jsx           ✅  mounts the Phaser game; World panel + Conversations sidebar
-    ├── style.css         ✅  grid layout, responsive below 700px
+        ├── App.jsx            ✅  mounts the Phaser game; floating HUD + slide-out conversation drawer
+    ├── style.css          ✅  fullscreen shell, floating HUD, drawer (`.chat-drawer`)
     ├── assets/           🟡  Vite starter leftovers (unused)
     ├── world/
     │   ├── game.js       ✅  createGame(parent) — the only Phaser config (DW-003)
-    │   ├── constants.js  ✅  tile/world/viewport sizes (DW-008)
+    │   ├── constants.js  ✅  tile/viewport sizes shared by every map (DW-008)
     │   ├── assets.js     ✅  texture keys, paths, manifest, loadAssets() (DW-046)
+    │   ├── maps/          ✅  map data, validation and registry (DW-032/033)
+    │   ├── entities/      ✅  Player, Dwelling (DW-014/026)
     │   └── scenes/       ✅  BootScene, PreloadScene, WorldScene (DW-004/005)
     ├── bridge/           ✅  React ↔ Phaser event bus (DW-035 groundwork)
     └── chat/README.md    ▢   boundary only — no code
 ```
 
-**Phaser renders a real tiled world** (verified 2026-10-17, Day 2): `WorldScene`
-draws a 60×40 ground layer from the Kenney Tiny Town tileset (`public/assets/`),
-with physics and camera bounds taken from `constants.js`. `PreloadScene` loads a
-declarative asset manifest with a progress bar and reports missing assets by
-required/optional status. There is still no player or interaction — those arrive
-in later milestones.
+**Phaser renders a real, multi-map tiled world** (verified 2026-10-19, Day 6):
+`WorldScene` is reused for every map, drawing ground, dwellings and obstacles
+from the registry (`world/maps/`). Switching maps clears map-owned objects and
+rebuilds them without restarting the scene; the player, static group and collider
+are reused. Physics and camera bounds come from the active map's tile dimensions.
+`PreloadScene` loads the asset manifest and reports missing assets by
+required/optional status. The React HUD shows the active map and a selector,
+synced through `map:changed` / `map:switch` on the bridge.
 
 ---
 
@@ -55,14 +60,14 @@ transport should be kept in a separate client module").
 | --- | --- | --- | --- |
 | **Entry** | Bootstrap the app: mount the game, wire UI | `src/main.js`, `src/App.jsx` | ✅ mounts the game |
 | **Game config** | Phaser config: parent, size, scale, physics, scene list | `src/world/game.js` | ✅ DW-003 |
-| **Constants** | Tile size, world size, speeds, depths — defined once | `src/world/constants.js` | ✅ DW-008 |
+| **Constants** | Tile size, viewport, speeds, depths — defined once; map size lives in map data | `src/world/constants.js` | ✅ DW-008 |
 | **Asset keys** | Texture keys mapped to file paths | `src/world/assets.js` | ✅ DW-046 |
 | **Scenes** | Lifecycle units (`preload`, `create`, `update`) | `src/world/scenes/` | ✅ DW-004/005 |
 | **Entities** | Player, dwelling — sprite + behavior | `src/world/entities/` | ▢ DW-014, DW-026 |
 | **Systems** | Cross-entity logic: movement, interaction resolution | `src/world/systems/` | ▢ DW-015, DW-028 |
-| **Maps** | Map data, registry, loading | `src/world/maps/` | ▢ DW-032/033 |
+| **Maps** | Map data, validation, registry, reused-scene loading | `src/world/maps/` | ✅ DW-032/033 |
 | **Bridge** | Canvas ↔ DOM event translation | `src/bridge/` | ✅ exists (DW-035 settles details) |
-| **UI** | Panels, HUD, prompts as DOM | `src/ui/` (proposed) | ▢ DW-036/037 |
+| **UI** | Panels, HUD, prompts as DOM | `src/ui/` (proposed); HUD lives in `App.jsx` for now | 🟡 DW-037 done, DW-036 planned |
 | **Chat** | Conversation UI | `src/chat/` | ▢ placeholder only |
 | **Services** | HTTP + Socket.IO clients | `src/services/` (proposed) | ▢ deferred |
 
@@ -82,7 +87,7 @@ Phaser scenes are the unit of lifecycle. Proposed split (DW-004/DW-005):
 | --- | --- | --- |
 | `BootScene` | Minimal startup; anything needed before a loading screen exists | ✅ stub |
 | `PreloadScene` | Load assets and show a progress indicator (DW-012) | ✅ stub |
-| `WorldScene` | The world: ground, bounds, obstacles, dwellings, player, interaction | ✅ placeholder |
+| `WorldScene` | The world: map lifecycle, ground, bounds, obstacles, dwellings, player, interaction | ✅ implemented |
 
 **Rules**
 
@@ -109,7 +114,8 @@ An entity owns its sprite and its own behavior:
 - An entity must not decide *who* the player is talking to. Interaction
   *resolution* (which dwelling is active) belongs to a system, so the rule can
   change in one place.
-- Placeholder textures are generated in code until real art exists (ADR-0007).
+- Art comes from the two supplied packs (ADR-0019); entities reference texture
+  keys declared in `world/assets.js` and never load files themselves.
 
 ---
 
@@ -153,9 +159,9 @@ The single seam between canvas and HTML (ADR-0005).
 
 - **Confirmed:** it is a dedicated module, not ad-hoc DOM access from scenes
   (DW-035).
-- **Proposed:** a minimal event bus — `emit(eventName, payload)` /
-  `on(eventName, handler)` — with named events such as `dwelling:near`,
-  `dwelling:interact`, `map:changed`.
+- **Implemented:** a minimal event bus — `publish` / `subscribe` — with named
+  events such as `dwelling:near`, `dwelling:interact`, `map:changed`,
+  `map:switch`. `requestMapSwitch()` is the UI → Phaser helper.
 - **Rules:**
   - Scenes may `emit`; they must not import UI modules.
   - UI modules may subscribe; they must not import scenes.

@@ -3,30 +3,39 @@
 Where game and UI assets live, how they are named, where they come from, and how
 the code references them.
 
-> **Reality check (2026-10-17):** the first game assets now exist. Two **CC0**
-> Kenney tilesheets live in `frontend/public/assets/tilesets/` and are loaded via
-> `src/world/assets.js`. The tables below are updated to match; folders that are
-> still empty (characters, houses, props, interiors, altar, ui) remain **planned**
-> and are only created when they hold a file.
+> **Reality check (2026-11-12):** the project now uses the two **supplied** packs
+> — Sunnyside World (Daniel Diggle) and Sprout Lands Basic (Cup Nooble). They are
+> copied into `frontend/public/assets/` and loaded through `src/world/assets.js`.
+> The Kenney CC0 sheets are superseded and no longer loaded. The full audit and
+> feature mapping live in [`asset-inventory.md`](asset-inventory.md); provenance
+> and licences in [`../../frontend/public/assets/CREDITS.md`](../../frontend/public/assets/CREDITS.md).
 
 ---
 
 ## What actually exists today
 
-Verified by inspecting `frontend/` on 2026-10-17:
+Verified by inspecting `frontend/` and the supplied packs on 2026-11-12:
 
 | Path | What it is | Used? |
 | --- | --- | --- |
 | `frontend/public/favicon.svg` | Site favicon | Referenced from `index.html` as `/favicon.svg` |
-| `frontend/public/icons.svg` | SVG icon sprite | Not referenced yet |
-| `frontend/public/assets/tilesets/tiny-town.png` | Kenney Tiny Town tilesheet (CC0), 16×16 tiles | Ground layer (`WorldScene`) |
-| `frontend/public/assets/tilesets/tiny-dungeon.png` | Kenney Tiny Dungeon tilesheet (CC0), 16×16 tiles | Loaded as optional; furnishings in DW-051 |
-| `frontend/public/assets/CREDITS.md` | Provenance for the above | Documentation |
+| `frontend/public/assets/tilesets/sunnyside-world.png` | Sunnyside World 16 px tileset, 1024×1024 | **World ground** (frame 65) |
+| `frontend/public/assets/tilesets/sprout-dirt.png` | Sprout Lands dirt tiles, 176×112, tone-matched | **Roads and trails** (path layer) |
+| `frontend/public/assets/characters/player-sprout.png` | Sprout Lands character sheet, 4×4 frames of 48×48 | **Player**, four walk directions |
+| `frontend/public/assets/houses/cottage-*.png` | Five cottages cropped from the Sunnyside tileset (32×56, upscaled 2× to 64×112) | **Dwellings** |
+| `frontend/public/assets/props/tree-*.png`, `rock-*.png` | Sunnyside tree/rock crops | **Obstacles** |
+| `frontend/public/assets/props/fences.png` | Sprout Lands fence tiles (16×16) | **Farm rail** (posts, rails, caps) |
+| `frontend/public/assets/props/crops.png` | Sprout Lands plant sheet, 6×2 frames of 16×16 | **Farm crops** (wheat and root, four growth stages) |
+| `frontend/public/assets/ui/avatar-*.png` | Composited Sunnyside contact portraits, 20×26 | **Chat drawer avatar** |
+| `frontend/public/assets/ui/expression-chat.png` | Sunnyside UI icon, 9×9 | Loaded, reserved for UI |
+| `frontend/public/assets/tilesets/tiny-town.png`, `tiny-dungeon.png` | Kenney CC0 sheets | **No longer loaded** (superseded) |
+| `frontend/public/assets/characters/player-walk.png` | Early generated player sheet | **No longer loaded** |
+| `frontend/public/assets/CREDITS.md` | Provenance and licences | Documentation |
 | `frontend/src/assets/hero.png` etc. | Vite starter leftovers | **Not imported anywhere** |
 
-There is still **no character sheet, house sprite, furniture, prop, UI image,
-font or audio file**. Houses, props and furniture will be sliced from the two
-tilesheets where possible rather than sourced as separate files.
+No audio or font file exists in either pack; both remain out of scope. Interiors
+are still unbuilt (Milestone 8) and use furniture tiles already available in the
+Sunnyside tileset and Sprout Lands objects.
 
 `frontend/dist/` is build output and is **not** a source of assets. It is
 gitignored; treat anything in it as disposable.
@@ -74,20 +83,32 @@ categories below are added when they get their first file.
 assets/
 ├── README.md       layout, naming, how to add, ≤512 KB rule
 ├── CREDITS.md      every third-party file: pack, author, license, URL (NFR-014)
-└── tilesets/       packed 16×16 tilesheets, sliced by tile index
-    ├── tiny-town.png      Kenney Tiny Town (CC0) — ground, houses, props, trees
-    └── tiny-dungeon.png   Kenney Tiny Dungeon (CC0) — interior furniture
+├── tilesets/       packed 16×16 sheets, sliced by tile index
+│   ├── sunnyside-world.png   Sunnyside World — ground, terrain, props
+│   └── sprout-dirt.png       Sprout Lands dirt — roads and trails
+├── characters/
+│   └── player-sprout.png     Sprout Lands — 4 directions × 4 frames
+├── houses/
+│   └── cottage-*.png         processed cottages from the Sunnyside sheet
+├── props/
+│   ├── tree-*.png, rock-*.png  processed Sunnyside props
+│   ├── fences.png              Sprout Lands fence tiles
+│   └── crops.png               Sprout Lands crop growth stages
+├── interiors/      created for Milestone 8 furniture
+└── ui/
+    ├── avatar-*.png          composited contact portraits
+    └── expression-chat.png   supplied UI icon
 ```
 
 | Folder | Contents | Source | Status |
 | --- | --- | --- | --- |
-| `tilesets/` | Packed 16×16 sheets; ground, houses, props, furniture by tile index | CC0 (Kenney) | ✅ created (DW-044) |
-| `characters/` | Player sheet, 4 directions × 2–4 walk frames | CC0 pack or authored | **planned** (DW-047) |
-| `houses/` | Dedicated house sprites, if sliced sheets are not reused | CC0 pack | **planned** (DW-026) |
-| `props/` | Dedicated prop sprites, if sliced sheets are not reused | CC0 pack | **planned** (DW-020) |
-| `interiors/` | Interior-only furniture, if not sliced from `tiny-dungeon` | CC0 pack | **planned** (DW-051) |
+| `tilesets/` | 16×16 world tileset + dirt path sheet | Sunnyside World + Sprout Lands | ✅ integrated |
+| `characters/` | Player sheet, 4 directions × 4 walk frames | Sprout Lands | ✅ integrated |
+| `houses/` | Complete cottage sprites (processed crops) | Sunnyside World | ✅ integrated |
+| `props/` | Trees, rocks, fences, crops (processed crops/sheets) | Sunnyside + Sprout Lands | ✅ integrated |
+| `interiors/` | Interior furniture | Sunnyside + Sprout Lands | **planned** (DW-051) |
 | `altar/` | Altar landmark | **Code-authored** | **planned** (DW-055) |
-| `ui/` | Interact prompt, HUD icons, door/interior glyphs | **Code-authored** | **planned** (DW-029, DW-037) |
+| `ui/` | Contact portraits, expression icon | Sunnyside World | ✅ avatars integrated |
 
 ### Documentation screenshots
 
@@ -132,13 +153,16 @@ exported JSON is used.
 
 ## Where assets come from
 
-### Third-party CC0 packs (tiles, houses, furniture, props)
+### Supplied packs (tiles, characters, houses, props, UI)
 
-Sourced in DW-044 under a hard rule:
+Both packs were supplied by the project owner. They are used as the primary
+visual source; no replacement art is generated and no random download replaces a
+suitable supplied file.
 
-1. **Prefer one pack family** so tiles, houses and furniture share a palette.
-2. **Verify the license** permits use and redistribution before the file enters
-   the repository. CC0 or equivalent only.
+1. **Prefer one pack per role** so the palette stays coherent (Sunnyside for the
+   world, Sprout Lands for the four-direction player).
+2. **Verify the license** before a file enters the repository. Sunnyside permits
+   commercial use; Sprout Lands is **non-commercial** with credit required.
 3. **Record it in `CREDITS.md`** — pack name, author, license, source URL, and
    which files came from it.
 4. **Check the tile size and grid** match the 16×16 grid; repack if not.

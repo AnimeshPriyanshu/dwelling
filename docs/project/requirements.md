@@ -12,9 +12,11 @@ concrete way to observe whether it holds.
 | `In progress` | Partly implemented. |
 | `Planned` | Agreed, not started. |
 | `Deferred` | Out of the current phase; see [`scope.md`](scope.md). |
+| `Not supported` | Ruled out by a recorded decision (ADR); kept for traceability. |
 
-_As of the current repository state, no product requirement below is `Done`.
-The scaffold contains transport, config, and schema placeholders, not features._
+_Updated 2026-10-19 after Milestone 6. Statuses below reflect verified runtime
+checks recorded in [`../planning/daily-log.md`](../planning/daily-log.md); deferred
+requirements stay `Planned` until their milestone lands._
 
 ---
 
@@ -24,50 +26,61 @@ The scaffold contains transport, config, and schema placeholders, not features._
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-001 | The app renders a 2D world in a Phaser canvas inside the World panel. | Planned |
-| FR-002 | The player character is visible in the world at a defined spawn position. | Planned |
-| FR-003 | The player can be moved with the arrow keys **and** WASD. | Planned |
-| FR-004 | Movement is smooth and frame-rate independent (delta-time based). | Planned |
-| FR-005 | Diagonal movement is normalized so it is not faster than straight movement. | Planned |
-| FR-006 | The player cannot move through solid obstacles. | Planned |
-| FR-007 | The player cannot leave the world boundaries. | Planned |
-| FR-008 | The camera follows the player and does not show area outside the world bounds. | Planned |
-| FR-009 | The player's facing direction is reflected visually at all times. | Planned |
+| FR-001 | The app renders a 2D world in a Phaser canvas inside the World panel. | Done |
+| FR-002 | The player character is visible in the world at a defined spawn position. | Done |
+| FR-003 | The player can be moved with the arrow keys **and** WASD. | Done |
+| FR-004 | Movement is smooth and frame-rate independent (delta-time based). | Done |
+| FR-005 | Diagonal movement is normalized so it is not faster than straight movement. | Done |
+| FR-006 | The player cannot move through solid obstacles. | Done |
+| FR-007 | The player cannot leave the world boundaries. | Done |
+| FR-008 | The camera follows the player and does not show area outside the world bounds. | Done |
+| FR-009 | The player's facing direction is reflected visually at all times. | Done |
 
 ### Dwellings and interaction
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-010 | Dwellings are rendered at configured positions in the world. | Planned |
-| FR-011 | Each dwelling is associated with exactly one contact identity. | Planned |
-| FR-012 | Each dwelling has an interaction zone the player can enter. | Planned |
-| FR-013 | Entering an interaction zone shows visible, unambiguous feedback. | Planned |
-| FR-014 | Pressing the interact key inside a zone triggers that dwelling's interaction. | Planned |
-| FR-015 | An interaction resolves to the correct contact's conversation. | Planned |
-| FR-016 | Leaving an interaction zone clears the interaction prompt. | Planned |
+| FR-010 | Dwellings are rendered at configured positions in the world. | Done |
+| FR-011 | Each dwelling is associated with exactly one contact identity. | Done |
+| FR-012 | Each dwelling has an interaction zone the player can enter. | Done |
+| FR-013 | Entering an interaction zone shows visible, unambiguous feedback. | Done |
+| FR-014 | Pressing the interact key inside a zone triggers that dwelling's interaction. | Done |
+| FR-015 | An interaction resolves to the correct contact's conversation. | Done |
+| FR-016 | Leaving an interaction zone clears the interaction prompt. | Done |
 
 ### Maps
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-017 | Contacts are grouped into maps by the first letter of their name, per fixed alphabet ranges. | Planned |
-| FR-018 | Each map is defined by data (size, spawn, dwellings, obstacles), not hard-coded scene logic. | Planned |
-| FR-019 | The game can load any registered map by id. | Planned |
-| FR-020 | There is a mechanism to move between maps (transition or selection). | Planned |
-| FR-021 | The current map is identified in the UI. | Planned |
+| FR-017 | Contacts are grouped into maps by the first letter of their name, per fixed alphabet ranges. | In progress |
+| FR-018 | Each map is defined by data (size, spawn, dwellings, obstacles), not hard-coded scene logic. | Done |
+| FR-019 | The game can load any registered map by id. | Done |
+| FR-020 | There is a mechanism to move between maps (transition or selection). | Done |
+| FR-021 | The current map is identified in the UI. | Done |
+
+> **FR-017 note (2026-10-19):** the fixed ranges (`a-c`, `s-u`, …) and the
+> registry are implemented, and `s-u` places new contacts by range. The four
+> Milestone 5 contacts (Elowen, Rowan, Kael, Lyra) remain on `a-c` with their
+> original contact ids so M5 interactions and dwelling ids are preserved; they
+> are not yet regrouped into `d-f`, `j-l` and `p-r`. Regrouping is deferred until
+> contact ids can be migrated safely.
 
 ### UI and chat
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-022 | The HTML UI around the canvas (header, panels) remains functional alongside the canvas. | Planned |
-| FR-023 | Interacting with a dwelling opens a conversation UI for that contact. | Planned |
-| FR-024 | The conversation UI shows the contact's name. | Planned |
-| FR-025 | The conversation UI can be closed and returns focus to the world. | Planned |
-| FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** | Planned |
-| FR-027 | An Altar supports interaction by multiple users in the same location. | Deferred |
-| FR-028 | Users can send and receive messages in a conversation. | Deferred |
+| FR-022 | The HTML interface (floating HUD, map selector, conversation drawer) remains functional alongside the fullscreen canvas. | Done |
+| FR-023 | Interacting with a dwelling opens a conversation UI for that contact. | Done |
+| FR-024 | The conversation UI shows the contact's name. | Done |
+| FR-025 | The conversation UI can be closed and returns focus to the world. | Done |
+| FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** Group conversations belong to Altars and are scheduled as Phase 12 of [`plan.md`](../planning/plan.md). | Done |
+| FR-027 | An Altar supports interaction by multiple users in the same location. | Planned |
+| FR-028 | Users can send and receive messages in a conversation. | Planned |
 | FR-029 | The app shows which contacts are online (presence). | Deferred |
+
+> **FR-027 note:** direct conversations are one-to-one only (ADR-0020); Altar
+group conversations are scheduled as Phase 12 of [`plan.md`](../planning/plan.md),
+so the Altar stays scenery until then (FR-026).
 
 ### Interiors
 
@@ -76,12 +89,28 @@ The scaffold contains transport, config, and schema placeholders, not features._
 | FR-030 | The player can enter a dwelling's interior and exit back to that dwelling's door, without a page reload. | Planned |
 | FR-031 | The shared interior contains a recognisable fireplace, kitchen area, and bed. | Planned |
 
-### Conversation sidebar
+### Conversation drawer
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| FR-032 | The conversation UI opens as a docked sidebar beside the world, covering no part of the canvas. | Planned |
-| FR-033 | Any mock conversation content is visibly labelled as mock data, and no input field implies that sending works. | Planned |
+| FR-032 | The conversation UI opens as a slide-out overlay drawer on the right edge of the fullscreen canvas, and can be dismissed to restore the unobstructed world. | Done |
+| FR-033 | Any mock conversation content is visibly labelled as mock data, and no input field implies that sending works. | Done |
+
+> **FR-032 note (2026-11-13):** the original wording required a *docked sidebar
+> beside the world, covering no part of the canvas*. That layout was superseded by
+> ADR-0017 — a fullscreen `100vw × 100vh` canvas with a right-edge slide-out
+> drawer — which the owner confirmed on 2026-10-17. The requirement is reworded to
+> match the accepted design; because the drawer is an overlay by design, "covers
+> no part of the canvas" no longer applies. Implemented in `App.jsx` and
+> `style.css` (`.chat-drawer`), covered by `App.test.jsx`.
+
+### Conversations and contacts
+
+| ID | Requirement | Status |
+| --- | --- | --- |
+| FR-034 | Every conversation has exactly two participants; a conversation cannot be created or stored with zero, one, three or more. | Planned |
+| FR-035 | A conversation can only be created between two users who are contacts of each other (mutual add, immediate, no request/accept state). | Planned |
+| FR-036 | Participant and contact rules are enforced by the backend and the data model, not only by the UI. | Planned |
 
 ---
 
@@ -97,13 +126,21 @@ The scaffold contains transport, config, and schema placeholders, not features._
 | NFR-006 | Initial world load is under ~3 seconds on a local development machine. | Planned |
 | NFR-007 | The latest stable Chrome, Firefox, and Safari are supported. | Planned |
 | NFR-008 | The layout remains usable down to 320px viewport width. | Planned |
-| NFR-009 | All raster assets are PNG or WebP and individually kept small (target ≤ 512 KB). | Planned |
-| NFR-010 | DOM UI is reachable and operable by keyboard, with visible focus states. | Planned |
+| NFR-009 | All raster assets are PNG or WebP and individually kept small (target ≤ 512 KB). | Done |
+| NFR-010 | DOM UI is reachable and operable by keyboard, with visible focus states. | In progress |
 | NFR-011 | No secret, credential, or environment-specific value is committed to source control. | Planned |
 | NFR-012 | Module boundaries are respected: transport code does not contain persistence logic, and vice versa. | Planned |
 | NFR-013 | Documentation is updated as part of each completed milestone. | Planned |
-| NFR-014 | Every third-party asset's pack, author, license and source URL is recorded in `frontend/public/assets/CREDITS.md`, and its license permits use and redistribution. | Planned |
+| NFR-014 | Every third-party asset's pack, author, license and source URL is recorded in `frontend/public/assets/CREDITS.md`, and its license permits use and redistribution. | In progress |
 | NFR-015 | The app always starts in a working, demonstrable state — the frontend phase is graded partly on a live demonstration and a written report. | Planned |
+
+> **NFR-010 note (2026-11-13):** the DOM UI uses real, labelled controls (the map
+> `<select>` and the drawer's close button), and both have an explicit
+> `:focus-visible` outline. The closed drawer is `inert`, so its controls stay out
+> of the tab order; opening it moves focus to the close button and traps Tab
+> inside, and closing it returns focus to the world. Colour contrast is not yet
+> audited, so the requirement stays **In progress** until the palette pass
+> (DW-058).
 
 ---
 
@@ -118,3 +155,15 @@ The scaffold contains transport, config, and schema placeholders, not features._
 - Requirements added during the 2026-10-17 requirements session are FR-030 to
   FR-033 and NFR-014 to NFR-015; FR-026 was narrowed from "shared gathering
   location" to scenery-only for this phase.
+- FR-034 to FR-036 were added on 2026-11-13 with the one-to-one-only decisions
+  (ADR-0020, ADR-0021); they are backend/data-model requirements and are not
+  implemented yet.
+
+> **NFR-014 note (2026-11-12):** all files used at runtime are recorded in
+> `frontend/public/assets/CREDITS.md` with pack, author, licence and URL. The
+> Sunnyside World licence permits use and redistribution. The **Sprout Lands**
+> pack is non-commercial and forbids redistributing the pack itself, so the
+> requirement is only partly met: the player sheet and fences may ship inside
+> this non-commercial project with the required credit, but the repository must
+> not be published as a reusable asset source. Largest shipped file is the
+> 134 KB Sunnyside tileset (NFR-009 met).

@@ -1,3 +1,4 @@
+
 {
   "name": "@dwelling/frontend",
   "private": true,
@@ -5,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.test.{js,jsx}\" src/test-setup.js eslint.config.js vitest.config.js",
+    "format:check": "prettier --check \"src/**/*.test.{js,jsx}\" src/test-setup.js eslint.config.js vitest.config.js",
+    "test": "vitest run --config vitest.config.js"
   },
   "dependencies": {
     "phaser": "^3.90.0",
@@ -14,7 +19,13 @@
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
-    "vite": "^8.3.0",
-    "@vitejs/plugin-react": "^6.1.2"
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.10",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^31.0.0",
+    "vite": "^8.3.0"
   }
 }

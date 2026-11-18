@@ -26,21 +26,28 @@ based on ADR (Architecture Decision Record).
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
 | [ADR-0001](#adr-0001--npm-workspace-monorepo-instead-of-separate-repositories) | npm-workspace monorepo instead of separate repositories | Accepted (inherited) | before 2026-09-20 |
-| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Accepted | before 2026-09-20 |
+| [ADR-0002](#adr-0002--vanilla-javascript--phaser-3-instead-of-a-framework) | Vanilla JavaScript + Phaser 3 instead of a framework | Superseded by ADR-0016 | before 2026-09-20 |
 | [ADR-0003](#adr-0003--express--socketio-as-the-backend-transport) | Express + Socket.IO as the backend transport | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0004](#adr-0004--postgresql-with-prisma-for-persistence) | PostgreSQL with Prisma for persistence | Accepted (inherited) | before 2026-09-20 |
 | [ADR-0005](#adr-0005--html-ui-around-the-canvas-rather-than-in-canvas) | HTML UI around the canvas rather than in-canvas | Accepted | 2026-10-17 |
-| [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Proposed | 2026-10-17 |
-| [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Accepted | 2026-10-17 |
+| [ADR-0006](#adr-0006--alphabet-based-maps-as-stable-url-less-ids) | Alphabet-based maps as stable, URL-less ids | Accepted | 2026-10-17 |
+| [ADR-0007](#adr-0007--placeholder-art-generated-in-code-until-assets-exist) | Placeholder art generated in code until assets exist | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0008](#adr-0008--documentation-first-planning-system) | Documentation-first planning system | Accepted | 2026-10-17 |
-| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Accepted | 2026-10-17 |
+| [ADR-0009](#adr-0009--no-automated-test-runner-during-the-frontend-phase) | No automated test runner during the frontend phase | Superseded by ADR-0020 | 2026-10-17 |
 | [ADR-0010](#adr-0010--16-bit-pixel-art-top-down-with-a-slight-34-tilt-cozy-palette) | 16-bit pixel art, top-down with a slight 3/4 tilt, cozy palette | Accepted | 2026-10-17 |
-| [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Accepted | 2026-10-17 |
+| [ADR-0011](#adr-0011--cc0-packs-plus-code-authored-art-no-image-generator-available) | CC0 packs plus code-authored art (no image generator available) | Superseded by ADR-0019 | 2026-10-17 |
 | [ADR-0012](#adr-0012--interiors-as-one-shared-room-template-behind-a-door-trigger) | Interiors as one shared room template behind a door trigger | Accepted | 2026-10-17 |
 | [ADR-0013](#adr-0013--chat-is-a-docked-sidebar-with-explicitly-labelled-mock-data) | Chat is a docked sidebar with explicitly labelled mock data | Accepted | 2026-10-17 |
-| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted | 2026-10-17 |
-| [ADR-0016](#adr-0016--use-react-for-ui-components-and-application-shell) | Use React for UI components and application shell | Accepted | 2026-10-17 |
+| [ADR-0015](#adr-0015--private-11-conversations-group-conversations-only-in-altars) | Private 1:1 conversations; group conversations only in Altars | Accepted — Altars scheduled as Phase 12 | 2026-10-17 |
+| [ADR-0016](#adr-0016--react-as-the-ui-framework-with-phaser-for-the-2d-world) | React as the UI framework with Phaser for the 2D world | Accepted | 2026-10-17 |
 | [ADR-0017](#adr-0017--fullscreen-immersive-canvas-with-slide-out-chat-drawer-on-house-interaction) | Fullscreen immersive canvas with slide-out chat drawer on house interaction | Accepted | 2026-10-17 |
+| [ADR-0018](#adr-0018--map-data-format-and-registry-reused-scene-loading) | Map data format and registry, reused-scene loading | Accepted | 2026-10-19 |
+| [ADR-0019](#adr-0019--use-the-supplied-sunnyside-world-and-sprout-lands-packs-as-primary-art) | Use the supplied Sunnyside World and Sprout Lands packs as primary art | Accepted | 2026-11-12 |
+| [ADR-0023](#adr-0023--adopt-eslint-prettier-vitest-and-ci) | Adopt ESLint, Prettier, Vitest and CI | Accepted | 2026-11-13 |
+| [ADR-0024](#adr-0024--five-model-direct-messaging-core-proposed-phase-12-altar-extension) | Five-model direct messaging core; proposed Phase 12 Altar extension | Accepted | 2026-11-13 |
+| [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars) | One-to-one conversations only; no group conversations or Altars | Accepted | 2026-11-13 |
+| [ADR-0021](#adr-0021--contacts-are-mutual-add-pairs-with-no-requestaccept-flow) | Contacts are mutual-add pairs with no request/accept flow | Accepted | 2026-11-13 |
+| [ADR-0022](#adr-0022--jwt-authentication-using-an-httponly-cookie) | JWT authentication using an HttpOnly cookie | Accepted | 2026-11-14 |
 
 ---
 
@@ -165,8 +172,9 @@ migrations are managed from the `database` workspace.
 
 ### Consequences
 - ✅ Generated client gives typed-ish access and a single schema source.
-- ⚠️ **No migrations have been generated yet**; the first migration is required
-  before any real data work.
+- ⚠️ **No migrations had been generated when this was decided**; the initial
+  migration landed later at PR-15/PR-16, and it is required before any real data
+  work.
 - ⚠️ Local development requires a running PostgreSQL instance (see
   [`development/setup.md`](../development/setup.md)).
 
@@ -211,14 +219,14 @@ other's internals.
 
 ## ADR-0006 — Alphabet-based maps as stable, URL-less ids
 
-**Status:** Proposed
+**Status:** Accepted (2026-10-19 — two maps now load and switch; DW-033/DW-034)
 **Date:** 2026-10-17
 
 ### Context
 Contacts must be split across several maps. The concept (documented in the root
 README) is to group them by the first letter of their name.
 
-### Decision (proposed)
+### Decision
 Fix eight alphabet ranges — `A–C`, `D–F`, `G–I`, `J–L`, `M–O`, `P–R`, `S–U`,
 `V–Z` — and give each map a **stable string id** derived from the range (for
 example `a-c`). Map ids identify loading keys and are not exposed as URLs in this
@@ -236,8 +244,11 @@ phase.
 - ✅ Ranges can be changed later in one place if a range gets too crowded.
 - ⚠️ Uneven distribution (many contacts starting with "S") will crowd `S–U`. A
   split rule may be needed later; not designed yet.
-- ⚠️ Kept **Proposed** until at least two maps actually load side by side in the
-  app (DW-033/DW-034).
+- ✅ Verified 2026-10-19: `a-c` and `s-u` both load by id and switch without a
+  page reload, so the id/range scheme is accepted.
+- ⚠️ The four Milestone 5 contacts (E, K, L, R) were authored on `a-c` before
+  this scheme landed; they remain there with their original ids. Fully deriving
+  placement from names is tracked as the remaining FR-017 gap.
 
 ### Related
 [`design/maps.md`](../design/maps.md), FR-017 to FR-021.
@@ -246,7 +257,7 @@ phase.
 
 ## ADR-0007 — Placeholder art generated in code until assets exist
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0019
 **Date:** 2026-10-17
 
 ### Context
@@ -317,7 +328,7 @@ marked `Done` only against verified acceptance criteria.
 
 ## ADR-0009 — No automated test runner during the frontend phase
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0023
 **Date:** 2026-10-17
 
 ### Context
@@ -394,7 +405,7 @@ tones. Pixel art is authored on a 16×16 tile grid with buildings at
 
 ## ADR-0011 — CC0 packs plus code-authored art (no image generator available)
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0019
 **Date:** 2026-10-17
 
 ### Context
@@ -555,40 +566,59 @@ task IDs are preserved so previously written references stay valid.
 
 ## ADR-0015 — Private 1:1 conversations; group conversations only in Altars
 
-**Status:** Accepted
-**Date:** 2026-10-17
+
+> **Superseded 2026-11-13.** Dwelling supports **one-to-one conversations
+> only**; there are no group conversations and an Altar is not a conversation
+> venue. The "more than two members belongs to an Altar" clause below therefore
+> no longer applies. The 1:1 privacy rule survives unchanged in
+> [ADR-0020](#adr-0020--one-to-one-conversations-only-no-group-conversations-or-altars).
+> The original text is kept so the history stays readable.
 
 ### Context
 The owner stated the rule: a 1:1 conversation is only between those two people,
-and more than two people share a conversation only in a group space.
+and more than two people share a conversation only in a group space. The existing
+Prisma schema already supported this via `ConversationMember` and `Altar`/`AltarMembership`.
 
 ### Decision
-**A direct conversation has exactly two members and is private to them. Any
-conversation with more than two members belongs to an Altar.** This matches the
-existing Prisma schema, where `ConversationMember` already models arbitrary
-membership and `Altar`/`AltarMembership` model the shared space.
+Direct messages are strictly **one-to-one**: `Conversation` holds exactly two
+participants (`userOneId`, `userTwoId`) with canonical `userOneId < userTwoId`
+ordering. More than two people share a conversation **only inside an Altar**, and
+every group conversation belongs to an Altar.
+
+Timing, per [`plan.md`](plan.md):
+
+- **Phases 0–11** deliver direct messages on the five-model schema (`User`,
+  `Dwelling`, `Contact`, `Conversation`, `Message`). Altar behavior is not built
+  here.
+- **Phase 12 (PR-85…PR-92)** delivers Altars: `Altar` + `AltarMembership`, a
+group conversation per Altar, and `ConversationMember` for group participants.
+- The legacy `ConversationMember`/`Altar`/`AltarMembership` tables are dropped at
+  PR-15/PR-16 because their shape predates this decision; Phase 12 reintroduces
+  Altar support in a redesigned shape with its own migration. Nothing was lost —
+  no database or migration history existed at the time, and the initial migration
+  creates only the five-model schema.
 
 ### Alternatives considered
-- **Any conversation can gain a third member arbitrarily** — more flexible, but
-  then "who is this conversation with?" and "which dwelling opens it?" become
-  ambiguous.
+- **Drop Altars permanently** — rejected by the owner: Altars are part of the
+  product vision, not a discarded sketch.
+- **Keep the legacy tables unchanged through the five-model migration** —
+  rejected: they cannot express the canonical direct pair without ambiguity and
+  would ship unused tables into the direct-message phase.
+- **Build Altars before direct messages** — rejected: direct messages are the
+  first product milestone and the foundation for auth, contacts, and realtime.
 
 ### Consequences
-- ✅ The rule is simple enough to state in a demo and to enforce server-side.
-- ✅ No schema change is required — the data model already supports it (which is
-  notable, since the schema was written before this rule was stated).
-- ✅ Refines the previously **Proposed** alphabet-map work: a dwelling maps to a
-  direct conversation, an Altar to a group one.
-- ⚠️ **Privacy is enforced server-side, not in the UI.** Hiding a panel is not
-  access control — see
-  [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md).
-  Nothing is enforced yet because there is no backend work in this phase.
-- ⚠️ Not demonstrated this phase: the Altar is **scenery only**, so the group
-  behaviour is designed but unbuilt (FR-027, DW-B03).
+- ✅ Direct conversations need no join table; the pair is provably unique.
+- ✅ Altars stay on the roadmap with a concrete phase and PR range.
+- ⚠️ Phase 12 alters `Conversation` (kind discriminator, nullable columns) and
+  reintroduces `ConversationMember` for groups only.
+- ⚠️ Group messages require Altar-membership authorization; membership is checked
+  in the backend service, not by a database constraint.
+- ⚠️ Altars are outside the 84-PR direct-message scope and outside the MVP subset
+  in the plan's deadline note.
 
 ### Related
-[`../architecture/database.md`](../architecture/database.md),
-[`../project/requirements.md`](../project/requirements.md), DW-B03.
+[`../project/requirements.md`](../project/requirements.md), [`../architecture/database.md`](../architecture/database.md), [`task-board.md`](task-board.md), [`plan.md`](plan.md).
 
 ---
 
@@ -658,7 +688,7 @@ The initial prototype used a fixed `max-width: 1200px` container with a permanen
 1. **Fullscreen edge-to-edge canvas:** The game canvas fills `100vw × 100vh` edge-to-edge without page margin, header box, or letterboxing bars.
 2. **Floating glass HUD:** Essential titles and interaction hints float minimally in the top-left using dark semi-transparent glassmorphism (`backdrop-filter: blur(12px)`).
 3. **Slide-out chat drawer on house interaction:** The conversation panel becomes an overlay drawer docked to the right edge (`position: fixed`). It is hidden by default (`transform: translateX(100%)`).
-4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) emits a `dwelling:open-chat` event that slides open the drawer populated with that dwelling's resident information.
+4. **Trigger mechanism:** Clicking on any dwelling house (or pressing `E` when standing adjacent to it) publishes `dwelling:interact` on the bridge (ADR-0005), which slides open the drawer populated with that dwelling's resident information.
 5. **Dismissal & Focus:** The drawer can be dismissed by pressing `Escape` or clicking the close button (✕), immediately restoring keyboard focus to the game canvas for seamless movement.
 6. **Mock labelling preserved:** FR-033 is preserved with an amber banner explicitly stating mock data.
 
@@ -680,6 +710,366 @@ The initial prototype used a fixed `max-width: 1200px` container with a permanen
 [`task-board.md`](task-board.md).
 
 ---
+
+## ADR-0018 — Map data format and registry, reused-scene loading
+
+**Status:** Accepted
+**Date:** 2026-10-19
+
+### Context
+DW-032/DW-033 needed a data shape for maps and a loading strategy. The single
+world had dwelling and obstacle coordinates inline in `WorldScene`, and a map
+switch had to avoid recreating the Phaser game or duplicating listeners and
+colliders.
+
+### Decision
+1. **Map data is plain JavaScript.** Each map lives in `frontend/src/world/maps/`
+   and exports `{ id, name, range, size: { columns, rows }, groundTile?, spawn,
+   dwellings, doors, obstacles, altar }`. All positions are world pixels; `size`
+   is in tiles. `TILE_SIZE`, the viewport and the default ground frame stay in
+   `world/constants.js`.
+2. **Validate at registration.** `maps/format.js` documents the contract and
+   returns human-readable errors. `maps/index.js` holds a registry
+   (`registerMap`, `getMap`, `getDefaultMap`, `listMaps`). Invalid or duplicate
+   maps are rejected with a console error/warning; unknown ids return `null`.
+3. **One scene, explicit lifecycle.** `WorldScene` is never restarted. `loadMap`
+   resolves the id, clears map-owned objects (`clearMap`), rebuilds ground,
+   obstacles and dwellings from data, repositions the reused player, resets
+   physics/camera bounds, and clears the active prompt. The player, the static
+   group and the single player↔obstacles collider are reused.
+4. **The bridge owns coordination.** The scene publishes `map:changed` with
+   `{ id, name, range }`; React renders the HUD from it. The selector publishes
+   `map:switch` with `mapId`; the scene confirms the result through
+   `map:changed`. React never reads scene internals.
+
+### Alternatives considered
+- **Restart the scene per map** — risks duplicate listeners/colliders and makes
+  the player/collider lifecycle harder to reason about.
+- **One scene subclass per map** — duplicates logic and makes adding a map a code
+  change, violating FR-018.
+- **Hard-code each map in `WorldScene` with a switch statement** — rejected for
+  the same reason.
+- **Let React hold the active map as the source of truth** — contradicts the
+  documented rule that world state lives in Phaser and UI state syncs through
+  the bridge.
+
+### Consequences
+- ✅ Adding a map is a data file plus one `registerMap` call; `WorldScene` is
+  untouched. A runtime-registered third map was switched to during verification.
+- ✅ Repeated switches keep one canvas, one collider and stable display-object
+  counts (10-switch test).
+- ✅ Unknown ids leave the current map running and re-publish it to the HUD.
+- ⚠️ `doors` and `altar` are part of the format but not rendered yet; M8/M9 own
+  their behaviour.
+- ⚠️ Maps larger than the 800×400 viewport are required until camera zoom or a
+  smaller-world rule exists.
+- ⚠️ Legacy M5 contacts do not match the `a-c` letter range; see ADR-0006.
+
+### Related
+[`design/maps.md`](../design/maps.md),
+[`architecture/frontend.md`](../architecture/frontend.md),
+[`milestones.md`](milestones.md) (M6), FR-017–FR-021.
+
+---
+
+## ADR-0019 — Use the supplied Sunnyside World and Sprout Lands packs as primary art
+
+**Status:** Accepted
+**Date:** 2026-11-12
+
+### Context
+Two complete, professionally drawn asset packs were supplied in the repository
+root: **Sunnyside World V2.1** by Daniel Diggle and the **Sprout Lands Basic
+pack** by Cup Nooble. Until now the world used CC0 Kenney placeholder sheets
+(ADR-0007, ADR-0011), which were functional but not the art the project is meant
+to ship with. The brief requires the supplied assets to be used, not replaced,
+recreated or left as coloured-rectangle placeholders.
+
+An audit found that Sunnyside supplies a 1024×1024 16 px world tileset, modular
+buildings, five complete 32×56 cottages, trees, rocks, furniture, UI and layered
+human characters — but its humans are **single-facing**, so they cannot drive a
+four-direction player. Sprout Lands supplies a verified 4-direction 48×48
+character sheet, plus fences, house parts and furniture.
+
+### Decision
+Use the supplied packs as the primary visual source:
+
+1. **Sunnyside World** builds the world — grass ground (tileset frame 65),
+   cottage dwellings (processed crops), trees and rocks (processed crops), UI
+   portraits.
+2. **Sprout Lands** supplies the player (`Basic Charakter Spritesheet.png`, 48×48
+   frames, rows down/up/right/left) and fence tiles.
+3. Assets are copied verbatim into `frontend/public/assets/`; crops are separate
+   processed files and the pack folders are never modified.
+4. Loading stays centralised in `world/assets.js`; animations are registered once
+   in `PreloadScene`.
+5. Map data references texture keys (`sprite`) rather than tileset frame indices
+   for dwellings and obstacles.
+6. The Kenney sheets stay on disk but are removed from the manifest.
+
+### Alternatives considered
+- **Stay on Kenney placeholders** — ignores the supplied assets and the brief.
+- **Use Sunnyside humans for the player** — single facing fails FR-009.
+- **Composite Sunnyside bodies + hair for the player** — still single-facing.
+- **Assemble houses from modular roof/wall tiles** — the sheets are exploded
+  kits; assembling them reliably is far slower than cropping the complete
+  cottages the artist already arranged.
+- **Generate new art** — explicitly forbidden while suitable supplied art exists.
+
+### Consequences
+- ✅ Every runtime visual now comes from a supplied pack; no generic placeholder
+  rectangles remain.
+- ✅ Adding a dwelling or prop is a data change plus a texture key.
+- ✅ Sprite grids were inspected rather than assumed (48×48 player, 16×16 world,
+  32×56 cottages).
+- ⚠️ **Licence:** Sprout Lands is non-commercial and forbids redistributing the
+  pack itself; credit is required and recorded in
+  `frontend/public/assets/CREDITS.md`. The project must stay non-commercial, and
+  publishing the repository as an asset source is not permitted.
+- ⚠️ Two packs are mixed: palettes are close but not identical. Sunnyside owns
+  the world, Sprout Lands only the player and fences, which limits the clash.
+- ⚠️ Cottages are 32×56 against a 16 px grid, so a dwelling is a sprite, not a
+  tile rectangle; collision bodies are therefore explicit, not tile-derived.
+- ⚠️ The 32 px Sunnyside forest tileset and all audio remain unused.
+
+### Related
+[`design/asset-inventory.md`](../design/asset-inventory.md),
+[`design/assets.md`](../design/assets.md),
+[`../../frontend/public/assets/CREDITS.md`](../../frontend/public/assets/CREDITS.md),
+FR-002, FR-009, FR-010, NFR-014.
+
+---
+
+
+---
+
+## ADR-0020 — One-to-one conversations only; no group conversations or Altars
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+Dwelling supports one-to-one conversations only, as confirmed by the project owner. There are no group conversations and an Altar is not a conversation venue. This decision enforces strict 1:1 direct messaging with canonical pair ordering.
+
+### Decision
+Direct messages are strictly **one-to-one**: `Conversation` holds exactly two participants (`userOneId`, `userTwoId`) with canonical `userOneId < userTwoId` ordering. A conversation is legal only when both participants are mutual contacts (ADR-0021). Creating a conversation requires both users to be each other's contacts.
+
+### Alternatives considered
+- **Group conversations** — rejected: the owner confirmed one-to-one only (ADR-0020).
+- **Altar as a conversation venue** — rejected: Altars are separate group spaces, not conversation venues.
+
+### Consequences
+- ✅ Direct conversations need no join table; the pair is provably unique.
+- ✅ The five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) is sufficient for direct messaging without legacy `ConversationMember` ambiguity.
+- ⚠️ Phase 12 alters `Conversation` (kind discriminator, nullable columns) and reintroduces `ConversationMember` for groups only.
+- ⚠️ Group messages require Altar-membership authorization; membership is checked in the backend service, not by a database constraint.
+- ⚠️ Altars are outside the 84-PR direct-message scope and outside the MVP subset in the plan's deadline note.
+- ✅ The 1:1 privacy rule survives unchanged from ADR-0015.
+
+---
+
+## ADR-0021 — Contacts are mutual-add pairs with no request/accept flow
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+Contacts are symmetric: if A has B as a contact then B has A as a contact. Adding is immediate — there is no pending request or accept state — and adding yourself is rejected. This mutual-add behavior is the foundation for legal conversations: a conversation is permitted only when both participants are mutual contacts.
+
+### Decision
+**Contacts are mutual-add pairs with no request/accept flow**:
+- Adding a contact writes **two mirrored rows** in one transaction: `(userId = A, contactId = B)` and `(userId = B, contactId = A)`.
+- The schema uses `@@id([userId, contactId])` composite primary key, not `@@unique([userId, contactId])`.
+- `@@index([contactId])` so the reverse lookup is cheap.
+- CHECK constraint `userId <> contactId`; the service also rejects self-add before touching the database.
+- Mutual removal: deleting a contact deletes both rows in one transaction. This is the intended mutual-contact behaviour: a contact list is not one-way, and a half-deleted pair would leave one user seeing a dwelling they can no longer converse with.
+- **Service is the only writer.** A future reconciliation job could repair a half-deleted pair, but with a single writer and a transaction it should never occur.
+- Trade-off recorded: mirrored rows double the storage and require transactional writes, but "my contacts" becomes a single indexed read with no ordering logic, and the unique index makes duplicates impossible.
+
+### Alternatives considered
+- **One canonical row per pair** — would require the application to track both directions and duplicate logic, increasing complexity.
+- **Pending request/accept flow** — rejected: the owner confirmed immediate mutual add without a request state.
+- **Separate Contact IDs** — rejected: the composite primary key `[userId, contactId]` is the identity; no surrogate id is needed.
+
+### Consequences
+- ✅ Mutual add is atomic and consistent; no pending state to manage.
+- ✅ "My contacts" is a single indexed read with no ordering logic needed.
+- ✅ The unique index makes duplicates impossible.
+- ⚠️ Mirrored rows double the storage compared to a single canonical row.
+- ⚠️ Application code must ensure both rows are written in one transaction.
+- ⚠️ A half-deleted pair (one row deleted, one remains) would be inconsistent; the service must always delete both.
+
+---
+
+## ADR-0022 — JWT authentication using an HttpOnly cookie
+
+**Status:** Accepted
+**Date:** 2026-11-14
+
+### Context
+
+Authentication was the largest open question in
+[`../architecture/security-and-caching.md`](../architecture/security-and-caching.md):
+"session cookies vs. tokens" was undecided while the approved roadmap already
+assumed a JWT (`JWT_SECRET` is required at boot in
+`backend/src/config/env.js`) and an httpOnly cookie (PR-19 and PR-21). The API
+contract could not define signup, login, logout, or `/api/auth/me` without
+settling where the credential lives.
+
+The two realistic options for a single-page frontend talking to the same Express
+backend are a bearer token held by JavaScript or a token in an `HttpOnly` cookie.
+JavaScript-held tokens are readable by any script on the page, so an XSS bug
+becomes full account takeover. Cookies are not readable by script, but they are
+sent automatically by the browser, which reintroduces CSRF.
+
+### Decision
+
+1. **The session credential is a signed JWT**, `HS256`, signed with `JWT_SECRET`
+   from the environment. Claims: `sub` (user id), `iat`, `exp`. No profile fields
+   or roles are stored in the token.
+2. **It is delivered only in an `HttpOnly` cookie** named `dwelling_session`,
+   with `SameSite=Lax`, `Secure` in production, `Path=/`, and `Max-Age` equal to
+   the token lifetime. JavaScript never reads or writes it, and it is never put
+   in `localStorage`, `sessionStorage`, or a response body.
+3. **The v1 lifetime is seven days**, fixed at issue. There is no refresh token
+   and no sliding expiration. Re-authenticating replaces the cookie.
+4. **Logout clears the cookie and does not revoke the token.** A stateless JWT
+   cannot be invalidated by deleting a cookie, so an already-issued token —
+   including a copied one — remains valid until `exp`. There is no denylist,
+   token-version column, or password-change invalidation in v1; revocation needs
+   its own decision and implementation.
+5. **CSRF is handled at the transport boundary, without a token in v1.**
+   Every state-changing request must use `Content-Type: application/json`, and a
+   request that relies on the session cookie must carry an `Origin`/`Referer`
+   matching `CLIENT_ORIGIN`; the server rejects everything else. `SameSite=Lax`
+   is an additional layer, **not** a complete defense: it
+   does not cover same-site subdomains or XSS, and it prevents the cookie from
+   being sent at all if the frontend and API are deployed on different sites.
+6. **A cross-site deployment requires reassessment.** Moving to
+   `SameSite=None; Secure` removes the built-in protection and makes a CSRF
+   token mandatory. The token mechanism is deferred (OQ-13), and the deployment
+   topology is unresolved (OQ-14); neither is silently assumed.
+7. **Identity always comes from the verified cookie.** A `userId`, `senderId`, or
+   role in a body or query is untrusted input, never proof of identity. Socket
+   authentication is not covered here; PR-60 reuses this cookie at handshake time
+   and must define origin checks.
+
+### Alternatives considered
+
+- **Bearer JWT in memory or `localStorage`** — rejected: any XSS can read the
+  token and exfiltrate a long-lived credential, and it contradicts PR-19/PR-21.
+- **Server-side sessions in Redis with an opaque cookie** — viable and would make
+  logout truly revocable, but it adds a session store and a lookup on every
+  request before any session exists; rejected for v1, and still possible later
+  by replacing the cookie's value without changing the HTTP contract.
+- **`SameSite=Strict`** — stronger against CSRF but blocks the cookie on ordinary
+  top-level navigations into the app, which makes "open a link while signed in"
+  behave as signed out.
+- **`SameSite=None; Secure` plus a CSRF token now** — the correct end state for a
+  split-origin deployment, but it hardens against a topology that is not decided
+  yet; deferred rather than guessed.
+- **Short-lived access token with refresh rotation** — more machinery than a
+  two-person-world v1 needs, and revocation still needs a store.
+
+### Consequences
+
+- ✅ The credential is unreadable by JavaScript, so an XSS bug cannot directly
+  steal the session cookie.
+- ✅ The HTTP contract has one identity mechanism (ADR-0022), consistent with
+  `JWT_SECRET` and the auth PRs in [`../../plan.md`](../../plan.md).
+- ✅ No token storage decision is left to frontend code.
+- ⚠️ **Logout is not revocation.** Closing a session on one device cannot end it
+  on another, and a stolen cookie works until `exp`. This is documented in
+  [`../api/README.md`](../api/README.md) rather than hidden.
+- ⚠️ CSRF protection depends on the JSON content type, the `Origin` check, and
+  `SameSite=Lax`; none alone is sufficient, and a cross-site deploy invalidates
+  the `Lax` assumption.
+- ⚠️ A password change does not invalidate existing sessions in v1.
+- ⚠️ Nothing is implemented: PR-19 adds the dependencies, PR-21 the token and
+  cookie helpers, PR-22 the middleware. The cookie name and attributes are fixed
+  now so the frontend and socket layers can be built against them.
+
+### Related
+
+[`../api/README.md`](../api/README.md) (auth contract),
+[`../architecture/security-and-caching.md`](../architecture/security-and-caching.md),
+[`../../plan.md`](../../plan.md) (PR-19–PR-29, PR-60),
+[`daily-log.md`](daily-log.md).
+
+---
+
+## ADR-0023 — Adopt ESLint, Prettier, Vitest and CI
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+The project currently lacks ESLint, Prettier, Vitest, and CI tooling. Code quality, formatting, and automated testing are deferred to ensure the critical path stays unblocked, but these tools must be adopted before the project ships.
+
+### Decision
+Adopt ESLint, Prettier, Vitest and CI:
+- **ESLint** with recommended config for JavaScript/React, configured in `frontend/` and `backend/`. Enforce consistent style and catch common errors.
+- **Prettier** for code formatting, configured in `frontend/` and `backend/`. Run as a pre-commit hook and npm script.
+- **Vitest** as the test framework, configured in `frontend/` and `backend/`. Vitest provides fast unit tests with ES module support and JSX transform.
+- **CI** via GitHub Actions, running `npm run lint`, `npm test`, and `npm run build` on every PR. The workflow is defined in `.github/workflows/ci.yml`.
+
+### Alternatives considered
+- **No tooling** — deferred for the critical path, but code quality and test coverage would be insufficient for shipping.
+- **Jest** — widely used but Vitest was chosen for its ES module support, speed, and Vite integration.
+- **StandardJS** — would require additional configuration on top of ESLint; ESLint alone covers the needed linting rules.
+
+### Consequences
+- ✅ ESLint catches common errors and enforces style before code is merged.
+- ✅ Prettier eliminates formatting bikeshedding and ensures consistent code across the codebase.
+- ✅ Vitest provides fast unit test feedback in the developer workflow.
+- ✅ CI guarantees that lint, tests, and build pass before merge.
+- ⚠️ Initial setup cost: adding config files, npm scripts, and GitHub Actions workflow.
+- ⚠️ Existing code may need formatting fixes when Prettier is integrated.
+- ⚠️ Test writing requires discipline; Vitest is only effective if tests are actually written.
+- ⚠️ CI adds pipeline maintenance overhead.
+
+---
+
+## ADR-0024 — Five-model direct messaging core; proposed Phase 12 Altar extension
+
+**Status:** Accepted
+**Date:** 2026-11-13
+
+### Context
+The five-model schema (`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) serves direct conversations only. The current implemented schema contains exactly five models: User, Dwelling, Contact, Conversation, and Message. The Conversation model supports direct one-to-one conversations only.
+
+### Decision
+**Five-model messaging core for direct conversations only.** The current implemented schema contains exactly five models: User, Dwelling, Contact, Conversation, and Message. The Conversation model supports direct one-to-one conversations only.
+
+- Exactly five Prisma models: `User`, `Dwelling`, `Contact`, `Conversation`, `Message`
+- `Conversation` supports direct one-to-one conversations only
+- No Altar-related models or group-conversation fields are currently implemented in this schema
+- Single message table, one pagination contract, one conversation list
+
+### Future Phase 12 extension (proposed)
+These are FUTURE proposals, not currently implemented:
+- `Conversation.kind` discriminator (`DIRECT` / `ALTAR`) on the `Conversation` model
+- Nullable `userOneId` / `userTwoId` and nullable `altarId` columns on `Conversation`
+- `ConversationMember` returns for `ALTAR` conversations only
+- `Altar` (`id`, `name`, `createdAt`) and `AltarMembership` (`altarId`, `userId`, `joinedAt`, `@@unique([altarId, userId])`, `@@index([userId])`)
+- Partial unique index on `(userOneId, userTwoId) WHERE kind = 'DIRECT'` (hand-written SQL migration; Prisma cannot express partial indexes)
+- CHECK constraints for the discriminated shapes are hand-written; Prisma does not model them
+- Service-layer validation required for "two or more members" since a CHECK cannot count rows
+- Only current Altar members may read or send messages; membership must be checked on the backend for every read and every write
+
+### Alternatives considered
+- **Option B — a separate group-conversation model** — stronger compile-time 1:1 typing but duplicates message storage, pagination, realtime delivery, and conversation-list code. Rejected in favor of Option A for code-sharing efficiency.
+
+### Consequences
+Current implementation consequences:
+- ✅ One `Conversation` and one `Message` model serve direct conversations only; no second message table.
+- ✅ Single conversation list, one pagination contract, one realtime delivery path.
+
+Future Phase 12 consequences (proposed):
+- ⚠️ Partial unique index requires hand-written SQL migration; review every later migration and re-add if a generated diff tries to drop it.
+- ⚠️ CHECK constraints for the discriminated shapes are hand-written; Prisma does not model them.
+- ⚠️ Service-layer validation is required for "two or more members" since a CHECK cannot count rows.
+- ⚠️ Future Phase 12 authorization: only current Altar members may read or send messages; membership must be checked on the backend for every read and every write.
 
 ## Adding an ADR
 

@@ -2,7 +2,7 @@
 
 The current plan: **ten small milestones, one per working day**, focused on
 **frontend development** — a usable 2D world with movement, collision, dwellings,
-a shared interior, an Altar, and a conversation sidebar.
+a shared interior, an Altar, and a conversation drawer.
 
 > **The plan was extended from seven days to ten during the requirements session**
 > on 2026-10-17. Interiors were added to the phase and the map selector was kept,
@@ -26,7 +26,7 @@ Settled with the project owner during the requirements session. These are
 | Interiors | **In scope** — one **shared** interior template per dwelling (fireplace, kitchen, bed) |
 | Altar | **Scenery only** this phase |
 | Chat UI | **Slide-out overlay drawer** over fullscreen canvas, **mock content labelled as mock** (ADR-0017) |
-| Conversation model | 1:1 conversations are **private**; more than two people share a conversation only in an **Altar group space** |
+| Conversation model | **One-to-one only** this phase — exactly two participants, between mutual contacts; group conversations are **Phase 12** (ADR-0020, ADR-0021) |
 | Extra UI | **Minimal HUD only** (map name + interact prompt) |
 | Devices | **Desktop-first**, layout stays usable on small screens |
 | Assets | **Hybrid** — CC0 packs for tiles/houses/furniture, code-authored art for Dwelling-specific pieces |
@@ -89,12 +89,12 @@ configuration skeleton, without breaking the current HTML shell.
 | DW-003 | Create `frontend/src/world/game.js` with the Phaser game config (`parent: 'world'`) | High | 1h | DW-002 |
 | DW-004 | Create `world/scenes/` with `BootScene` and `PreloadScene` stubs | High | 1h | DW-003 |
 | DW-005 | Create a `WorldScene` stub and register scene order in the config | High | 1h | DW-003 |
-| DW-006 | Start the game from `frontend/src/main.js` without removing the sidebar | High | 1h | DW-004, DW-005 |
+| DW-006 | Start the game from `frontend/src/main.js` without removing the conversation panel | High | 1h | DW-004, DW-005 |
 | DW-007 | Verify `npm run dev` and `npm run build` both pass with Phaser mounted | High | 30m | DW-006 |
 
 ### Acceptance criteria
 - [x] A Phaser canvas appears inside the existing `#world` element.
-- [x] The sidebar panel is still present and the page layout is intact.
+- [x] The conversation panel is still present and the page layout is intact.
 - [x] `npm run dev` serves the app with no console errors from Phaser.
 - [x] `npm run build` exits successfully.
 - [x] Phaser is imported as an ES module (no CDN script tag).
@@ -287,20 +287,20 @@ interaction feedback.
 | DW-031 | Wire the event to a placeholder DOM handler (log or panel toggle) | Medium | 30m | DW-030 |
 
 ### Acceptance criteria
-- [ ] Multiple dwellings render at distinct positions in the world.
-- [ ] Each dwelling is bound to a unique contact id.
-- [ ] Entering a zone shows a clear prompt naming the dwelling/contact.
-- [ ] Leaving a zone clears the prompt.
-- [ ] Only the nearest/active dwelling is interactable when zones overlap.
-- [ ] Pressing `E` inside a zone fires an event with the **correct** contact id.
+- [x] Multiple dwellings render at distinct positions in the world.
+- [x] Each dwelling is bound to a unique contact id.
+- [x] Entering a zone shows a clear prompt naming the dwelling/contact.
+- [x] Leaving a zone clears the prompt.
+- [x] Only the nearest/active dwelling is interactable when zones overlap.
+- [x] Pressing `E` inside a zone fires an event with the **correct** contact id.
 
 ### Testing checklist
-- [ ] Walk to each dwelling; the prompt shows the right name.
-- [ ] Walk away; the prompt disappears immediately.
-- [ ] Stand between two dwellings; exactly one prompt is active, matching the
+- [x] Walk to each dwelling; the prompt shows the right name.
+- [x] Walk away; the prompt disappears immediately.
+- [x] Stand between two dwellings; exactly one prompt is active, matching the
       closer one.
-- [ ] Interact with each dwelling and confirm the logged/opened contact id.
-- [ ] Press `E` outside any zone; nothing happens. Press `E` while moving; the
+- [x] Interact with each dwelling and confirm the logged/opened contact id.
+- [x] Press `E` outside any zone; nothing happens. Press `E` while moving; the
       player does not stall.
 
 ### Definition of Done
@@ -333,19 +333,19 @@ Turn the single world into data-driven, switchable maps.
 | DW-037 | Add a HUD showing the current map name | Low | 30m | DW-033 |
 
 ### Acceptance criteria
-- [ ] A map is fully described by data: id, alphabet range, size, spawn,
+- [x] A map is fully described by data: id, alphabet range, size, spawn,
       dwellings, doors, obstacles, and the Altar position.
-- [ ] The world scene contains **no hard-coded dwelling or obstacle positions**.
-- [ ] **Two maps** exist and can be switched between without a page reload.
-- [ ] Switching maps repopulates the world and moves the player to that map's spawn.
-- [ ] The HUD shows the current map's name/range and updates on change.
+- [x] The world scene contains **no hard-coded dwelling or obstacle positions**.
+- [x] **Two maps** exist and can be switched between without a page reload.
+- [x] Switching maps repopulates the world and moves the player to that map's spawn.
+- [x] The HUD shows the current map's name/range and updates on change.
 
 ### Testing checklist
-- [ ] Load the default map; verify spawn, dwellings, obstacles and Altar come from data.
-- [ ] Add a third map entry in data only; confirm it loads without editing scene code.
-- [ ] Switch maps repeatedly; no leaked sprites, no duplicate colliders, no errors.
-- [ ] Switch maps while a prompt is visible; the prompt clears.
-- [ ] HUD text matches the loaded map in both maps.
+- [x] Load the default map; verify spawn, dwellings, obstacles and Altar come from data.
+- [x] Add a third map entry in data only; confirm it loads without editing scene code.
+- [x] Switch maps repeatedly; no leaked sprites, no duplicate colliders, no errors.
+- [x] Switch maps while a prompt is visible; the prompt clears.
+- [x] HUD text matches the loaded map in both maps.
 
 ### Definition of Done
 Maps are data-driven, two of them load and switch cleanly, and the HUD reports
@@ -360,12 +360,12 @@ the active map.
 
 ---
 
-## Milestone 7 — DOM bridge and the conversation sidebar
+## Milestone 7 — DOM bridge and the conversation drawer
 
 **Day 7 · Covers:** FR-022, FR-023, FR-024, FR-025, FR-032, FR-033
 
 ### Objective
-Connect the canvas to the HTML UI and open a real conversation sidebar, with
+Connect the canvas to the HTML UI and open a real conversation drawer, with
 mock content clearly labelled as mock.
 
 ### Tasks
@@ -373,27 +373,27 @@ mock content clearly labelled as mock.
 | ID | Task | Priority | Estimate | Dependencies |
 | --- | --- | --- | --- | --- |
 | DW-035 | Add a Phaser ↔ DOM event bridge module | High | 1h | DW-031 |
-| DW-036 | Add a conversation sidebar panel driven by interactions (replaces the Conversations panel) | High | 1.5h | DW-035, DW-030 |
+| DW-036 | Add a slide-out conversation drawer driven by interactions (replaces the Conversations panel) | High | 1.5h | DW-035, DW-030 |
 | DW-048 | Add mock contacts and message history, clearly labelled "Mock data — messaging not implemented yet" | Medium | 1h | DW-036 |
 | DW-038 | Decide and implement the input-focus rule (panel open = DOM owns the keyboard; `Esc` closes) | High | 1h | DW-036 |
 
 ### Acceptance criteria
-- [ ] Interacting with a dwelling opens the sidebar showing the **correct** contact name.
-- [ ] The panel is docked beside the world; the canvas stays visible and is not covered.
-- [ ] The panel can be closed with `Esc` and a close button, returning control to the world.
-- [ ] Mock content is **visibly labelled** as mock; no input field pretends to work.
-- [ ] While the panel is open, movement keys do not move the player.
-- [ ] Scenes never touch the DOM directly; all updates arrive through the bridge.
+- [x] Interacting with a dwelling opens the drawer showing the **correct** contact name.
+- [x] The drawer slides in over the right edge of the fullscreen canvas (ADR-0017); the world stays visible behind it.
+- [x] The panel can be closed with `Esc` and a close button, returning control to the world.
+- [x] Mock content is **visibly labelled** as mock; no input field pretends to work.
+- [x] While the panel is open, movement keys do not move the player.
+- [x] Scenes never touch the DOM directly; all updates arrive through the bridge.
 
 ### Testing checklist
-- [ ] Open a conversation for each dwelling; the name matches every time.
-- [ ] Close the panel; movement and interaction work again.
-- [ ] Type while the panel is open; nothing moves the player.
-- [ ] Reload mid-session; the app returns to a clean state.
-- [ ] Console is free of bridge/listener warnings after 10 open/close cycles.
+- [x] Open a conversation for each dwelling; the name matches every time.
+- [x] Close the panel; movement and interaction work again.
+- [x] Type while the panel is open; nothing moves the player.
+- [x] Reload mid-session; the app returns to a clean state.
+- [x] Console is free of bridge/listener warnings after 10 open/close cycles.
 
 ### Definition of Done
-The canvas and the HTML sidebar communicate only through a dedicated bridge, the
+The canvas and the HTML drawer communicate only through a dedicated bridge, the
 right conversation opens and closes cleanly, and nothing misrepresents itself as
 working messaging.
 
@@ -481,7 +481,7 @@ Make the Altar a visible, distinct landmark, and polish what already exists.
 
 ### Testing checklist
 - [ ] The Altar appears in both maps (or the one where it is placed) and at the right position.
-- [ ] Walking up to the Altar shows no prompt promising a group chat.
+- [ ] Walking up to the Altar shows no prompt at all — it must not imply an interaction.
 - [ ] Walk animation does not stutter when changing direction rapidly.
 - [ ] Prompts are legible against both grass and interior flooring.
 
@@ -492,8 +492,9 @@ not have, and the visuals are consistent enough to demo.
 ### Risks / blockers
 - **This is the schedule buffer.** If Days 1–8 overran, DW-055–DW-058 shrink; the
   Altar may then be bound to Day 10's fix budget rather than dropped.
-- **Silent scope creep.** Any temptation to make the Altar interactive belongs to
-  the next phase; note it in the roadmap instead.
+- **Silent scope creep.** Making the Altar interactive is **not** planned at all:
+  conversations are one-to-one only (ADR-0020), so there is nothing to defer it
+  to.
 
 ---
 
@@ -553,7 +554,7 @@ documentation and report material honestly reflect reality.
 | M4 — Collision and camera | 6 | ~4h |
 | M5 — Dwellings and interactions | 6 | ~5.5h |
 | M6 — Maps, second map, HUD | 4 | ~4.5h |
-| M7 — Bridge and chat sidebar | 4 | ~4.5h |
+| M7 — Bridge and conversation drawer | 4 | ~4.5h |
 | M8 — House interiors | 6 | ~7.5h |
 | M9 — Altar and polish | 4 | ~5h |
 | M10 — Integration and review | 6 | ~6h |
@@ -577,4 +578,5 @@ realistic, with Day 9 as the buffer.
 | NFR-001 – NFR-004, NFR-006 | M1, M2, M10 |
 | NFR-005, NFR-009, NFR-014 | M2, M9 |
 | NFR-013, NFR-015 | M10 |
+| NFR-007, NFR-008, NFR-010 – NFR-012 | Cross-cutting — [`development/testing.md`](../development/testing.md) and the M10 regression |
 | FR-027 – FR-029 | **Not in this phase** — deferred (see `scope.md`) |

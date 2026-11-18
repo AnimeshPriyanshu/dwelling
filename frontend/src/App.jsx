@@ -1,107 +1,407 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { createGame } from './world/game'
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createGame } from "./world/game";
+import { EventType, requestMapSwitch, setChatOpen, subscribe } from "./bridge";
+import { getDefaultMap, listMaps, summarizeMap } from "./world/maps";
+import { AVATAR_URLS } from "./world/assets";
 
-const MOCK_MESSAGES = [
+const RESIDENT_MESSAGES = {
+  "contact-elowen": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "Welcome to Redwood Cottage! Pull up a chair by the hearth.",
+      time: "10:42 AM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Thanks! The herbs outside smell wonderful.",
+      time: "10:43 AM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "That would be the wild lavender. Take some if you need it!",
+      time: "10:45 AM",
+    },
+  ],
+  "contact-rowan": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "Greetings! Mind the woodchips on the doorstep.",
+      time: "11:15 AM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Working on a new project?",
+      time: "11:16 AM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "Carving cedar benches for the town square. Stop by anytime!",
+      time: "11:18 AM",
+    },
+  ],
+  "contact-kael": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "The forge is glowing bright today! Keep your distance from the anvil.",
+      time: "01:20 PM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Do you have any reinforced nails for fence repairs?",
+      time: "01:22 PM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "Plenty in the barrel out back. Take what you need.",
+      time: "01:24 PM",
+    },
+  ],
+  "contact-lyra": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "Welcome traveler! Come warm your hands by the stove.",
+      time: "02:05 PM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Do you have hot spiced cider ready?",
+      time: "02:07 PM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "A fresh kettle is simmering right now. Have a seat!",
+      time: "02:08 PM",
+    },
+  ],
+  "contact-sable": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "Welcome to Sunhollow! Mind the tide charts on the table.",
+      time: "09:10 AM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Did you chart the southern shoals yet?",
+      time: "09:12 AM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "Only the near side. The far side needs a calm morning.",
+      time: "09:14 AM",
+    },
+  ],
+  "contact-tomas": [
+    {
+      id: 1,
+      sender: "inbound",
+      text: "The tide is turning — the nets are already out.",
+      time: "06:40 AM",
+    },
+    {
+      id: 2,
+      sender: "outbound",
+      text: "Any luck with the silver catch?",
+      time: "06:42 AM",
+    },
+    {
+      id: 3,
+      sender: "inbound",
+      text: "Two baskets full. Come by the lodge and I will show you.",
+      time: "06:44 AM",
+    },
+  ],
+};
+
+const DEFAULT_MESSAGES = [
   {
     id: 1,
-    sender: 'inbound',
-    text: 'Welcome to Dwelling! Pull up a chair by the hearth.',
-    time: '10:42 AM',
+    sender: "inbound",
+    text: "Welcome to our dwelling! Make yourself at home.",
+    time: "10:00 AM",
   },
-  {
-    id: 2,
-    sender: 'outbound',
-    text: 'Thanks! The village looks wonderful today.',
-    time: '10:43 AM',
-  },
-  {
-    id: 3,
-    sender: 'inbound',
-    text: 'Let me know if you need any herbs or supplies for your hearth.',
-    time: '10:45 AM',
-  },
-]
+];
+
+// Contact portraits composited from the supplied Sunnyside character pack.
+// Paths live in `world/assets.js`; this map only picks the portrait per contact.
+const CONTACT_AVATARS = {
+  "contact-elowen": AVATAR_URLS.curlyhair,
+  "contact-rowan": AVATAR_URLS.longhair,
+  "contact-kael": AVATAR_URLS.mophair,
+  "contact-lyra": AVATAR_URLS.bowlhair,
+  "contact-sable": AVATAR_URLS.shorthair,
+  "contact-tomas": AVATAR_URLS.spikeyhair,
+};
+const DEFAULT_AVATAR = AVATAR_URLS.base;
+
+// The drawer's contact shape. Map data and bridge events both provide plain
+// dwelling data, so one projection keeps the drawer fields in one place.
+const contactFromDwelling = (dwelling) => ({
+  id: dwelling.id,
+  contactId: dwelling.contactId,
+  name: dwelling.name,
+  contact: dwelling.contact,
+  role: dwelling.role || "Resident",
+});
+
+// Fallback for an empty registry; the drawer stays closed until an interaction
+// names a resident.
+const EMPTY_CONTACT = {
+  id: "",
+  contactId: "",
+  name: "",
+  contact: "",
+  role: "",
+};
 
 const App = () => {
-  const worldRef = useRef(null)
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [activeContact, setActiveContact] = useState({
-    id: 'dwelling-1',
-    name: 'Redwood Cottage',
-    contact: 'Elowen',
-  })
+  const worldRef = useRef(null);
+  const drawerRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const returnFocusRef = useRef(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // Seed the drawer from map data rather than a copy of it, so map files stay
+  // the only place a dwelling is described.
+  const [activeContact, setActiveContact] = useState(() => {
+    const dwelling = getDefaultMap()?.dwellings?.[0];
+    return dwelling ? contactFromDwelling(dwelling) : EMPTY_CONTACT;
+  });
+  const [activeMap, setActiveMap] = useState(() => {
+    const map = getDefaultMap();
+    return map ? summarizeMap(map) : { id: "", name: "No map", range: "" };
+  });
 
-  // Close chat handler
+  // Close chat handler. Focus is returned to the world by the drawer's own
+  // focus-management effect, so closing by button, Escape, or a map change all
+  // follow the same path.
   const handleCloseChat = useCallback(() => {
-    setIsChatOpen(false)
-    // Refocus canvas so player controls respond immediately
-    const canvas = worldRef.current?.querySelector('canvas')
-    if (canvas) canvas.focus()
-  }, [])
+    setIsChatOpen(false);
+  }, []);
 
-  // Listen for dwelling interaction events from Phaser
+  // React owns drawer visibility; the world blocks its own input while the
+  // drawer is open. Publishing from state covers every open and close path.
   useEffect(() => {
-    const onOpenChat = (event) => {
-      if (event.detail) {
-        setActiveContact(event.detail)
-      }
-      setIsChatOpen(true)
-    }
+    setChatOpen(isChatOpen);
+  }, [isChatOpen]);
 
+  // Dwelling interactions arrive through the bridge (ADR-0005); the world
+  // never reaches into React and React never reaches into the scene.
+  // Subscription lifetime is managed via unsubscribeRef, which is accessible
+  // from the Escape key useEffect cleanup since both effects share the same scope.
+  const unsubscribeRef = useRef();
+
+  // Subscribe to dwelling interact events and store unsubscribe ref
+  useEffect(() => {
+    unsubscribeRef.current = subscribe(EventType.DWELLING_INTERACT, (event) => {
+      if (!event || !event.dwelling) return;
+      setActiveContact(event.dwelling);
+      setIsChatOpen(true);
+    });
+
+    return unsubscribeRef.current;
+  }, []);
+
+  // Escape key handling. Uses a ref to access the unsubscribe function
+  // from the Dwelling interact useEffect cleanup, since each useEffect
+  // has its own scope in JavaScript/React.
+  useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        handleCloseChat()
+      if (e.key === "Escape") {
+        handleCloseChat();
       }
-    }
+    };
 
-    window.addEventListener('dwelling:open-chat', onOpenChat)
-    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.removeEventListener('dwelling:open-chat', onOpenChat)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [handleCloseChat])
+      unsubscribeRef.current?.();
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [handleCloseChat]);
+
+  // Focus management for the drawer. While it is open, focus moves into it and
+  // Tab stays inside; when it closes — by button, Escape, or a map change —
+  // focus returns to whatever had it before, falling back to the game canvas
+  // so player controls respond immediately.
+
+  // Focus management for the drawer. While it is open, focus moves into it and
+  // Tab stays inside; when it closes — by button, Escape, or a map change —
+  // focus returns to whatever had it before, falling back to the game canvas
+  // so player controls respond immediately.
+  useEffect(() => {
+    if (!isChatOpen) return undefined;
+
+    const container = worldRef.current;
+    returnFocusRef.current = document.activeElement;
+    closeButtonRef.current?.focus();
+
+    const FOCUSABLE =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const onKeyDown = (event) => {
+      if (event.key !== "Tab") return;
+      const drawer = drawerRef.current;
+      if (!drawer) return;
+
+      const focusable = [...drawer.querySelectorAll(FOCUSABLE)];
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (!drawer.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+
+      const target = returnFocusRef.current;
+      returnFocusRef.current = null;
+      if (target && target !== document.body && document.contains(target)) {
+        target.focus();
+        return;
+      }
+      const canvas = container?.querySelector("canvas");
+      if (canvas) {
+        // Phaser's canvas is not focusable by default. `-1` makes it
+        // programmatically focusable without adding a new tab stop.
+        if (!canvas.hasAttribute("tabindex")) canvas.tabIndex = -1;
+        canvas.focus();
+      }
+    };
+  }, [isChatOpen]);
+
+  // Keep the HUD in sync with the world's active map (Phaser → bridge → React).
+  useEffect(() => {
+    const unsubscribe = subscribe(EventType.MAP_CHANGED, (event) => {
+      if (!event || !event.map) return;
+      setActiveMap(event.map);
+      // A conversation belongs to the map it was opened on; never leave a
+      // stale contact drawer open after the world has changed underneath it.
+      setIsChatOpen(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Map selection is a UI request; Phaser owns the active map and confirms it
+  // back through `map:changed`, which is what updates the HUD.
+  const handleMapChange = useCallback((event) => {
+    const mapId = event.target.value;
+    setIsChatOpen(false);
+    requestMapSwitch(mapId);
+    event.target.blur();
+  }, []);
 
   // Mount Phaser game
   useEffect(() => {
-    const container = worldRef.current
-    if (!container) return undefined
+    const container = worldRef.current;
+    if (!container) return undefined;
 
-    const game = createGame(container)
+    const game = createGame(container);
     if (import.meta.env.DEV) {
-      window.__dwellingGame = game
+      window.__dwellingGame = game;
     }
 
     return () => {
-      game.destroy(true, true)
-      container.replaceChildren()
-    }
-  }, [])
+      // `noReturn` must stay false: passing `true` destroys Phaser's global
+      // core-plugin cache, so the next game created on this page cannot boot
+      // (React StrictMode remounts this effect in development).
+      game.destroy(true);
+      container.replaceChildren();
+    };
+  }, []);
+
+  const currentMessages =
+    RESIDENT_MESSAGES[activeContact.contactId] || DEFAULT_MESSAGES;
 
   return (
     <div className="app-shell">
       {/* Floating Glass HUD */}
       <header className="floating-hud">
         <h1>Dwelling</h1>
-        <span className="hud-hint">• Click a house or press E to chat</span>
+        <div className="hud-map" aria-live="polite">
+          <span className="hud-map-name">{activeMap.name}</span>
+          <span aria-hidden="true">·</span>
+          <span className="hud-map-range">{activeMap.range}</span>
+        </div>
+        <label className="map-picker">
+          <span>Map</span>
+          <select
+            value={activeMap.id}
+            onChange={handleMapChange}
+            aria-label="Switch map"
+          >
+            {listMaps().map((map) => (
+              <option key={map.id} value={map.id}>
+                {map.name} ({map.range})
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="hud-hint">• Press E near a house to chat</span>
       </header>
 
       {/* Fullscreen Game World */}
       <main id="world" ref={worldRef} className="world-mount" />
 
       {/* Slide-out Chat Drawer */}
-      <aside className={`chat-drawer ${isChatOpen ? 'open' : ''}`} aria-hidden={!isChatOpen}>
+      <aside
+        ref={drawerRef}
+        className={`chat-drawer ${isChatOpen ? "open" : ""}`}
+        role="dialog"
+        aria-label={`Conversation with ${activeContact.contact}`}
+        aria-hidden={!isChatOpen}
+        inert={isChatOpen ? undefined : ""}
+      >
         <div className="drawer-header">
           <div className="drawer-title-group">
-            <h2>{activeContact.name}</h2>
-            <div className="contact-sub">Resident: {activeContact.contact}</div>
+            <img
+              className="contact-avatar"
+              src={CONTACT_AVATARS[activeContact.contactId] || DEFAULT_AVATAR}
+              alt=""
+              aria-hidden="true"
+            />
+            <div className="drawer-heading">
+              <h2>{activeContact.name}</h2>
+              <div className="contact-sub">
+                Resident: {activeContact.contact} (
+                {activeContact.role || "Resident"})
+              </div>
+            </div>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             className="drawer-close-btn"
             onClick={handleCloseChat}
             aria-label="Close conversation"
+            aria-keyshortcuts="Escape"
           >
             ✕
           </button>
@@ -114,7 +414,7 @@ const App = () => {
 
         {/* Message Feed */}
         <div className="drawer-messages">
-          {MOCK_MESSAGES.map((msg) => (
+          {currentMessages.map((msg) => (
             <div key={msg.id} className={`chat-bubble ${msg.sender}`}>
               <div className="bubble-text">{msg.text}</div>
               <span className="timestamp">{msg.time}</span>
@@ -135,11 +435,13 @@ const App = () => {
               Send
             </button>
           </div>
-          <div className="input-disclaimer">Press Esc or ✕ to return to the world</div>
+          <div className="input-disclaimer">
+            Press Esc or ✕ to return to the world
+          </div>
         </div>
       </aside>
     </div>
-  )
-}
+  );
+};
 
-export default App
+export default App;

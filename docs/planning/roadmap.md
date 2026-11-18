@@ -8,9 +8,9 @@ always the ten-day plan in [`milestones.md`](milestones.md).
 Stage 0  Scaffold                ✅ repository structure, tooling, schema placeholders
 Stage 1  Playable world          ▶ CURRENT — render, move, collide, interact   (Days 1–5)
 Stage 2  Maps and rooms          ▶ data-driven maps, second map, shared interior (Days 6, 8)
-Stage 3  Interface integration   ▶ canvas ↔ HTML, conversation sidebar        (Days 7, 9)
+Stage 3  Interface integration   ▶ canvas ↔ HTML, conversation drawer        (Days 7, 9)
 Stage 4  Realtime messaging      ▢ sockets, message delivery, history
-Stage 5  Presence & Altars       ▢ online status, shared gathering spaces
+Stage 5  Presence                ▢ online status for contacts
 Stage 6  Activities              ▢ farms, working, achievements
 Stage 7  Accounts & security     ▢ auth, validation, rate limiting, caching
 Stage 8  Polish & delivery       ▢ performance, accessibility, deployment
@@ -77,14 +77,14 @@ Covers **Days 6 and 8**.
 **Goal:** the canvas and the HTML UI work as one product.
 
 - A DOM bridge so scene events reach the HTML UI.
-- A **docked conversation sidebar** that opens on interaction and closes cleanly,
-  with mock content **labelled as mock**.
+- A **slide-out conversation drawer** over the fullscreen canvas (ADR-0017) that
+  opens on interaction and closes cleanly, with mock content **labelled as mock**.
 - A minimal HUD: current map name and interact prompt.
 - The **Altar** rendered as a distinct landmark (scenery only).
 - A visual consistency pass so exteriors, interiors and HUD look like one game.
 
-**Success:** interacting with a dwelling opens a sidebar naming the right contact,
-without reloading the page and without covering the world.
+**Success:** interacting with a dwelling opens a drawer naming the right contact,
+without reloading the page and without interrupting the world.
 
 Covers **Days 7 and 9**.
 
@@ -95,23 +95,27 @@ Covers **Days 7 and 9**.
 **Goal:** messages actually travel between users.
 
 - Socket event contract for sending and receiving messages.
-- Conversation membership resolution, with **1:1 conversations private to their
-  two members** and group conversations belonging to Altars (ADR-0015).
-- Persisting messages via Prisma — requires the first migration.
+- Conversation resolution between **mutual contacts only**, with every direct
+  conversation private to its **two** participants (ADR-0020, ADR-0021). Group
+  conversations belong to Altars and arrive in Phase 12 of [`plan.md`](plan.md).
+- Persisting messages via Prisma — the schema and initial migration exist.
 - Loading history when a conversation opens, replacing the labelled mock data.
 
-**Depends on:** Stage 3 (a sidebar to send from), plus backend and database work
-currently out of scope.
+**Depends on:** Stage 3 (a drawer to send from), plus backend and database work
+that is not yet built.
 
 ---
 
-## Stage 5 — Presence & Altars ▢
+## Stage 5 — Presence ▢
 
-**Goal:** shared space becomes real.
+> **📅 Altars are scheduled — Phase 12 of [`plan.md`](plan.md).** They remain part
+> of the product vision: one group conversation per Altar, with persistent
+> membership. The legacy tables were dropped at PR-15/PR-16 and return in Phase 12
+> with their own migration; direct messages ship first.
+
+**Goal:** shared space becomes real — contacts visibly come and go.
 
 - Online/offline presence for contacts, replacing the static indication.
-- Altars become interactive, multi-user spaces (FR-027).
-- Group conversation entry points.
 - Shared player movement — the authority model is still **Undecided** (full
   authoritative movement versus lightweight presence).
 
@@ -142,7 +146,7 @@ half-built. The design work — what "working" actually does — has not started
 **Goal:** the system is safe to open to more than one trusted user.
 
 - Authentication and session handling; a real player identity.
-- Authorization on conversations, dwellings and Altars, enforced server-side.
+- Authorization on contacts, conversations and dwellings, enforced server-side.
 - Input validation, rate limiting, secure configuration, and caching.
 
 See [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md).

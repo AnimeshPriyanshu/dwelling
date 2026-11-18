@@ -20,6 +20,8 @@ export function createGame(parent) {
     width: VIEW_WIDTH,
     height: VIEW_HEIGHT,
     backgroundColor: '#1b2320',
+    // Keep supplied pixel art crisp when the canvas is scaled by Scale.FIT.
+    pixelArt: true,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
