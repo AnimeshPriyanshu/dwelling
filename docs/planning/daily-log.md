@@ -659,6 +659,86 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-18 — Phase 3, PR-21/PR-22: JWT, cookie helpers and auth middleware
+
+**Status:** helpers merged into `main` locally (`6133b46`, `bda29c7`); no auth routes yet
+**Focus task(s):** PR-21, PR-22
+
+### Completed
+- Added `backend/src/auth/jwt.js` — `signSessionToken` / `verifySessionToken`
+  over `jsonwebtoken`, with the seven-day lifetime from ADR-0022.
+- Added `backend/src/auth/cookies.js` — `setSessionCookie` / `clearSessionCookie`
+  for the `dwelling_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` in
+  production).
+- Added `backend/src/auth/middleware.js` — `createRequireAuth()` reads the cookie,
+  verifies the token and attaches `request.auth.userId`; missing, malformed,
+  expired and wrongly-signed tokens all return the same `401 AUTH_REQUIRED`.
+  It does not load the user or do route-level authorization.
+- Wired `cookie-parser` into `app.js` so `request.cookies` exists, and routed
+  `env.isProduction`, `env.jwtSecret` and `env.redisUrl` through
+  `config/env.js` instead of reading `process.env` directly.
+- Added `backend/tests/auth/{jwt,cookies,middleware}.test.js` covering issue and
+  verify, cookie attributes, and the middleware's rejection paths.
+- No route, Prisma schema, migration or dependency change. Backend suite:
+  48 passed, 1 skipped.
+
+### Problems encountered
+- `GET /api/auth/me` and the signup/login/logout routes still do not exist, so
+  the middleware is only exercisable in tests. PR-23 remains the next auth task.
+
+### Decisions made
+- `401 AUTH_REQUIRED` is the single response for every session failure, so
+  verification details never reach the client.
+- `env` exports optional values and `validateEnv()` keeps the startup check, so
+  importing config never throws.
+
+### Next day's priority
+1. PR-23 — signup with validation and duplicate-email handling.
+
+**Tasks moved to Done:** PR-20, PR-21, PR-22
+
+---
+
+## 2026-11-18 — Stabilization after the auth merge
+
+**Status:** complete
+**Focus task(s):** post-merge stabilization (Phase 3–6 of the stabilization brief)
+
+### Completed
+- Found and removed six leftover merge separators (`=======` with no surrounding
+  `<<<<<<<`/`>>>>>>>`) in `scope.md`, `task-board.md`, `roadmap.md` and
+  `requirements.md`, keeping the authoritative side of each duplicated section.
+- Restored the Phase 12 Altar/group-conversation vision in those docs; dropped the
+  contradicting "FR-027 withdrawn / group chat not supported" text, which
+  conflicted with `plan.md` Phase 12 and ADR-0015.
+- Corrected stale statements: the initial migration and five-model schema exist,
+  auth helpers are merged, and the slide-out drawer (ADR-0017) is the implemented
+  UI, not a docked sidebar.
+- `compare()` in `shared/src/password.js` now returns `false` for null, empty and
+  whitespace passwords instead of throwing; `hash()` still rejects unusable
+  input. Tests updated (shared suite: 15 passed).
+- Shared tests now run in CI (see `.github/workflows/ci.yml`), so the job fails on
+  a shared regression instead of silently skipping it.
+
+### Problems encountered
+- The docs merge kept both competing versions of several sections and deleted
+  only the conflict markers, so the corruption was easy to miss in review.
+- An empty password reached `bcrypt.compare` and produced a `500`; the API
+  contract requires a `401 INVALID_CREDENTIALS` through the normal login flow.
+
+### Decisions made
+- Treat unusable credentials as a mismatch rather than an error; password length
+  validation stays in PR-23, not in the shared helper.
+- `plan.md` is the source of truth for what is planned: Altars and group
+  conversations stay scheduled as Phase 12.
+
+### Next day's priority
+1. PR-23 — signup with validation and duplicate-email handling.
+
+**Tasks moved to Done:** none (stabilization only)
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:
