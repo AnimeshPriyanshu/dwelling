@@ -1,7 +1,10 @@
 # Dwelling Implementation Plan
 
 Status: **approved roadmap, in progress.** Phases 0 and 1 are complete
-(PR-02…PR-09, verified 2026-11-13); Phase 2 is next. The original 84-PR record
+(PR-02…PR-09, verified 2026-11-13). Phase 2's data model and initial migration
+(PR-15/PR-16) and the API contract (PR-11) have landed. Phase 3 is under way:
+password hashing (PR-20) and the JWT/cookie helpers plus auth middleware
+(PR-21/PR-22) are merged; signup (PR-23) is next. The original 84-PR record
 below is preserved as written, with completion marks added. Altars and group
 conversations are scheduled as **Phase 12** (PR-85…PR-92) and are not part of the
 direct-message phases.
@@ -63,9 +66,8 @@ PR-15/PR-16 remove the legacy `ConversationMember`, `Altar`, and `AltarMembershi
 tables. They were sketched before the one-to-one design and their shape does not
 match what Phase 12 needs. **Phase 12 reintroduces Altar support in a redesigned
 form with its own migration** — Altars are deferred, not dropped from the product.
-Removing the legacy tables loses no data because there is no database and no
-migration history yet; if that changes before PR-16, the rows must be exported or
-the drop cancelled.
+PR-15/PR-16 have removed the legacy tables: the initial migration creates only
+the five-model schema, so no data was lost.
 
 `Conversation` requirements (direct messages):
 

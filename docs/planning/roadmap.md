@@ -95,39 +95,31 @@ Covers **Days 7 and 9**.
 **Goal:** messages actually travel between users.
 
 - Socket event contract for sending and receiving messages.
-- Conversation membership resolution, with **1:1 conversations private to their
-  two members** (ADR-0015). Group conversations belong to Altars and arrive in
-  Phase 12 of [`plan.md`](plan.md).
-=======
-- Conversation resolution between **mutual contacts only**, with every
-  conversation private to its **two** participants (ADR-0020, ADR-0021).
-- Persisting messages via Prisma — requires the first migration.
+- Conversation resolution between **mutual contacts only**, with every direct
+  conversation private to its **two** participants (ADR-0020, ADR-0021). Group
+  conversations belong to Altars and arrive in Phase 12 of [`plan.md`](plan.md).
+- Persisting messages via Prisma — the schema and initial migration exist.
 - Loading history when a conversation opens, replacing the labelled mock data.
 
 **Depends on:** Stage 3 (a drawer to send from), plus backend and database work
-currently out of scope.
+that is not yet built.
 
 ---
 
 ## Stage 5 — Presence ▢
 
-> **📅 Scheduled — Phase 12 of [`plan.md`](plan.md).** Altars are part of the
-> product vision: one group conversation per Altar, persistent membership. The
-> legacy tables are dropped at PR-15/PR-16 and rebuilt in Phase 12 with a
-> migration; direct messages ship first.
+> **📅 Altars are scheduled — Phase 12 of [`plan.md`](plan.md).** They remain part
+> of the product vision: one group conversation per Altar, with persistent
+> membership. The legacy tables were dropped at PR-15/PR-16 and return in Phase 12
+> with their own migration; direct messages ship first.
 
-**Goal:** shared space becomes real.
-=======
-**Goal:** contacts visibly come and go.
+**Goal:** shared space becomes real — contacts visibly come and go.
 
 - Online/offline presence for contacts, replacing the static indication.
 - Shared player movement — the authority model is still **Undecided** (full
   authoritative movement versus lightweight presence).
 
 **Depends on:** Stage 4.
-
-**Not planned:** Altars and group conversation are out of scope (ADR-0020); the
-Altar stays scenery.
 
 ---
 
