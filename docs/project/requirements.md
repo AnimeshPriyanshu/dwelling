@@ -76,15 +76,11 @@ requirements stay `Planned` until their milestone lands._
 | FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** Group conversations belong to Altars and are scheduled as Phase 12 of [`plan.md`](../planning/plan.md). | Done |
 | FR-027 | An Altar supports interaction by multiple users in the same location. | Planned |
 | FR-028 | Users can send and receive messages in a conversation. | Planned |
-=======
-| FR-025 | The conversation UI can be closed and returns focus to the world. | Planned |
-| FR-026 | The Altar is rendered in the world as a visually distinct gathering location, positioned by map data. **Scenery only — it must not offer an interaction it cannot perform.** | Planned |
-| FR-027 | An Altar supports interaction by multiple users in the same location. | Not supported |
-| FR-028 | Users can send and receive messages in a conversation. | Deferred |
 | FR-029 | The app shows which contacts are online (presence). | Deferred |
 
-> **FR-027 note (2026-11-13):** withdrawn by ADR-0020. Group conversations and
-> Altar interaction are not supported; the Altar stays scenery (FR-026).
+> **FR-027 note:** direct conversations are one-to-one only (ADR-0020); Altar
+group conversations are scheduled as Phase 12 of [`plan.md`](../planning/plan.md),
+so the Altar stays scenery until then (FR-026).
 
 ### Interiors
 

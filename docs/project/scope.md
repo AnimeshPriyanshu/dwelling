@@ -3,11 +3,13 @@
 This document answers one question: **what is being built right now, and what is
 explicitly not?**
 
-The current phase is **frontend development**, extended from seven days to
-**ten** during the requirements session (ADR-0014). The goal is a usable,
-navigable 2D world with a controllable character, placed dwellings, a shared
-interior, a visible Altar, and a working conversation drawer — using a real
-16-bit asset set.
+The frontend phase is **in progress**, extended from seven days to **ten** during
+the requirements session (ADR-0014); Milestones 1–7 are done and the house
+interior is next. The goal is a usable, navigable 2D world with a controllable
+character, placed dwellings, a shared interior, a visible Altar, and a working
+conversation drawer — using a real 16-bit asset set. The backend data model and
+auth foundation (password hashing, JWT/cookie helpers, auth middleware) have
+landed alongside it; no feature routes are implemented yet.
 
 ---
 
@@ -32,16 +34,11 @@ interior, a visible Altar, and a working conversation drawer — using a real
 - A **slide-out conversation drawer** over the fullscreen canvas (ADR-0017),
   opened by interaction, with **mock content visibly labelled as mock**
   (FR-032, FR-033).
-- The **Altar rendered as scenery** visible and distinct, placed by map data.
-  It is **not interactive** this phase (FR-026). Group conversations are a
-  planned future feature (see Below).
-=======
 - **One-to-one conversations only** — exactly two participants between mutual
-  contacts; group conversations are not part of the product (ADR-0020).
-- A **docked conversation sidebar** replacing the Conversations panel, opened by
-  interaction, with **mock content visibly labelled as mock** (FR-032, FR-033).
-- The **Altar rendered as scenery**: visible, distinct, placed by map data, and
-  explicitly **not** interactive (FR-026).
+  contacts (ADR-0020, ADR-0021); group conversations are Phase 12 of
+  [`plan.md`](../planning/plan.md) (see below).
+- The **Altar rendered as scenery** visible and distinct, placed by map data.
+  It is **not interactive** this phase (FR-026).
 - A minimal HUD: current map name and interact prompt.
 - Screenshots and a demo script suitable for the graded report (DW-042).
 
@@ -62,9 +59,10 @@ No messaging is implemented or being implemented. Sockets exist as scaffolding
 ([`../architecture/realtime.md`](../architecture/realtime.md)).
 
 ### Backend and database work
-The Express API, Socket.IO, Redis module and Prisma client exist but are not
-being extended. **No migrations have been generated.** The frontend does not talk
-to the backend or the database in this phase
+The Express API, Socket.IO, Redis module and Prisma client exist, and the
+five-model schema with its initial migration is committed. No feature routes
+(signup, login, contacts, conversations, messages) are implemented yet. The
+frontend does not talk to the backend or the database in this phase
 ([`../architecture/backend.md`](../architecture/backend.md)).
 
 ### Altar interaction and group conversations
@@ -72,18 +70,10 @@ to the backend or the database in this phase
 the product vision ([`plan.md`](../planning/plan.md)): a group conversation
 always belongs to an Altar, membership persists, and `ConversationMember` returns
 for group participants in that later phase. The five-model schema used by Phases
-0–11 stays one-to-one; the legacy `Altar`/`AltarMembership` tables are dropped at
-PR-15/PR-16 and rebuilt in Phase 12 in a redesigned shape. In this phase the
-Altar is **scenery only**, with no prompt that promises a group chat.
-=======
-### Group conversations and Altar interaction
-**Not supported.** Conversations are one-to-one only: every conversation has
-exactly two participants, between mutual contacts, with no group chat and no group
-membership (ADR-0020, ADR-0021). The earlier allowance for group conversations at
-an Altar (ADR-0015) is withdrawn.
-
-The Altar stays **scenery** — visible, distinct and placed by map data, but never
-interactive (FR-026). FR-027 and DW-B03 are withdrawn with the group feature.
+0–11 stays one-to-one; the legacy `Altar`/`AltarMembership` tables were dropped at
+PR-15/PR-16 and return in Phase 12 in a redesigned shape. In this phase the
+Altar is **scenery only**, with no prompt that promises a group chat. Direct
+conversations stay strictly one-to-one (ADR-0020).
 
 ### Personalised interiors
 Every dwelling opens the **same shared room** this phase (ADR-0012). Distinct
@@ -101,10 +91,12 @@ Desktop-first with a small-screen-usable layout (DW-B07). A phone user gets a
 readable page they cannot control — an accepted limitation.
 
 ### Authentication, security and caching
-No auth, authorization, validation, rate limiting, or caching is implemented or
-being implemented. Requirements are recorded in
+Auth helpers are merged: password hashing (PR-20), JWT issue/verify and the
+httpOnly cookie (PR-21), and the auth middleware (PR-22). Signup, login, logout
+and `GET /api/auth/me` routes do not exist yet, and no rate limiting or caching
+is implemented. Requirements are recorded in
 [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md)
-so they are not forgotten, not so that they get built now.
+so they are not forgotten.
 
 ### Production concerns
 Deployment, hosting, CI and monitoring are out of scope for a college project at
