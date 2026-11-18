@@ -1,11 +1,12 @@
 import { createClient } from 'redis';
+import { env } from '../config/env.js';
 
 let client;
 
 export async function connectCache() {
-  if (!process.env.REDIS_URL) return;
+  if (!env.redisUrl) return;
 
-  client = createClient({ url: process.env.REDIS_URL });
+  client = createClient({ url: env.redisUrl });
   client.on('error', (error) => console.error('Redis client error:', error));
   await client.connect();
 }
