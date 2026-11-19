@@ -63,13 +63,15 @@ app.use((_request, _response, next) => {
 const jsonParser = express.json({ limit: '10kb', strict: true });
 app.use(jsonParser);
 
-// 2b. Cookie parser.
+// 2b. Cookie parser — populates `request.cookies` so the auth middleware can
+//     read the HttpOnly session cookie (ADR-0022). It only parses; it does not
+//     authenticate anything by itself.
 app.use(cookieParser());
 
-// 2c. Authentication routes.
 app.use(API_PREFIX, authRouter);
 
-// 3. Health check.
+// 3. Health check — independent route, registered before the 404 catch-all
+//    so it never falls through to the unknown-route handler.
 app.get(`${API_PREFIX}/health`, (_request, response) => {
   response.json({ status: 'ok' });
 });
@@ -102,13 +104,15 @@ export function errorHandler(err, _request, _response, next) {
     });
   }
 
-  const status = 500;
-  const code = 'INTERNAL';
-  const message = 'Internal server error';
+// Always 500 with INTERNAL code; never forward err.message, stack, or err.code.
+const status = 500;
+const code = 'INTERNAL';
+const message = 'Internal server error';
 
-  if (!env.isProduction) {
-    console.error('Unhandled error:', err);
-  }
+// Log the full error server-side only (development only).
+if (!env.isProduction) {
+  console.error('Unhandled error:', err);
+}
 
   if (_response.headersSent) {
     return next(err);
