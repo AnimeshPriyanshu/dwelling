@@ -5,8 +5,8 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 > ## ⚠️ Most of this file is still a plan
 >
 > **Implemented endpoints:** `GET /api/health`, `POST /api/signup`,
-> `POST /api/auth/login`, and `POST /api/auth/logout`. They are documented
-> below.
+> `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me`. They
+> are documented below.
 >
 > Everything else in this file is a placeholder marked `Defined` or `Pending`.
 > Do not build against a pending endpoint, and do not assume a pending
@@ -56,7 +56,7 @@ documented how to verify it.
 
 ## Authentication and sessions
 
-Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout (PR-25) clears it. `GET /api/auth/me` does not exist yet.
+Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout (PR-25) clears it; `GET /api/auth/me` (PR-26) loads the session user.
 
 ### Cookie
 
@@ -281,7 +281,6 @@ logins set no cookie.
 - Unknown email and wrong password run the same password comparison and return
   the same response, so the endpoint does not disclose whether an address is
   registered. Do not add a distinct "user not found" error.
-- This does not implement `GET /api/auth/me` (PR-26).
 
 **Verify**
 
@@ -321,11 +320,59 @@ POST /api/auth/logout HTTP/1.1
 curl -i -X POST http://localhost:3000/api/auth/logout
 ```
 
+### `GET /api/auth/me` ✅ Implemented
+
+Return the authenticated user. The canonical replacement for the old
+`GET /api/me` placeholder.
+
+**Request**
+
+```http
+GET /api/auth/me HTTP/1.1
+```
+
+- **Auth:** session cookie required.
+- **Body:** none.
+- **Success — `200 OK`:** `{ "user": User }`
+
+```json
+{
+  "user": {
+    "id": "clx0user1",
+    "email": "ada@example.com",
+    "displayName": "Ada",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| `401` | `AUTH_REQUIRED` | Missing, malformed, expired, or wrongly-signed session cookie, or a token whose user no longer exists |
+| `500` | `INTERNAL` | Unexpected failure; no details are returned |
+
+**Notes**
+
+- The only session-bootstrap endpoint. It reads `sub` from the JWT and loads the
+  user; a token for a deleted user is `401`, not `500`. Used by PR-31.
+- **User** = `{ id, email, displayName, createdAt }`. The response never contains
+  the password, password hash, or JWT. The email is returned only to the user
+  themselves; no other endpoint exposes it.
+
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/auth/me \
+  --cookie 'dwelling_session=<token>'
+```
+
 ---
 
 ## Defined endpoints — not implemented
 
-The nine endpoints below are the remaining Phase 2–7 contract. They are grouped by
+The eight endpoints below are the remaining Phase 2–7 contract. They are grouped by
 the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 
 - **Auth:** session cookie required, unless the endpoint says otherwise
@@ -333,24 +380,6 @@ the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 - **Return JSON** on success and on every defined error
 - **Use the error codes** in [Error format](#error-format), with the wire envelope
   owned by PR-12
-
-### Authentication (PR-19 – PR-29)
-
-All auth endpoints use session cookie authentication.
-
-#### `GET /api/auth/me` ▢ Defined
-
-Return the authenticated user. The canonical replacement for the old
-`GET /api/me` placeholder.
-
-- **Auth:** session cookie required.
-- **Success — `200 OK`:** `{ "user": User }`
-- **Errors:** `401 AUTH_REQUIRED`
-- **Notes:** the only session-bootstrap endpoint. It reads `sub` from the JWT and
-  loads the user; a token for a deleted user is `401`, not `500`. Used by PR-31.
-
-**User** = `{ id, email, displayName, createdAt }`. The email is returned only to
-the user themselves; no other endpoint exposes it.
 
 ### Contacts (PR-36 – PR-42)
 

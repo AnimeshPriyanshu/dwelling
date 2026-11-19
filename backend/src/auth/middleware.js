@@ -3,7 +3,7 @@ import { SESSION_COOKIE_NAME } from './cookies.js';
 import { verifySessionToken } from './jwt.js';
 
 /** The one response body for every authentication failure. */
-function sendAuthRequired(response) {
+export function sendAuthRequired(response) {
   response.status(401).json({
     code: 'AUTH_REQUIRED',
     message: 'Authentication required.',

@@ -23,6 +23,22 @@ const LOGIN_USER_FIELDS = {
 const DUMMY_PASSWORD_HASH =
   '$2b$10$ETKqbwmREq/YfWfdbxHN7ONRVkqOiHmAQNld2NVpC5tiAG6CVgdtu';
 
+/**
+ * Loads the public profile for a session's user id.
+ *
+ * Returns `null` when the account no longer exists, so the route can answer
+ * with the same `401` it uses for any other unusable session.
+ *
+ * @param {string} userId
+ * @returns {Promise<{ id: string, email: string, displayName: string, createdAt: Date } | null>}
+ */
+export async function getUserById(userId) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: PUBLIC_USER_FIELDS,
+  });
+}
+
 export async function signupUser({ email, password, displayName }) {
   const passwordHash = await hash(password);
 

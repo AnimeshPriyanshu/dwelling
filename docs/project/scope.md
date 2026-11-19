@@ -8,8 +8,9 @@ the requirements session (ADR-0014); Milestones 1–7 are done and the house
 interior is next. The goal is a usable, navigable 2D world with a controllable
 character, placed dwellings, a shared interior, a visible Altar, and a working
 conversation drawer — using a real 16-bit asset set. The backend data model and
-auth foundation (password hashing, JWT/cookie helpers, auth middleware) have
-landed alongside it; no feature routes are implemented yet.
+auth foundation (password hashing, JWT/cookie helpers, auth middleware) and the
+auth routes (signup, login, logout, and `GET /api/auth/me`) have landed alongside
+it; other feature routes are not implemented yet.
 
 ---
 
@@ -60,9 +61,10 @@ No messaging is implemented or being implemented. Sockets exist as scaffolding
 
 ### Backend and database work
 The Express API, Socket.IO, Redis module and Prisma client exist, and the
-five-model schema with its initial migration is committed. No feature routes
-(signup, login, contacts, conversations, messages) are implemented yet. The
-frontend does not talk to the backend or the database in this phase
+five-model schema with its initial migration is committed. The auth routes
+(signup, login, logout, and `GET /api/auth/me`) are implemented; contacts,
+conversations, and messages are not. The frontend does not talk to the backend
+or the database in this phase
 ([`../architecture/backend.md`](../architecture/backend.md)).
 
 ### Altar interaction and group conversations
@@ -92,9 +94,9 @@ readable page they cannot control — an accepted limitation.
 
 ### Authentication, security and caching
 Auth helpers are merged: password hashing (PR-20), JWT issue/verify and the
-httpOnly cookie (PR-21), and the auth middleware (PR-22). Signup, login, logout
-and `GET /api/auth/me` routes do not exist yet, and no rate limiting or caching
-is implemented. Requirements are recorded in
+httpOnly cookie (PR-21), and the auth middleware (PR-22). Signup, login, logout,
+and `GET /api/auth/me` routes now exist, and no rate limiting or caching is
+implemented. Requirements are recorded in
 [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md)
 so they are not forgotten.
 

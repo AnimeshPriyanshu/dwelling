@@ -2,9 +2,9 @@
 
 The intended backend boundaries and the HTTP surface that actually exists.
 
-The backend currently provides health, signup, and login; the frontend still does
-not call any of them. Contacts, conversations, messaging, logout, and
-`GET /api/auth/me` are not implemented.
+The backend currently provides health, signup, login, logout, and session lookup
+(`GET /api/auth/me`); the frontend still does not call any of them. Contacts,
+conversations, and messaging are not implemented.
 
 > **Scope reminder:** the ten-day plan is frontend-only. This document exists so
 > the boundaries are fixed before they are needed and so they are not violated
@@ -25,13 +25,13 @@ backend/src/
 │                              auth router, health, error handler, JSON 404
 ├── config/env.js          ✅  loads root .env via dotenv; exports port, origins, URLs, JWT secret
 ├── config/validateEnv.js  ✅  requires JWT_SECRET; validates optional TEST_DATABASE_URL
-├── routes/auth.js         ✅  POST /signup and POST /auth/login handlers
-├── auth/service.js        ✅  signupUser() and loginUser()
+├── routes/auth.js         ✅  POST /signup, POST /auth/login, POST /auth/logout, GET /auth/me handlers
+├── auth/service.js        ✅  signupUser(), loginUser(), and getUserById()
 ├── auth/validation.js     ✅  signup and login field validation
 ├── auth/errors.js         ✅  ValidationError, EmailTakenError, InvalidCredentialsError
 ├── auth/jwt.js            ✅  signSessionToken / verifySessionToken
 ├── auth/cookies.js        ✅  setSessionCookie / clearSessionCookie / SESSION_COOKIE_NAME
-├── auth/middleware.js     ✅  createRequireAuth / requireAuth (defined, not mounted)
+├── auth/middleware.js     ✅  createRequireAuth / requireAuth (mounted on GET /auth/me)
 ├── cache/index.js         ✅  Redis behind connectCache/getCache/setCache/closeCache; no-ops without REDIS_URL
 ├── db/prisma.js           ✅  exports a single `new PrismaClient()`
 ├── sockets/index.js       ✅  registerSocketHandlers(io): on connection → socket.emit('server:ready')
@@ -46,12 +46,13 @@ backend/src/
 - **Dependencies:** `express`, `socket.io`, `@prisma/client`, `dotenv`, `redis`,
   `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`, `@dwelling/shared`.
   Dev-only: `vitest`, `supertest`.
-- **HTTP routes:** `GET /api/health`, `POST /api/signup`, and
-  `POST /api/auth/login`. Signup and login issue the session cookie.
+- **HTTP routes:** `GET /api/health`, `POST /api/signup`, `POST /api/auth/login`,
+  `POST /api/auth/logout`, and `GET /api/auth/me`. Signup and login issue the
+  session cookie; logout clears it.
 - **Implemented middleware:** Content-Type enforcement, JSON body parsing,
   cookie parsing, centralized error handling, and a JSON 404 catch-all.
-- **Not mounted:** `requireAuth` and `helmet`; there is no rate limiter and no
-  Origin/Referer CSRF check.
+- **Not mounted:** `helmet`; there is no rate limiter and no Origin/Referer CSRF
+  check.
 
 **Nothing in the frontend calls the backend.** The database has one applied
 migration, so the auth queries can run against a migrated database.
@@ -87,9 +88,9 @@ sockets/             business rules and         cache/index.js → Redis (option
    workspace.
 
 **What this means today:** `backend/src/auth/` is the domain/data module for
-signup and login; `routes/auth.js` parses transport input, calls it, and sets the
-cookie. New features should follow that shape rather than putting logic in
-`app.js`.
+signup, login, and session lookup; `routes/auth.js` parses transport input, calls
+it, and manages the cookie. New features should follow that shape rather than
+putting logic in `app.js`.
 
 ---
 
@@ -100,6 +101,8 @@ cookie. New features should follow that shape rather than putting logic in
 | `GET` | `/api/health` | `{ "status": "ok" }` | `backend/src/app.js` |
 | `POST` | `/api/signup` | `201 { user }` and session cookie | `backend/src/routes/auth.js` |
 | `POST` | `/api/auth/login` | `200 { user }` and session cookie | `backend/src/routes/auth.js` |
+| `POST` | `/api/auth/logout` | `204` and cleared session cookie | `backend/src/routes/auth.js` |
+| `GET` | `/api/auth/me` | `200 { user }` or `401 AUTH_REQUIRED` | `backend/src/routes/auth.js` |
 
 - The `/api` prefix comes from `@dwelling/shared` (`API_PREFIX`), so both sides
   agree on the base path. The auth router is mounted at that prefix, which is why
@@ -108,8 +111,11 @@ cookie. New features should follow that shape rather than putting logic in
   `409 EMAIL_TAKEN`.
 - Login validates `{ email, password }`; unknown email and wrong password both
   answer the same `401 INVALID_CREDENTIALS`.
-- Logout and `GET /api/auth/me` do not exist. Contacts, conversations, and
-  messages are pending; the contract is in [`../api/README.md`](../api/README.md).
+- Logout clears the cookie and always answers `204`, even without a valid session.
+- `GET /api/auth/me` loads the session user from the token `sub` and returns only
+  public fields; a token for a deleted user answers `401 AUTH_REQUIRED`, not `500`.
+  Contacts, conversations, and messages are pending; the contract is in
+  [`../api/README.md`](../api/README.md).
 
 ---
 
