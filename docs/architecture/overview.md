@@ -23,9 +23,10 @@ exists today versus what is only planned.**
 ✅  npm-workspace monorepo        root package.json (node >=20.19.0)
 ✅  frontend/  Vite + React + Phaser 3  React shell + implemented Phaser world
           (movement, maps, dwellings, camera) and the conversation drawer
-🟡  backend/   Express + Socket.IO  /api/health + env validation; sockets emit server:ready
-🟡  database/  Prisma schema      models defined; NO migrations generated
-✅  shared/    API_PREFIX only     single exported constant
+✅  backend/   Express + Socket.IO  health, signup, login, auth helpers, error handling;
+          sockets emit server:ready only
+✅  database/  Prisma schema      five models, one migration, idempotent demo seed
+✅  shared/    API_PREFIX + password hash/compare helpers
 ✅  docs/      documentation       this tree
 ✅  tests/    workspace unit/component tests (Vitest, Testing Library, Supertest)
 ✅  CI        .github/workflows/ci.yml — lint, format check, tests, build
@@ -83,13 +84,15 @@ frontend phase.
 └────────────────────────────────────────────────────────────────┘
            ✓ interactions and map changes flow over the bridge
 ┌──────────────────────── Backend (runs; UI does not call it) ───┐
-│   app.js     GET /api/health  →  { status: 'ok' }              │
+│   routes/    GET /api/health · POST /api/signup               │
+│              POST /api/auth/login                              │
+│   auth/      bcrypt hash/compare · JWT · cookies · validation  │
 │   config/    validateEnv → JWT_SECRET required                 │
-│   sockets/   on connection    →  emit 'server:ready'           │
+│   db/        PrismaClient; signup create + login lookup        │
+│   sockets/   on connection → emit 'server:ready'               │
 │   cache/     no-ops unless REDIS_URL is set                    │
-│   db/        PrismaClient singleton (nothing queries it)       │
 └────────────────────────────────────────────────────────────────┘
-        database/  schema only — no migrations, no data
+        database/  five-model schema · one migration · demo seed
 ```
 
 The Vite dev server **is** configured to proxy `/api` and `/socket.io` to
@@ -109,7 +112,7 @@ already prepared even though nothing uses it fully yet.
 | **Backend routes/sockets** | Parsing transport input, emitting events | Hold persistence logic |
 | **Backend domain/data** | Business rules, query orchestration | Know about HTTP requests or sockets |
 | **`database/`** | Schema and migrations | Contain application logic |
-| **`shared/`** | Environment-independent constants and contracts | Import from a workspace that depends on it |
+| **`shared/`** | Environment-independent constants and contracts (`API_PREFIX`, password `hash`/`compare`) | Import from a workspace that depends on it |
 
 This is the same boundary described in [`../architecture.md`](../architecture.md):
 route and socket handlers call domain/data modules rather than embedding
@@ -169,8 +172,8 @@ they need. This keeps them testable and prevents circular imports.
 ## Environments and configuration
 
 - **Confirmed:** root `.env` is loaded by the backend via
-  `backend/src/config/env.js`, which reads `PORT` and `CLIENT_ORIGIN`
-  (defaults `3000` and `http://localhost:5173`).
+  `backend/src/config/env.js`, which reads `PORT`, `CLIENT_ORIGIN`, `NODE_ENV`,
+  `DATABASE_URL`, `REDIS_URL`, and `JWT_SECRET` (port and origin have defaults).
 - **Confirmed:** `backend/.env.example` is the tracked template — copy it to the
   repository root as `.env`. It documents `PORT`, `CLIENT_ORIGIN`, the required
   `JWT_SECRET`, `DATABASE_URL`, and an optional `REDIS_URL`.
@@ -178,6 +181,10 @@ they need. This keeps them testable and prevents circular imports.
   before it listens.
 - **Confirmed:** the frontend does **not** read any environment variable today.
   Any `VITE_*` variable would be new, and must be documented when introduced.
+- **Separate from the app env:** the demo seed loads `DEMO_PASSWORD` (and an
+  optional `DATABASE_URL`) from the gitignored root `.env.local`; the backend
+  never reads that file. `TEST_DATABASE_URL` is used only by backend integration
+  tests.
 - **Required:** secrets never enter source control (NFR-011).
 
 See [`../development/setup.md`](../development/setup.md) for the real commands.

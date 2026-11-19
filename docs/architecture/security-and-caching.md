@@ -2,55 +2,52 @@
 
 Responsibilities, rules, and what must never be committed.
 
-> **These controls are largely not implemented.** The authentication *helpers*
-> exist — password hashing (PR-20), JWT issue/verify and the session cookie
-> (PR-21), and the auth middleware (PR-22) — but no route issues or clears the
-> cookie yet. Authorization, input validation beyond the JSON/Content-Type
-> guards in `app.js`, rate limiting, and functional caching are still not built.
-> This document records the *intent* so the requirements are not forgotten. See
-> [`../project/scope.md`](../project/scope.md).
+> **Partially implemented.** Signup and login validate their inputs and issue the
+> session cookie; password hashing, JWT, cookie helpers, and auth middleware exist.
+> Logout and `GET /api/auth/me` are absent, `requireAuth` is not mounted, and
+> Origin/Referer CSRF enforcement, authorization for future resources, rate
+> limiting, and functional caching are still not built. Sections below distinguish
+> current behaviour from intended controls.
 
 ---
 
 ## Security posture today
 
-Dwelling currently runs as a **single-user local development app**:
+Dwelling currently exposes a small local-development API:
 
-- The only endpoint, `GET /api/health`, returns a constant and touches no data.
+- `GET /api/health` returns a constant and touches no data.
+- `POST /api/signup` and `POST /api/auth/login` validate input, query the
+  database, and issue the signed session cookie. No endpoint clears it.
+- `requireAuth` reads and verifies `dwelling_session` and attaches
+  `request.auth.userId`, but no route mounts it; it is only exercised in tests.
 - Socket connections are unauthenticated; a connecting client is sent
   `server:ready` and nothing else.
-- The session helpers exist, but nothing issues a cookie yet: no route calls
-  `setSessionCookie`, so an incoming request carries no identity and `requireAuth`
-  is only exercised in tests. The contract is in
-  [Authentication](#authentication-helpers-implemented-routes-pending) and
-  [`../api/README.md`](../api/README.md).
 - CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for
   Socket.IO. **Express has no CORS configuration**, because no browser code calls
   the API yet.
-- Errors pass through a centralized handler: unhandled failures always answer
-  `500 INTERNAL` with a sanitized body, malformed JSON answers `400 BAD_REQUEST`,
-  and unknown routes answer JSON `404 NOT_FOUND`.
+- Errors pass through a centralized handler: malformed JSON answers
+  `400 BAD_REQUEST`, validation `400 VALIDATION_FAILED`, duplicate email
+  `409 EMAIL_TAKEN`, bad credentials `401 INVALID_CREDENTIALS`, unhandled
+  failures a sanitized `500 INTERNAL`, and unknown routes JSON `404 NOT_FOUND`.
 
-**Consequence:** the app is safe *because* it is inert. As soon as real data flows,
-the gaps below become real vulnerabilities. See Stage 6 in
-[`../planning/roadmap.md`](../planning/roadmap.md).
+**Consequence:** the auth endpoints are real and must be treated as such, even
+though the frontend does not call them yet. The gaps below still apply. See Stage
+6 in [`../planning/roadmap.md`](../planning/roadmap.md).
 
 ---
 
-## Authentication (helpers implemented, routes pending)
+## Authentication (signup/login implemented; logout and me pending)
 
 **Decided in ADR-0022**
 ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
-**The helpers are merged; the routes are not.** `backend/src/auth/` provides
-`signSessionToken`/`verifySessionToken` (PR-21), `setSessionCookie` /
-`clearSessionCookie` (PR-21), and `requireAuth` (PR-22). Signup, login, logout and
-`GET /api/auth/me` do not exist yet, so nothing in a running server issues a
-session.
+`backend/src/auth/` provides `signSessionToken`/`verifySessionToken`,
+`setSessionCookie`/`clearSessionCookie`, and `requireAuth`. Signup and login issue
+the cookie; logout and `GET /api/auth/me` do not exist yet.
 
 **HTTP:** a signed JWT (`HS256`, `JWT_SECRET`) delivered in an `HttpOnly` cookie
-named `dwelling_session`. It is set at signup and login, sent automatically on
-every same-origin API request, and verified before any user-specific handler
-runs.
+named `dwelling_session`. Signup and login set it; it is sent automatically on
+same-origin API requests. `requireAuth` can verify it before a user-specific
+handler, but no protected route is mounted yet.
 
 | Cookie attribute | Value |
 | --- | --- |
@@ -61,10 +58,11 @@ runs.
 | `Max-Age` | Seven days, matching the JWT `exp` |
 
 - **Lifetime:** seven days, fixed at issue. No refresh token, no sliding session.
-- **Logout:** clears the cookie and always returns `204`. It does **not** revoke
-  the token. An already-issued JWT — including a copied one — remains valid until
-  `exp`; a denylist, token-version check, or password-change invalidation is not
-  built in v1 and needs its own decision.
+- **Logout (not implemented):** the contract is to clear the cookie and always
+  return `204`; `clearSessionCookie()` exists but no route calls it. It would
+  **not** revoke the token. An already-issued JWT — including a copied one —
+  remains valid until `exp`; a denylist, token-version check, or password-change
+  invalidation is not built in v1 and needs its own decision.
 - **Socket:** the socket connection must be authenticated **at connection time**,
   not on each event, and an unauthenticated socket must not be placed in any
   room. Reusing `dwelling_session` for the handshake is PR-60; origin checking
@@ -79,10 +77,11 @@ runs.
 Cookie authentication is automatically attached by the browser, so state-changing
 requests need CSRF defenses that a bearer header would not.
 
-- **Required now:** `Content-Type: application/json` on every state-changing
-  request (HTML forms cannot send it), and an `Origin`/`Referer` check against
-  `CLIENT_ORIGIN` for requests that rely on the session cookie. Both are enforced
-  at the transport boundary (PR-27).
+- **Implemented:** `Content-Type: application/json` is required for
+  state-changing `/api` requests with a body.
+- **Not implemented:** the `Origin`/`Referer` check against `CLIENT_ORIGIN` for
+  requests that rely on the session cookie, plus rate limiting and security
+  headers (PR-27).
 - **`SameSite=Lax`** blocks cross-site form POSTs and subrequests, but it is a
   layer, not the whole answer: same-site subdomains, XSS on the app's own origin,
   and clients that ignore the attribute are not covered.
@@ -130,9 +129,14 @@ participant of *that* conversation — not merely that the conversation exists.
 
 ---
 
-## Input validation (not implemented)
+## Input validation (auth implemented; future endpoints pending)
 
-**Intended:** validate at the transport boundary, before domain logic.
+**Implemented for signup and login:** allowlisted fields, trimmed/lowercased
+email, email format/length, password presence, 8-character signup minimum, and a
+72-byte bcrypt cap. Unknown fields are rejected.
+
+**Intended for every endpoint:** validate at the transport boundary, before domain
+logic.
 
 - **Rule:** validate **every** inbound value — request bodies, query parameters,
   route parameters, and socket event payloads.

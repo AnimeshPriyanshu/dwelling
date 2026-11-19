@@ -23,8 +23,8 @@ dwelling/
 ├── README.md             ✅  project overview, concept, and local development
 ├── frontend/             ✅  Vite + React 18 + Phaser 3 browser app
 ├── backend/              ✅  Express + Socket.IO API
-├── database/             ✅  Prisma schema (no migrations)
-├── shared/               ✅  cross-workspace constants
+├── database/             ✅  Prisma schema, migration, and demo seed
+├── shared/               ✅  cross-workspace constants and password helpers
 ├── docs/                 ✅  this documentation tree
 ├── tests/                ▢   cross-workspace tests — README only; workspace tests live beside the code
 ├── scripts/              ▢   maintenance scripts — README only
@@ -107,13 +107,16 @@ backend/
 ├── vitest.config.js      ✅  node environment; includes tests/**/*.test.js
 ├── package.json          ✅  dev/start/test/lint/format scripts
 ├── tests/
-│   ├── health.test.js    ✅  Supertest: GET /api/health
+│   ├── auth/           ✅  signup, login, JWT, cookie, middleware tests
+│   ├── health.test.js  ✅  Supertest: GET /api/health
+│   ├── seed*.test.js   ✅  seed guards/unit coverage; integration needs TEST_DATABASE_URL
 │   └── config/validateEnv.test.js  ✅  required-env validation
 └── src/
     ├── server.js         ✅  HTTP server + Socket.IO; validates env, registers handlers, connects cache, listens
-    ├── app.js            ✅  Express app: json parsing + GET /api/health
+    ├── app.js            ✅  Express app: guards, parsers, auth router, health, errors, 404
+    ├── auth/             ✅  service, validation, errors, JWT, cookies, middleware
     ├── config/
-    │   ├── env.js        ✅  loads root .env; exports { port, clientOrigin }
+    │   ├── env.js        ✅  loads root .env; exports nodeEnv, isProduction, port, clientOrigin, databaseUrl, redisUrl, jwtSecret
     │   └── validateEnv.js ✅  fail-fast JWT_SECRET check (used by server.js)
     ├── cache/
     │   ├── index.js      ✅  Redis get/set/close — no-ops when REDIS_URL is unset
@@ -121,7 +124,9 @@ backend/
     ├── db/
     │   ├── prisma.js     ✅  PrismaClient singleton
     │   └── README.md     ▢   boundary note
-    ├── routes/README.md  ▢   HTTP route modules belong here as the API grows
+    ├── routes/
+    │   ├── auth.js       ✅  POST /signup and POST /auth/login
+    │   └── README.md     ▢   boundary note
     └── sockets/
         ├── index.js      ✅  registerSocketHandlers: on connection → emit('server:ready')
         └── README.md     ▢   boundary note
@@ -142,7 +147,8 @@ backend/
 
 ```text
 database/
-├── package.json               ✅  generate (prisma generate) / migrate (prisma migrate dev)
+├── package.json               ✅  generate / migrate / seed scripts
+├── seed.js                    ✅  idempotent demo dataset with safety guards
 ├── README.md                  ✅  states the schema captures core entities and should evolve
 ├── prisma/schema.prisma       ✅  5 models: User, Dwelling, Contact, Conversation, Message
 └── prisma/migrations/         ✅  20261113220000_initial_migration — PostgreSQL
@@ -159,7 +165,9 @@ database/
 ```text
 shared/
 ├── package.json          ✅  name @dwelling/shared, exports "." → ./src/index.js
-└── src/index.js          ✅  exports exactly one constant: API_PREFIX = '/api'
+└── src/
+    ├── index.js          ✅  exports API_PREFIX plus hash/compare
+    └── password.js       ✅  bcrypt hash/compare helpers
 ```
 
 - `shared/` must stay **environment-independent**: no `window`, no `process`, no
@@ -180,7 +188,7 @@ docs/
 ├── design/               ✅  game-world, ui-ux, maps, assets
 ├── architecture/         ✅  overview, frontend, backend, database, realtime, security-and-caching
 ├── development/          ✅  setup, folder-structure, coding-conventions, testing
-└── api/README.md         ✅  reserved for endpoint documentation (all endpoints pending)
+└── api/README.md         ✅  HTTP contract; health, signup, and login are implemented
 ```
 
 `docs/architecture.md` and `docs/architecture/` coexist deliberately: the single
@@ -216,7 +224,7 @@ that workspace's Vitest config.
 | A game asset loaded by path | `frontend/public/assets/` |
 | An HTTP route module | `backend/src/routes/` |
 | A socket event handler | `backend/src/sockets/` |
-| Domain logic | `backend/src/<domain>/` (**planned**) — not in `app.js` |
+| Domain logic | `backend/src/<domain>/` (auth is implemented this way) — not in `app.js` |
 | A constant used by both frontend and backend | `shared/src/` |
 | A schema change | `database/prisma/schema.prisma` + a migration |
 | A workspace test | Next to the code as `*.test.js` / `*.test.jsx` |

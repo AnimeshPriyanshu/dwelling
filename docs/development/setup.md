@@ -17,7 +17,9 @@ where things live.
 
 - The backend loads environment variables with `dotenv` from the **root** `.env`
   file (`backend/src/config/env.js` resolves `../../../.env` relative to itself).
-  There is **no mode-specific env file** (no `.env.development`, `.env.local`).
+  There is **no mode-specific app env file** (no `.env.development`).
+- The demo seed script loads the **root `.env.local`** for `DEMO_PASSWORD`; that
+  file is gitignored (`*.local`) and is not read by the backend.
 - **The frontend currently reads no environment variables at all.** Only add a
   `VITE_*` variable if the code actually needs one, and remember that anything
   `VITE_*` is public in the built bundle
@@ -49,15 +51,22 @@ cp backend/.env.example .env
   and never commit the real value.
 - `PORT` (default `3000`) and `CLIENT_ORIGIN` (default
   `http://localhost:5173`).
-- `DATABASE_URL` is used by Prisma for database work. The template value is
-  `postgresql://postgres:postgres@localhost:5432/dwelling?schema=public`.
+- `DATABASE_URL` is used by Prisma for database work. The tracked template sets
+  `DATABASE_URL="postgresql://animeshpriyanshu:password@localhost:5432/dwelling?schema=public"`;
+  replace the credentials with your local ones.
 - **Leave `REDIS_URL` unset** to run without Redis; `backend/src/cache/` no-ops.
+- `DEMO_PASSWORD` is not read from this file or checked at boot. It is required
+  only by the demo seed and belongs in the root `.env.local`.
+- `TEST_DATABASE_URL` is optional and used only by backend integration tests. It
+  must be a `postgresql://` URL with an explicit host and port and a database
+  named `dwelling_test`; it never falls back to `DATABASE_URL`.
 
 ## Database (optional for frontend work)
 
 ```bash
 npm run db:generate   # prisma generate → Prisma client into node_modules
 npm run db:migrate    # prisma migrate dev → creates/applies migrations
+npm run seed --workspace=@dwelling/database   # idempotent demo data
 ```
 
 - ⚠️ **One migration exists** — `20261113220000_initial_migration`, which creates
@@ -65,11 +74,16 @@ npm run db:migrate    # prisma migrate dev → creates/applies migrations
   reachable PostgreSQL database.
 - ⚠️ The Prisma CLI does not read the root `.env` when run from the `database`
   workspace. Export `DATABASE_URL` in your shell (or pass it inline) before
-  `db:migrate`; `db:generate` needs no database.
+  `db:migrate`; `db:generate` needs no database. The seed loads the root
+  `.env.local`, which may also supply `DATABASE_URL`.
 - ⚠️ `db:generate` must succeed for `backend/src/db/prisma.js` to import
   `@prisma/client` at all.
-- **Neither command is needed for frontend work.** The frontend does not talk to
-  the database, and the current phase is frontend-facing
+- **The seed is explicit and idempotent.** It refuses to run when
+  `NODE_ENV=production` or `DEMO_PASSWORD` is unset, verifies existing rows, and
+  writes inside one transaction. It seeds 7 users, 7 dwellings, 12 mirrored
+  contact rows, 6 conversations, and 18 messages.
+- **None of these commands is needed for frontend work.** The frontend does not
+  talk to the database, and the current phase is frontend-facing
   ([`../project/scope.md`](../project/scope.md)).
 
 ## Run
@@ -118,8 +132,10 @@ npm start         # runs the backend from source (node src/server.js)
 | Build the frontend | `npm run build` |
 | Generate the Prisma client | `npm run db:generate` |
 | Create/apply a migration | `npm run db:migrate` |
+| Seed demo data | `npm run seed --workspace=@dwelling/database` |
 | Run frontend tests | `npm test --workspace=@dwelling/frontend` |
 | Run backend tests | `npm test --workspace=@dwelling/backend` |
+| Run shared tests | `npm test --workspace=@dwelling/shared` |
 | Lint a workspace | `npm run lint --workspace=@dwelling/<workspace>` |
 | Check formatting | `npm run format:check --workspace=@dwelling/<workspace>` |
 | Run all workspace installs | `npm install` (root) |
@@ -128,6 +144,10 @@ npm start         # runs the backend from source (node src/server.js)
 
 **Always install with `--workspace`.** Installing at the root into the wrong
 package produces an install that works locally and breaks for everyone else.
+
+`shared` exposes only a `test` script. Lint and format scripts live in the
+`frontend` and `backend` workspaces; `database` exposes `generate`, `migrate`, and
+`seed`.
 
 ---
 
@@ -152,7 +172,8 @@ Do **not** assume any of these exist:
 - **No deployment or hosting configuration.** CI runs lint, format checks, tests,
   and the build; it does not deploy.
 - **No TypeScript or type checking** — the code is plain JavaScript/JSX.
-- **No seed data or database fixtures.**
+- **No automatic seed data.** Demo data exists only when the explicit seed
+  command is run against a local database.
 - **No scripts in `scripts/`** — the folder contains only a README.
 - **No cross-workspace test suite** — each workspace tests its own code.
 
