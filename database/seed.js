@@ -125,24 +125,24 @@ async function phaseAPreflight(prisma) {
     if (existingById) {
       // Existing user: validate email, passwordHash, displayName
       if (existingById.email !== user.email) {
-        throw new Error(`Seed aborted: User ID "${user.id}" exists with wrong email "${existingById.email}".`)
+        throw new Error(`Seed aborted: User ID \"${user.id}\" exists with wrong email \"${existingById.email}\".`)
       }
       // MISSING passwordHash → ABORT (not skip)
       if (!existingById.passwordHash) {
-        throw new Error(`Seed aborted: Existing user "${user.id}" is missing passwordHash.`)
+        throw new Error(`Seed aborted: Existing user \"${user.id}\" is missing passwordHash.`)
       }
       // Invalid/malformed hash → ABORT (bcrypt.compare will propagate, but we explicitly check)
       if (typeof existingById.passwordHash !== 'string' || existingById.passwordHash === '') {
-        throw new Error(`Seed aborted: Existing user "${user.id}" has an invalid password hash.`)
+        throw new Error(`Seed aborted: Existing user \"${user.id}\" has an invalid password hash.`)
       }
       // Password mismatch → ABORT
       const passwordMatch = await compare(DEMO_PASSWORD, existingById.passwordHash)
       if (!passwordMatch) {
-        throw new Error(`Seed aborted: Existing user "${user.id}" password hash does not match DEMO_PASSWORD.`)
+        throw new Error(`Seed aborted: Existing user \"${user.id}\" password hash does not match DEMO_PASSWORD.`)
       }
       // DisplayName mismatch → ABORT
       if (existingById.displayName !== user.displayName) {
-        throw new Error(`Seed aborted: Existing user "${user.id}" has displayName "${existingById.displayName}", expected "${user.displayName}".`)
+        throw new Error(`Seed aborted: Existing user \"${user.id}\" has displayName \"${existingById.displayName}\", expected \"${user.displayName}\".`)
       }
       results.users[user.id] = { existing: true, emailMatch: true, passwordValid: true, displayNameMatch: true }
       continue
@@ -150,7 +150,7 @@ async function phaseAPreflight(prisma) {
     // New user: check email conflict
     const existingByEmail = await prisma.user.findUnique({ where: { email: user.email } })
     if (existingByEmail) {
-      throw new Error(`Seed aborted: Email "${user.email}" already belongs to a different user ID "${existingByEmail.id}".`)
+      throw new Error(`Seed aborted: Email \"${user.email}\" already belongs to a different user ID \"${existingByEmail.id}\".`)
     }
     results.users[user.id] = { existing: false, emailConflict: false }
   }
@@ -160,7 +160,7 @@ async function phaseAPreflight(prisma) {
     const existing = await prisma.dwelling.findUnique({ where: { id: dwelling.id } })
     if (existing) {
       if (existing.ownerId !== dwelling.ownerId || existing.title !== dwelling.title) {
-        throw new Error(`Seed aborted: Dwelling ID "${dwelling.id}" exists with conflicting owner or title.`)
+        throw new Error(`Seed aborted: Dwelling ID \"${dwelling.id}\" exists with conflicting owner or title.`)
       }
       results.dwellings[dwelling.id] = { existing: true }
       continue
@@ -169,22 +169,26 @@ async function phaseAPreflight(prisma) {
   }
 
   // --- Contacts preflight ---
-  const contactKeys = new Set()
+  // Validate actual existing database contact rows and their mirrored relationships.
+  // Do not populate the validation set from the static expected list.
   for (const contact of CONTACTS) {
     const existing = await prisma.contact.findUnique({ where: { userId_contactId: { userId: contact.userId, contactId: contact.contactId } } })
     if (existing) {
-      contactKeys.add(`${contact.userId}-${contact.contactId}`)
       continue
     }
-    // We do NOT create here — Phase A reads only
-    contactKeys.add(`${contact.userId}-${contact.contactId}`)
+    // We do NOT create here — Phase A reads only; Phase B will create
   }
-  // Validate mirrored relationships
+  // Track which direction exists: 0=neither, 1=forward only, 2=reverse only, 3=both
   for (const contact of CONTACTS) {
-    const reverseKey = `${contact.contactId}-${contact.userId}`
-    if (!contactKeys.has(reverseKey)) {
-      throw new Error(`Seed aborted: Missing mirrored contact row "${reverseKey}".`)
+    const forwardExisting = await prisma.contact.findUnique({ where: { userId_contactId: { userId: contact.userId, contactId: contact.contactId } } })
+    const reverseExisting = await prisma.contact.findUnique({ where: { userId_contactId: { userId: contact.contactId, contactId: contact.userId } } })
+    const direction = forwardExisting && reverseExisting ? 3 : forwardExisting ? 1 : reverseExisting ? 2 : 0
+    if (direction === 1 || direction === 2) {
+      // Exactly one direction exists (only forward or only reverse) → abort in Phase A
+      throw new Error(`Seed aborted: Incomplete mirrored contact row \"${contact.userId}-${contact.contactId}\".`)
     }
+    // direction 0 (neither exists): Phase B will create both
+    // direction 3 (both exist): accept
   }
   results.contacts.mirrored = true
 
@@ -193,7 +197,7 @@ async function phaseAPreflight(prisma) {
     const existing = await prisma.conversation.findUnique({ where: { id: conv.id } })
     if (existing) {
       if (existing.userOneId !== conv.userOneId || existing.userTwoId !== conv.userTwoId) {
-        throw new Error(`Seed aborted: Conversation ID "${conv.id}" has wrong participant ordering.`)
+        throw new Error(`Seed aborted: Conversation ID \"${conv.id}\" has wrong participant ordering.`)
       }
       results.conversations[conv.id] = { existing: true }
       continue
@@ -215,28 +219,38 @@ async function phaseAPreflight(prisma) {
   for (const conv of CONVERSATIONS) {
     const expected = expectedByConv[conv.id] || []
     if (expected.length !== 3) {
-      throw new Error(`Seed aborted: Conversation "${conv.id}" expected 3 messages.`)
+      throw new Error(`Seed aborted: Conversation \"${conv.id}\" expected 3 messages.`)
     }
     const existingMessages = await prisma.message.findMany({
       where: { conversationId: conv.id },
       orderBy: { createdAt: 'asc' },
     })
 
-    if (existingMessages.length > 0) {
-      // Existing messages: verify ALL 3 expected messages exist with correct content/senderId
-      if (existingMessages.length !== 3) {
-        throw new Error(`Seed aborted: Conversation "${conv.id}" has ${existingMessages.length} existing messages, expected 3. Cannot continue with partial match.`)
-      }
-      // Build sets of (content, senderId) pairs for both expected and existing messages
-      const expectedSet = new Set(expected.map(m => `${m.content}\u0000${m.senderId}`))
-      const existingSet = new Set(existingMessages.map(m => `${m.content}\u0000${m.senderId}`))
-      // All 3 existing messages match expected — no create needed
-      results.messages[conv.id] = { existing: true, matched: true }
-      continue
+    // Verify that the conversation has either 0 or exactly 3 existing messages
+    if (existingMessages.length > 0 && existingMessages.length !== 3) {
+      throw new Error(`Seed aborted: Conversation \"${conv.id}\" has ${existingMessages.length} existing messages, expected 0 or 3. Cannot continue with partial match.`)
     }
 
-    // No existing messages: validate content, sender membership, deterministic IDs/timestamps
-    results.messages[conv.id] = { existing: false, expected }
+    // Verify each expected message matches an existing message with all fields
+    // Only verify when there are existing messages; if 0 existing, Phase B will create them
+    if (existingMessages.length > 0) {
+      for (const expectedMsg of expected) {
+        const match = existingMessages.find(
+          (existingMsg) =>
+            existingMsg.content === expectedMsg.content &&
+            existingMsg.senderId === expectedMsg.senderId &&
+            existingMsg.conversationId === expectedMsg.conversationId &&
+            existingMsg.createdAt.getTime() === new Date(expectedMsg.createdAt).getTime()
+        )
+        if (!match) {
+          throw new Error(`Seed aborted: Conversation \"${conv.id}\" existing message does not match expected content/senderId/conversationId/timestamp. Content: \"${expectedMsg.content}\", Sender: ${expectedMsg.senderId}`)
+        }
+      }
+    }
+    // All 3 existing messages match expected — no create needed
+    // Or no existing messages — either way, proceed to writes (Phase B will create if needed)
+    results.messages[conv.id] = { existing: existingMessages.length > 0, matched: true }
+    continue
   }
   return results
 }
@@ -248,14 +262,6 @@ async function phaseBWrites(prisma, preflightResults) {
     if (preflightResults.users[user.id] && preflightResults.users[user.id].existing) {
       continue // already validated, skip
     }
-    // If we reach here, the user was new (or preflight didn't mark it existing)
-    // We need to recreate the check since Phase A may have thrown or we have a new user
-    // Actually, if Phase A didn't throw and this user isn't marked existing, it's new
-    // But we need to verify no email conflict exists - Phase A already did this
-    // However, we need the prisma tx to have been set up... 
-    // Let me restructure: Phase A and Phase B both run inside the same $transaction
-    // The results from Phase A are available to Phase B
-    // For new users, Phase A already checked no email conflict, so we can create
     const passwordHash = await hash(DEMO_PASSWORD)
     await prisma.user.create({ data: { id: user.id, email: user.email, passwordHash, displayName: user.displayName } })
   }
@@ -269,11 +275,8 @@ async function phaseBWrites(prisma, preflightResults) {
   }
 
   // --- Create missing contacts ---
-  // We need to create forward contacts that don't have existing rows
-  // Phase A already validated mirrors exist, but we may need to create the forward rows
-  // Actually, re-reading the original: Phase A validated mirrors, but creation happens in Phase B
-  // But the original code created forward contacts in a loop, then validated mirrors after
-  // Let me follow the original pattern but split correctly
+  // Create forward contacts that don't have existing rows
+  // Phase A already validated mirrors exist; create any missing forward rows here
   const createdContactKeys = new Set()
   for (const contact of CONTACTS) {
     const existing = await prisma.contact.findUnique({ where: { userId_contactId: { userId: contact.userId, contactId: contact.contactId } } })
@@ -287,13 +290,9 @@ async function phaseBWrites(prisma, preflightResults) {
   // Validate mirrors after creation (Phase B can do this since we're past preflight)
   for (const contact of CONTACTS) {
     const reverseKey = `${contact.contactId}-${contact.userId}`
-    if (!createdContactKeys.has(reverseKey) && !preflightResults.contacts.mirrored) {
-      // The reverse should have been created in a prior seed run; if not, abort
-      // Actually, the original code had the reverse validation after forward creation
-      // Let me just create both directions if needed
-      // But the spec says "existing valid records must be skipped"
-      // Since Phase A already validated mirrors conceptually, we just need to ensure
-      // the reverse exists. If it doesn't, we create it.
+    const reverseExisting = await prisma.contact.findUnique({ where: { userId_contactId: { userId: contact.contactId, contactId: contact.userId } } })
+    if (!reverseExisting) {
+      // The reverse should have been created in a prior seed run; if not, create it now
       await prisma.contact.create({ data: { userId: contact.contactId, contactId: contact.userId } })
     }
   }
@@ -320,7 +319,7 @@ async function phaseBWrites(prisma, preflightResults) {
   for (const conv of CONVERSATIONS) {
     const expected = expectedByConv[conv.id] || []
     if (expected.length !== 3) {
-      throw new Error(`Seed aborted: Conversation "${conv.id}" expected 3 messages.`)
+      throw new Error(`Seed aborted: Conversation \"${conv.id}\" expected 3 messages.`)
     }
     const existingCount = await prisma.message.count({ where: { conversationId: conv.id } })
 
@@ -331,13 +330,13 @@ async function phaseBWrites(prisma, preflightResults) {
         orderBy: { createdAt: 'asc' },
       })
       if (existingMessages.length !== 3) {
-        throw new Error(`Seed aborted: Conversation "${conv.id}" has ${existingMessages.length} existing messages, expected 3. Cannot continue with partial match.`)
+        throw new Error(`Seed aborted: Conversation \"${conv.id}\" has ${existingMessages.length} existing messages, expected 3. Cannot continue with partial match.`)
       }
       // Build sets of (content, senderId) pairs for both expected and existing messages
-      const expectedSet = new Set(expected.map(m => `${m.content} ${m.senderId}`))
-      const existingSet = new Set(existingMessages.map(m => `${m.content} ${m.senderId}`))
+      const expectedSet = new Set(expected.map(m => `${m.content}\u0000${m.senderId}`))
+      const existingSet = new Set(existingMessages.map(m => `${m.content}\u0000${m.senderId}`))
       if (expectedSet.size !== existingSet.size || ![...expectedSet].every(s => existingSet.has(s))) {
-        throw new Error(`Seed aborted: Conversation "${conv.id}" existing messages do not match expected all-fields set.`)
+        throw new Error(`Seed aborted: Conversation \"${conv.id}\" existing messages do not match expected all-fields set.`)
       }
       continue
     }
