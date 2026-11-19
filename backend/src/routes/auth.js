@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { setSessionCookie } from '../auth/cookies.js';
+import { clearSessionCookie, setSessionCookie } from '../auth/cookies.js';
 import { signSessionToken } from '../auth/jwt.js';
 import { loginUser, signupUser } from '../auth/service.js';
 import { validateLoginInput, validateSignupInput } from '../auth/validation.js';
@@ -40,4 +40,12 @@ authRouter.post('/auth/login', async (request, response, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+// Logout is intentionally unauthenticated: a stale or already-expired client
+// must still be able to clear its cookie. It removes the cookie from this
+// browser only and does not revoke the token (ADR-0022).
+authRouter.post('/auth/logout', (_request, response) => {
+  clearSessionCookie(response);
+  response.status(204).end();
 });
