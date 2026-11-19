@@ -55,7 +55,7 @@ documented how to verify it.
 
 ## Authentication and sessions
 
-Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout and `GET /api/auth/me` do not exist yet.
+Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout (PR-25) clears it. `GET /api/auth/me` does not exist yet.
 
 ### Cookie
 
@@ -290,6 +290,36 @@ curl -i -X POST http://localhost:3000/api/auth/login \
   -d '{"email":"ada@example.com","password":"correct horse battery"}'
 ```
 
+### `POST /api/auth/logout` ✅ Implemented
+
+Clear the session cookie.
+
+**Request**
+
+```http
+POST /api/auth/logout HTTP/1.1
+```
+
+- **Auth:** none. A request without a valid cookie still succeeds, so a stale
+  client can always clear itself.
+- **Body:** none.
+- **Success — `204 No Content`:** no body; `Set-Cookie` expires
+  `dwelling_session` with the same `Path`, `SameSite`, and `Secure` attributes
+  it was set with (`Max-Age=0`).
+
+**Notes**
+
+- **This does not invalidate the token.** Logout removes the cookie from this
+  browser only; an already-issued JWT stays valid until `exp`, and there is no
+  server-side session store to delete (ADR-0022).
+- No `Content-Type` is required because the request has no body.
+
+**Verify**
+
+```bash
+curl -i -X POST http://localhost:3000/api/auth/logout
+```
+
 ---
 
 ## Defined endpoints — not implemented
@@ -306,22 +336,6 @@ the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 ### Authentication (PR-19 – PR-29)
 
 All auth endpoints use session cookie authentication.
-
-#### `POST /api/auth/logout` ▢ Defined
-
-Clear the session cookie.
-
-- **Auth:** optional. A request without a valid cookie still succeeds, so a
-  stale client can always clear itself.
-- **Body:** none.
-- **Success — `204 No Content`:** no body; `Set-Cookie` expires
-  `dwelling_session` with the same `Path`, `SameSite`, and `Secure` attributes.
-- **Errors:** none defined.
-- **Notes:** **this does not invalidate the token.** Logout removes the cookie
-  from this browser; an already-issued JWT stays valid until `exp`, and there is
-  no server-side session store to delete (ADR-0022). Clients must discard local
-  state and treat the user as signed out; only revocation — not built in v1 —
-  would make the token unusable elsewhere.
 
 #### `GET /api/auth/me` ▢ Defined
 
