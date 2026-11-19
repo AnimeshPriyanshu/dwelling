@@ -18,11 +18,19 @@ vi.mock('../../src/db/prisma.js', () => ({
   prisma: { user: { findUnique } },
 }));
 
-import app from '../../src/app.js';
+import { createApp } from '../../src/app.js';
 import { env } from '../../src/config/env.js';
+import { createAuthRateLimiter } from '../../src/middleware/rateLimit.js';
 import { SESSION_COOKIE_NAME } from '../../src/auth/cookies.js';
 import { SESSION_TTL_SECONDS } from '../../src/auth/jwt.js';
 import { MAXIMUM_PASSWORD_BYTES } from '../../src/auth/validation.js';
+
+// Every state-changing request must carry the configured origin (PR-27).
+const ALLOWED_ORIGIN = env.clientOrigin;
+
+// A fresh app per test keeps the stricter auth rate limiter from accumulating
+// hits across the suite; the limit itself is unchanged.
+let app;
 
 const PASSWORD = 'correct horse battery';
 const VALID_PAYLOAD = {
@@ -53,6 +61,7 @@ function sessionTokenFrom(response) {
 }
 
 beforeEach(async () => {
+  app = createApp({ credentialLimiter: createAuthRateLimiter() });
   findUnique.mockReset();
   findUnique.mockResolvedValue({
     ...STORED_USER,
@@ -64,6 +73,7 @@ describe('POST /api/auth/login', () => {
   it('returns 200 with only safe public user fields', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     expect(response.status).toBe(200);
@@ -84,6 +94,7 @@ describe('POST /api/auth/login', () => {
   it('never returns the password, password hash, or JWT in the body', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     const serialized = JSON.stringify(response.body);
@@ -93,7 +104,10 @@ describe('POST /api/auth/login', () => {
   });
 
   it('normalizes the email before looking the user up', async () => {
-    await request(app).post('/api/auth/login').send(VALID_PAYLOAD);
+    await request(app)
+      .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     expect(findUnique).toHaveBeenCalledTimes(1);
     expect(findUnique).toHaveBeenCalledWith({
@@ -111,6 +125,7 @@ describe('POST /api/auth/login', () => {
   it('verifies the password against the stored hash', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     expect(response.status).toBe(200);
@@ -125,9 +140,11 @@ describe('POST /api/auth/login', () => {
 
     const accepted = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ email: STORED_USER.email, password: spacedPassword });
     const rejected = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ email: STORED_USER.email, password: spacedPassword.trim() });
 
     expect(accepted.status).toBe(200);
@@ -137,6 +154,7 @@ describe('POST /api/auth/login', () => {
   it('signs a session JWT with the configured secret and seven-day lifetime', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     expect(env.jwtSecret).toBe(TEST_SECRET);
@@ -151,6 +169,7 @@ describe('POST /api/auth/login', () => {
   it('sets an HttpOnly session cookie with the documented attributes', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     const header = response.headers['set-cookie'][0];
@@ -166,6 +185,7 @@ describe('POST /api/auth/login', () => {
     findUnique.mockResolvedValueOnce(null);
     const unknownEmail = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ email: 'nobody@example.com', password: PASSWORD });
 
     findUnique.mockResolvedValueOnce({
@@ -174,6 +194,7 @@ describe('POST /api/auth/login', () => {
     });
     const wrongPassword = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send(VALID_PAYLOAD);
 
     expect(unknownEmail.status).toBe(401);
@@ -188,6 +209,7 @@ describe('POST /api/auth/login', () => {
   it('accepts a short wrong password as a credential mismatch, not a validation error', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ email: STORED_USER.email, password: 'short' });
 
     expect(response.status).toBe(401);
@@ -213,7 +235,10 @@ describe('POST /api/auth/login', () => {
       { email: STORED_USER.email, password: 'é'.repeat(37) },
     ],
   ])('returns 400 VALIDATION_FAILED for %s', async (_label, payload) => {
-    const response = await request(app).post('/api/auth/login').send(payload);
+    const response = await request(app)
+      .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(payload);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
@@ -226,6 +251,7 @@ describe('POST /api/auth/login', () => {
   it('returns 400 BAD_REQUEST for a malformed JSON body', async () => {
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .set('Content-Type', 'application/json')
       .send('{"email": "ada@example.com",');
 
@@ -247,6 +273,7 @@ describe('POST /api/auth/login', () => {
 
     const response = await request(app)
       .post('/api/auth/login')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ email: STORED_USER.email, password });
 
     expect(response.status).toBe(200);
@@ -263,6 +290,7 @@ describe('POST /api/auth/login', () => {
     try {
       const response = await request(app)
         .post('/api/auth/login')
+        .set('Origin', ALLOWED_ORIGIN)
         .send(VALID_PAYLOAD);
 
       expect(response.status).toBe(500);

@@ -113,7 +113,9 @@ backend/
 │   └── config/validateEnv.test.js  ✅  required-env validation
 └── src/
     ├── server.js         ✅  HTTP server + Socket.IO; validates env, registers handlers, connects cache, listens
-    ├── app.js            ✅  Express app: guards, parsers, auth router, health, errors, 404
+    ├── app.js            ✅  createApp(): Helmet, CORS, rate limiter, guards, parsers,
+    │                         auth router, health, errors, 404 (default export = the app)
+    ├── middleware/       ✅  transport security: rateLimit.js (429 policy), originCheck.js (403 policy)
     ├── auth/             ✅  service, validation, errors, JWT, cookies, middleware
     ├── config/
     │   ├── env.js        ✅  loads root .env; exports nodeEnv, isProduction, port, clientOrigin, databaseUrl, redisUrl, jwtSecret
@@ -125,7 +127,7 @@ backend/
     │   ├── prisma.js     ✅  PrismaClient singleton
     │   └── README.md     ▢   boundary note
     ├── routes/
-    │   ├── auth.js       ✅  POST /signup and POST /auth/login
+    │   ├── auth.js       ✅  createAuthRouter(): /signup, /auth/login, /auth/logout, /auth/me
     │   └── README.md     ▢   boundary note
     └── sockets/
         ├── index.js      ✅  registerSocketHandlers: on connection → emit('server:ready')

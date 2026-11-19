@@ -5,9 +5,11 @@ Responsibilities, rules, and what must never be committed.
 > **Partially implemented.** Signup and login validate their inputs and issue the
 > session cookie; logout clears it; `GET /api/auth/me` returns the session user;
 > password hashing, JWT, cookie helpers, and auth middleware exist. `requireAuth`
-> is mounted on `GET /api/auth/me`. Origin/Referer CSRF enforcement, authorization
-> for future resources, rate limiting, and functional caching are still not built.
-> Sections below distinguish current behaviour from intended controls.
+> is mounted on `GET /api/auth/me`. PR-27 added Helmet security headers, an
+> explicit CORS policy, the Origin/Referer CSRF check, and HTTP rate limiting.
+> Authorization for future resources, a CSRF token, shared rate-limit storage,
+> and functional caching are still not built. Sections below distinguish current
+> behaviour from intended controls.
 
 ---
 
@@ -23,13 +25,17 @@ Dwelling currently exposes a small local-development API:
   `request.auth.userId`; it is mounted on `GET /api/auth/me`.
 - Socket connections are unauthenticated; a connecting client is sent
   `server:ready` and nothing else.
-- CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for
-  Socket.IO. **Express has no CORS configuration**, because no browser code calls
-  the API yet.
+- CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for both
+  Socket.IO and Express. There is no wildcard origin: the session cookie requires
+  `credentials: true`, and preflight is answered for the API's methods.
+- Helmet security headers are applied to every response, including rejections,
+  and `X-Powered-By` is removed.
 - Errors pass through a centralized handler: malformed JSON answers
   `400 BAD_REQUEST`, validation `400 VALIDATION_FAILED`, duplicate email
-  `409 EMAIL_TAKEN`, bad credentials `401 INVALID_CREDENTIALS`, unhandled
-  failures a sanitized `500 INTERNAL`, and unknown routes JSON `404 NOT_FOUND`.
+  `409 EMAIL_TAKEN`, bad credentials `401 INVALID_CREDENTIALS`, a missing/foreign
+  request origin `403 ORIGIN_NOT_ALLOWED`, an exceeded limit `429 RATE_LIMITED`,
+  unhandled failures a sanitized `500 INTERNAL`, and unknown routes JSON
+  `404 NOT_FOUND`.
 
 **Consequence:** the auth endpoints are real and must be treated as such, even
 though the frontend does not call them yet. The gaps below still apply. See Stage
@@ -37,7 +43,7 @@ though the frontend does not call them yet. The gaps below still apply. See Stag
 
 ---
 
-## Authentication (signup, login, logout, and me implemented)
+## Authentication (signup, login, and me implemented; logout unverified)
 
 **Decided in ADR-0022**
 ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
@@ -79,18 +85,23 @@ requests need CSRF defenses that a bearer header would not.
 
 - **Implemented:** `Content-Type: application/json` is required for
   state-changing `/api` requests with a body.
-- **Not implemented:** the `Origin`/`Referer` check against `CLIENT_ORIGIN` for
-  requests that rely on the session cookie, plus rate limiting and security
-  headers (PR-27).
+- **Implemented (PR-27):** every `POST`, `PUT`, `PATCH`, and `DELETE` under `/api`
+  must carry an `Origin` — or, when `Origin` is absent, a `Referer` — whose origin
+  equals `CLIENT_ORIGIN`. Missing, foreign, malformed, and opaque (`null`) origins
+  are rejected with `403 ORIGIN_NOT_ALLOWED`. A present `Origin` is authoritative,
+  so a valid `Referer` cannot rescue a foreign `Origin`. `GET` is never checked.
+  The supplied origin is not echoed in the response.
+- **Not implemented:** a CSRF token. The deferral in OQ-13 stands.
 - **`SameSite=Lax`** blocks cross-site form POSTs and subrequests, but it is a
   layer, not the whole answer: same-site subdomains, XSS on the app's own origin,
   and clients that ignore the attribute are not covered.
 - **No CSRF token in v1** — deferred, not denied (OQ-13).
 - **Cross-site deployment breaks the `Lax` assumption:** if the frontend and API
   are on different sites, the cookie must become `SameSite=None; Secure`, which
-  removes the main built-in protection and makes a CSRF token mandatory. The
-  deployment topology is OQ-14 and must be settled before launch; the posture is
-  reassessed at PR-27.
+  removes the main built-in protection and makes a CSRF token mandatory. PR-27
+  added the Origin/Referer check but **did not** settle the topology: OQ-14 is
+  still open, no CSRF token exists, and `trust proxy` is unset. All three must be
+  revisited together before a split-origin deployment.
 
 ---
 
@@ -159,26 +170,52 @@ SQL injection, not invalid or hostile content.
 
 ---
 
-## Rate limiting (not implemented)
+## Rate limiting (HTTP implemented, realtime pending)
 
-**Intended:** bound how much work one client can cause.
+**Goal:** bound how much work one client can cause.
 
-| Surface | Risk | Intended limit |
+| Surface | Risk | Status |
 | --- | --- | --- |
-| HTTP endpoints generally | Brute force, scraping | Per-IP and per-user request limits |
-| Message sending | Spam, flooding | Per-user rate limit on send events |
-| Socket connections | Connection flooding | Limit concurrent connections per user/IP |
-| Movement events | Tick flooding (higher rate than anything else) | Drop excess ticks server-side rather than queueing them |
+| HTTP endpoints generally | Brute force, scraping | ✅ Per-IP limits, PR-27 |
+| Signup and login | Credential brute force, enumeration | ✅ 10 per 15 min per IP, PR-27 |
+| Message sending | Spam, flooding | ▢ Per-user limit on send events, pending |
+| Socket connections | Connection flooding | ▢ Limit concurrent connections per user/IP, pending |
+| Movement events | Tick flooding (higher rate than anything else) | ▢ Drop excess ticks server-side rather than queueing, pending |
 
+**HTTP policy (PR-27):**
+
+| Scope | Window | Limit | Applies to |
+| --- | --- | --- | --- |
+| Global API | 15 minutes | 300 per IP | Every `/api` request except `GET /api/health` |
+| Credentials | 15 minutes | 10 per IP | `POST /api/signup`, `POST /api/auth/login` only |
+
+- The global limiter runs **before** body parsing, so a flood is rejected
+  cheaply. The credentials limiter runs inside the auth router — after body
+  parsing, before validation — and signup/login share one bucket. Logout and
+  `GET /api/auth/me` sit under the global limiter only.
+- A limited response is `429 { "code": "RATE_LIMITED", "message": "Too many
+  requests. Try again later." }` with an integer `Retry-After` of at least one
+  second. Standard `RateLimit`/`RateLimit-Policy` headers are sent; legacy
+  `X-RateLimit-*` headers are not.
 - **Rule:** rate limits are enforced on the **server**; a client-side throttle is
   a UX nicety, not a control.
-- **Where it belongs:** as middleware before handlers, or in the domain module
-  guarding the specific operation. **Undecided** which, until there is more than
-  one endpoint.
-- **Storage:** counters are a natural fit for Redis, which is already available
-  behind `backend/src/cache/` — see below.
-- **Status:** not implemented. The API contract reserves the `429 RATE_LIMITED`
-  code, but no limit, window, or `Retry-After` header is defined yet (PR-27).
+
+**Known limitations (accepted in PR-27):**
+
+- **Single-process counters.** The store is `express-rate-limit`'s in-memory
+  `MemoryStore`: counters are per process and reset on restart. Running multiple
+  API instances multiplies the effective limit, and a restart clears a client's
+  budget. A shared store (Redis behind `backend/src/cache/`) is the eventual
+  fix; it was not added because Redis is optional here and the cache module does
+  not expose a client.
+- **IP-based only.** Limits are keyed by IP; there is no per-user or per-account
+  limit yet.
+- **`trust proxy` is unset.** Behind a reverse proxy, every request appears to
+  come from the proxy's address and shares one bucket. Setting `trust proxy`
+  requires knowing the deployment topology (**OQ-14**, unresolved); enabling it
+  blindly would let clients spoof their key via `X-Forwarded-For`.
+- The health check is exempt on purpose so monitoring keeps working after the
+  API budget is spent.
 
 ---
 

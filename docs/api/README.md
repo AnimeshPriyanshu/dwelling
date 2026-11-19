@@ -5,8 +5,9 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 > ## ⚠️ Most of this file is still a plan
 >
 > **Implemented endpoints:** `GET /api/health`, `POST /api/signup`,
-> `POST /api/auth/login`, `POST /api/auth/logout`, and `GET /api/auth/me`. They
-> are documented below.
+> `POST /api/auth/login`, and `GET /api/auth/me`. `POST /api/auth/logout` is
+> documented as a **contract only**: its implementation is unverified because
+> PR-25 is not confirmed complete.
 >
 > Everything else in this file is a placeholder marked `Defined` or `Pending`.
 > Do not build against a pending endpoint, and do not assume a pending
@@ -45,6 +46,7 @@ there.
 | ▢ **Defined** | Contract agreed and reviewable, but **no code exists**. The shape is binding for implementation; behavior is not testable yet. |
 | ▢ **Pending** | Planned, shape not agreed. Do not build against it. |
 | 🟡 **Partial** | Exists, but not usable for its intended purpose. |
+| ⏳ **Unverified** | Code is present in the tree, but the implementing PR is not confirmed complete. Treat the shape as contract, not as delivered behavior. |
 | ⏸ **Deferred** | Out of the current phase. |
 | ⛔ **Not supported** | Ruled out by a decision; not planned at all. |
 
@@ -56,7 +58,7 @@ documented how to verify it.
 
 ## Authentication and sessions
 
-Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout (PR-25) clears it; `GET /api/auth/me` (PR-26) loads the session user.
+Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; `GET /api/auth/me` (PR-26) loads the session user. Logout (PR-25) is documented below as a **contract only** — its implementation is unverified and it must not be treated as a delivered endpoint.
 
 ### Cookie
 
@@ -76,7 +78,8 @@ in the token, so profile changes never require re-issuing it.
 ### Lifecycle
 
 - **Signup** and **login** set the cookie in their response.
-- **Logout** clears it (same attributes, `Max-Age=0`) and always returns `204`.
+- **Logout** — contract below; **PR-25 unverified** — clears it (same attributes,
+  `Max-Age=0`) and always returns `204`.
 - `GET /api/auth/me` is the only way a client learns who it is; there is no
   token introspection endpoint.
 - **There is no refresh token and no sliding session.** The session ends 7 days
@@ -95,10 +98,12 @@ tokens in a header do not have. The v1 posture:
   application/json`; form-encoded and `text/plain` bodies are rejected. A
   cross-site HTML form cannot produce that content type, and a cross-origin
   `fetch` with it is stopped by CORS preflight.
-- **Origin validation.** State-changing requests that rely on the session cookie
-  must carry an `Origin` (or `Referer`) matching `CLIENT_ORIGIN`; a missing or
-  foreign origin is rejected. This is enforced server-side at the transport
-  boundary (PR-27).
+- **Origin validation.** Every state-changing request (`POST`, `PUT`, `PATCH`,
+  `DELETE`) must carry an `Origin` — or, when `Origin` is absent, a `Referer` —
+  matching `CLIENT_ORIGIN`. A missing, foreign, malformed, or opaque (`null`)
+  origin is rejected with `403 ORIGIN_NOT_ALLOWED`. An `Origin` header is
+  authoritative: a valid `Referer` never rescues a foreign `Origin`. `GET` is
+  not checked. This is enforced server-side at the transport boundary (PR-27).
 - **No CSRF token in v1.** This is a deliberate deferral, not a claim that
   `SameSite=Lax` is sufficient on its own.
 - **`SameSite=Lax` limits.** It stops cookies on cross-site subrequests and
@@ -108,8 +113,9 @@ tokens in a header do not have. The v1 posture:
 - **Cross-site deployment changes the answer.** If the production frontend and
   API are on different sites, `Lax` prevents the cookie from being sent at all,
   forcing `SameSite=None; Secure` — which removes the main built-in protection
-  and makes a CSRF token mandatory. Deployment topology is **OQ-14**: it must be
-  settled before launch and the CSRF posture reassessed at PR-27.
+  and makes a CSRF token mandatory. Deployment topology is **OQ-14**: PR-27 added
+  the Origin/Referer check but did **not** resolve the topology, so the CSRF
+  posture (and `trust proxy`) stays open until it is settled before launch.
 
 ### Client rules
 
@@ -205,6 +211,7 @@ Also sets `Set-Cookie: dwelling_session=…` with the attributes above.
 
 ```bash
 curl -i -X POST http://localhost:3000/api/signup \
+  -H "Origin: http://localhost:5173" \
   -H 'Content-Type: application/json' \
   -d '{"email":"ada@example.com","password":"correct horse battery","displayName":"Ada"}'
 ```
@@ -286,11 +293,16 @@ logins set no cookie.
 
 ```bash
 curl -i -X POST http://localhost:3000/api/auth/login \
+  -H "Origin: http://localhost:5173" \
   -H 'Content-Type: application/json' \
   -d '{"email":"ada@example.com","password":"correct horse battery"}'
 ```
 
-### `POST /api/auth/logout` ✅ Implemented
+### `POST /api/auth/logout` ⏳ Unverified (PR-25)
+
+> **Status: unverified.** A logout route exists in the tree, but PR-25 has not
+> been confirmed complete. The behavior below is the documented contract, not a
+> claim that the endpoint is delivered or verified.
 
 Clear the session cookie.
 
@@ -317,8 +329,13 @@ POST /api/auth/logout HTTP/1.1
 **Verify**
 
 ```bash
-curl -i -X POST http://localhost:3000/api/auth/logout
+curl -i -X POST http://localhost:3000/api/auth/logout \
+  -H "Origin: http://localhost:5173"
 ```
+
+The `Origin` header is required by PR-27's Origin/Referer guard; without it the
+request is rejected with `403 ORIGIN_NOT_ALLOWED`. This example still does not
+confirm PR-25: the endpoint remains an unverified contract.
 
 ### `GET /api/auth/me` ✅ Implemented
 
@@ -581,10 +598,11 @@ internal detail.
 | `AUTH_REQUIRED` | `401` | No session, or an invalid/expired one. |
 | `INVALID_CREDENTIALS` | `401` | Login email/password do not match. |
 | `NOT_CONTACTS` | `403` | Conversation creation with a user who is not a mutual contact. |
+| `ORIGIN_NOT_ALLOWED` | `403` | The request's `Origin`/`Referer` is missing, malformed, or not `CLIENT_ORIGIN`. The supplied origin is never echoed. |
 | `USER_NOT_FOUND` | `404` | No user with that id. Discloses user existence by design. |
 | `CONVERSATION_NOT_FOUND` | `404` | No such conversation **or** caller is not a participant — deliberately indistinguishable. |
 | `EMAIL_TAKEN` | `409` | Signup with an already-registered email. |
-| `RATE_LIMITED` | `429` | Reserved; rate limiting is PR-27 and not implemented. |
+| `RATE_LIMITED` | `429` | A rate limit was exceeded. Always carries an integer `Retry-After` header of at least one second. |
 | `BAD_REQUEST` | `400` | Malformed JSON or unsupported Content-Type for state‑changing requests. |
 | `INTERNAL` | `500` | Reserved for unexpected failures; no details in the body. |
 
@@ -594,8 +612,33 @@ Error responses always use the envelope `{ code, message }`, for example:
 { "code": "VALIDATION_FAILED", "message": "'email' is required" }
 ```
 
-`GET /api/health` has no error responses. `POST /api/auth/logout` has none either
-— it always succeeds.
+`GET /api/health` has no application error responses. It is also exempt from
+rate limiting, so a monitoring loop keeps working when the API budget is spent.
+`POST /api/auth/logout` always succeeds once the transport guards pass — but it
+can still be rejected by the Origin guard (`403 ORIGIN_NOT_ALLOWED`) or by the
+global rate limiter (`429 RATE_LIMITED`).
+
+### Rate limiting
+
+Implemented in PR-27 with `express-rate-limit` and its in-memory store.
+
+| Scope | Window | Limit | Applies to |
+| --- | --- | --- | --- |
+| Global API | 15 minutes | 300 requests per IP | Every `/api` request except `GET /api/health` |
+| Credentials | 15 minutes | 10 requests per IP | `POST /api/signup` and `POST /api/auth/login` only |
+
+- A limited request answers `429` with the standard envelope,
+  `{ "code": "RATE_LIMITED", "message": "Too many requests. Try again later." }`,
+  plus `Retry-After` (integer seconds, minimum `1`). Standard `RateLimit` and
+  `RateLimit-Policy` headers are sent; legacy `X-RateLimit-*` headers are not.
+- Counters are **per process and reset on restart**; there is no shared store.
+  Running more than one API instance multiplies the effective limit.
+- Limits are keyed by IP. `trust proxy` is deliberately unset, so behind a
+  reverse proxy every client would share the proxy's address. Trusted-proxy
+  configuration is still open with the deployment topology (OQ-14).
+- A global-limit rejection happens before the body is parsed; a
+  credential-limit rejection happens after parsing but before validation.
+  Neither authenticates the request, so the client must retry after the window.
 
 ---
 
@@ -643,11 +686,11 @@ resolve it; none is answered by this document.
 | OQ-9 | Send-message idempotency and safe client retry semantics | PR-56 |
 | OQ-11 | `404 USER_NOT_FOUND` on contact add discloses whether a user id exists — accepted for v1 | PR-38 |
 | OQ-12 | Message edit/delete, read receipts, delivery states, unread counts — all out of v1 | PR-59 |
-| OQ-13 | CSRF token mechanism (double-submit cookie vs. header) — deferred, not denied | PR-27 |
-| OQ-14 | Deployment topology: same-site (Lax viable) or split-origin (needs `SameSite=None; Secure` plus a CSRF token) | PR-27, launch |
+| OQ-13 | CSRF token mechanism (double-submit cookie vs. header) — still deferred, not denied; PR-27 added the Origin/Referer check instead | Revisit if the topology becomes split-origin |
+| OQ-14 | Deployment topology: same-site (Lax viable) or split-origin (needs `SameSite=None; Secure` plus a CSRF token) — **unresolved**, and `trust proxy` follows from it | Launch |
 | OQ-15 | Mapping frontend map/contact ids to server `User.id` for dwellings and world rendering | PR-76, PR-15 |
 | OQ-16 | Socket.IO handshake authentication reusing this cookie, including origin checks | PR-60 |
-| OQ-17 | Rate-limit responses (`429 RATE_LIMITED`, `Retry-After`) are unbuilt | PR-27 |
+| OQ-17 | ✅ Resolved by PR-27: `429 RATE_LIMITED` with an integer `Retry-After` | PR-27 |
 | OQ-18 | Contact-list ordering | PR-37 |
 
 **Resolved during review:** OQ-10 (non-contact vs. unknown user) — existing

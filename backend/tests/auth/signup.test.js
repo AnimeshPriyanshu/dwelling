@@ -18,13 +18,21 @@ vi.mock('../../src/db/prisma.js', () => ({
   prisma: { user: { create } },
 }));
 
-import app from '../../src/app.js';
+import { createApp } from '../../src/app.js';
 import { env } from '../../src/config/env.js';
+import { createAuthRateLimiter } from '../../src/middleware/rateLimit.js';
 import { SESSION_COOKIE_NAME } from '../../src/auth/cookies.js';
 import {
   MAXIMUM_PASSWORD_BYTES,
   validateSignupInput,
 } from '../../src/auth/validation.js';
+
+// Every state-changing request must carry the configured origin (PR-27).
+const ALLOWED_ORIGIN = env.clientOrigin;
+
+// A fresh app per test keeps the stricter auth rate limiter from accumulating
+// hits across the suite; the limit itself is unchanged.
+let app;
 
 const VALID_PAYLOAD = {
   email: '  Ada@Example.COM ',
@@ -58,13 +66,17 @@ function sessionTokenFrom(response) {
 }
 
 beforeEach(() => {
+  app = createApp({ credentialLimiter: createAuthRateLimiter() });
   create.mockReset();
   create.mockImplementation(async (args) => createdUserFrom(args));
 });
 
 describe('POST /api/signup', () => {
   it('creates a user and returns 201 with only public fields', async () => {
-    const response = await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    const response = await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     expect(response.status).toBe(201);
     expect(Object.keys(response.body)).toEqual(['user']);
@@ -84,7 +96,10 @@ describe('POST /api/signup', () => {
   });
 
   it('normalizes email and display name before writing to the database', async () => {
-    await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     expect(create).toHaveBeenCalledTimes(1);
     const [{ data }] = create.mock.calls[0];
@@ -93,7 +108,10 @@ describe('POST /api/signup', () => {
   });
 
   it('hashes the password and never stores or returns plaintext', async () => {
-    await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     const [{ data }] = create.mock.calls[0];
     expect(data.passwordHash).not.toBe(VALID_PAYLOAD.password);
@@ -104,7 +122,10 @@ describe('POST /api/signup', () => {
   });
 
   it('writes exactly the fields defined on the Prisma User model', async () => {
-    await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     const [{ data, select }] = create.mock.calls[0];
     expect(Object.keys(data).sort()).toEqual([
@@ -121,7 +142,10 @@ describe('POST /api/signup', () => {
   });
 
   it('signs the session JWT with the configured JWT_SECRET', async () => {
-    const response = await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    const response = await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     expect(env.jwtSecret).toBe(TEST_SECRET);
     const token = sessionTokenFrom(response);
@@ -131,7 +155,10 @@ describe('POST /api/signup', () => {
   });
 
   it('sets an HttpOnly session cookie with the expected attributes', async () => {
-    const response = await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    const response = await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     const header = response.headers['set-cookie'][0];
     expect(header).toContain('Path=/');
@@ -145,6 +172,7 @@ describe('POST /api/signup', () => {
   it('returns 400 for a whitespace-only password', async () => {
     const response = await request(app)
       .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ ...VALID_PAYLOAD, password: '        ' });
 
     expect(response.status).toBe(400);
@@ -160,6 +188,7 @@ describe('POST /api/signup', () => {
 
     const response = await request(app)
       .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
       .send({ ...VALID_PAYLOAD, password });
 
     expect(response.status).toBe(201);
@@ -176,7 +205,10 @@ describe('POST /api/signup', () => {
       Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
     );
 
-    const response = await request(app).post('/api/signup').send(VALID_PAYLOAD);
+    const response = await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(VALID_PAYLOAD);
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
@@ -195,7 +227,10 @@ describe('POST /api/signup', () => {
     ['missing display name', { ...VALID_PAYLOAD, displayName: undefined }],
     ['unknown field', { ...VALID_PAYLOAD, role: 'admin' }],
   ])('returns 400 VALIDATION_FAILED for %s', async (_label, payload) => {
-    const response = await request(app).post('/api/signup').send(payload);
+    const response = await request(app)
+      .post('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .send(payload);
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
@@ -216,6 +251,7 @@ describe('POST /api/signup', () => {
     try {
       const response = await request(app)
         .post('/api/signup')
+        .set('Origin', ALLOWED_ORIGIN)
         .send(VALID_PAYLOAD);
 
       expect(response.status).toBe(500);
