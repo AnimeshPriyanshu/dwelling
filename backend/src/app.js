@@ -12,8 +12,7 @@ app.use((_request, _response, next) => {
   const methodAllowlist = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
   const isApiPath =
-    _request.path === API_PREFIX ||
-    _request.path.startsWith(`${API_PREFIX}/`);
+    _request.path === API_PREFIX || _request.path.startsWith(`${API_PREFIX}/`);
 
   if (isApiPath && methodAllowlist.includes(_request.method)) {
     const contentType = _request.headers['content-type'];
@@ -104,15 +103,15 @@ export function errorHandler(err, _request, _response, next) {
     });
   }
 
-// Always 500 with INTERNAL code; never forward err.message, stack, or err.code.
-const status = 500;
-const code = 'INTERNAL';
-const message = 'Internal server error';
+  // Always 500 with INTERNAL code; never forward err.message, stack, or err.code.
+  const status = 500;
+  const code = 'INTERNAL';
+  const message = 'Internal server error';
 
-// Log the full error server-side only (development only).
-if (!env.isProduction) {
-  console.error('Unhandled error:', err);
-}
+  // Log the full error server-side only (development only).
+  if (!env.isProduction) {
+    console.error('Unhandled error:', err);
+  }
 
   if (_response.headersSent) {
     return next(err);
