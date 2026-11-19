@@ -9,8 +9,9 @@ interior is next. The goal is a usable, navigable 2D world with a controllable
 character, placed dwellings, a shared interior, a visible Altar, and a working
 conversation drawer — using a real 16-bit asset set. The backend data model and
 auth foundation (password hashing, JWT/cookie helpers, auth middleware) and the
-auth routes (signup, login, logout, and `GET /api/auth/me`) have landed alongside
-it; other feature routes are not implemented yet.
+signup, login, and `GET /api/auth/me` routes have landed alongside it; logout
+(PR-25) exists in the tree but remains unverified, and other feature routes are
+not implemented yet.
 
 ---
 
@@ -62,7 +63,8 @@ No messaging is implemented or being implemented. Sockets exist as scaffolding
 ### Backend and database work
 The Express API, Socket.IO, Redis module and Prisma client exist, and the
 five-model schema with its initial migration is committed. The auth routes
-(signup, login, logout, and `GET /api/auth/me`) are implemented; contacts,
+(signup, login, and `GET /api/auth/me`) are confirmed implemented; logout exists
+in the tree but PR-25 is unverified. Contacts,
 conversations, and messages are not. The frontend does not talk to the backend
 or the database in this phase
 ([`../architecture/backend.md`](../architecture/backend.md)).
@@ -94,9 +96,12 @@ readable page they cannot control — an accepted limitation.
 
 ### Authentication, security and caching
 Auth helpers are merged: password hashing (PR-20), JWT issue/verify and the
-httpOnly cookie (PR-21), and the auth middleware (PR-22). Signup, login, logout,
-and `GET /api/auth/me` routes now exist, and no rate limiting or caching is
-implemented. Requirements are recorded in
+httpOnly cookie (PR-21), and the auth middleware (PR-22). Signup, login, and
+`GET /api/auth/me` routes now exist; the logout route exists too, but PR-25 is
+unverified. PR-27 adds Helmet security headers, an
+explicit CORS policy, the Origin/Referer CSRF check, and per-IP HTTP rate
+limiting; there is still no CSRF token, no shared rate-limit store, and no
+caching. Requirements are recorded in
 [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md)
 so they are not forgotten.
 

@@ -21,11 +21,13 @@ Every backend file, verified by inspection:
 backend/src/
 ├── server.js              ✅  http.createServer(app) + Socket.IO Server (CORS: env.clientOrigin)
 │                              validates required env, registers socket handlers, connects cache, listens
-├── app.js                 ✅  Express app: Content-Type guard, JSON + cookie parsing,
-│                              auth router, health, error handler, JSON 404
+├── app.js                 ✅  createApp(): Helmet, CORS, global rate limiter, Content-Type guard,
+│                              JSON + cookie parsing, Origin guard, auth router, health, error handler, JSON 404
+├── middleware/rateLimit.js ✅  express-rate-limit policies: global API and stricter credentials limiter
+├── middleware/originCheck.js ✅  Origin/Referer enforcement → 403 ORIGIN_NOT_ALLOWED
 ├── config/env.js          ✅  loads root .env via dotenv; exports port, origins, URLs, JWT secret
 ├── config/validateEnv.js  ✅  requires JWT_SECRET; validates optional TEST_DATABASE_URL
-├── routes/auth.js         ✅  POST /signup, POST /auth/login, POST /auth/logout, GET /auth/me handlers
+├── routes/auth.js         ✅  createAuthRouter(): POST /signup, POST /auth/login, POST /auth/logout, GET /auth/me handlers
 ├── auth/service.js        ✅  signupUser(), loginUser(), and getUserById()
 ├── auth/validation.js     ✅  signup and login field validation
 ├── auth/errors.js         ✅  ValidationError, EmailTakenError, InvalidCredentialsError
@@ -44,15 +46,26 @@ backend/src/
   `test` → `vitest run`.
 - **Package:** `@dwelling/backend`, private, `"type": "module"` (ES modules).
 - **Dependencies:** `express`, `socket.io`, `@prisma/client`, `dotenv`, `redis`,
-  `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`, `@dwelling/shared`.
-  Dev-only: `vitest`, `supertest`.
+  `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`,
+  `express-rate-limit`, `@dwelling/shared`. Dev-only: `vitest`, `supertest`.
 - **HTTP routes:** `GET /api/health`, `POST /api/signup`, `POST /api/auth/login`,
   `POST /api/auth/logout`, and `GET /api/auth/me`. Signup and login issue the
   session cookie; logout clears it.
-- **Implemented middleware:** Content-Type enforcement, JSON body parsing,
-  cookie parsing, centralized error handling, and a JSON 404 catch-all.
-- **Not mounted:** `helmet`; there is no rate limiter and no Origin/Referer CSRF
-  check.
+- **Implemented middleware, in order:** Helmet → CORS → global API rate limiter
+  (health exempt) → Content-Type enforcement → JSON body parsing → cookie
+  parsing → Origin/Referer guard → auth router (with the stricter credentials
+  limiter on signup and login) → health route → JSON 404 catch-all → centralized
+  error handler.
+- **`createApp(options)`** builds the app and accepts `apiLimiter` and
+  `credentialLimiter` overrides so tests can use fresh counters. The default
+  export is the single production instance.
+- **Rate limiting** uses `express-rate-limit`'s in-memory store: 300 requests
+  per 15 minutes per IP across `/api`, and 10 per 15 minutes on signup/login.
+  Counters are per process. `trust proxy` is intentionally unset until the
+  deployment topology (OQ-14) is decided.
+- **Origin handling:** CORS allows only `CLIENT_ORIGIN` with credentials, and a
+  separate server-side check rejects state-changing requests without a matching
+  `Origin`/`Referer` (`403 ORIGIN_NOT_ALLOWED`). CORS is not the CSRF control.
 
 **Nothing in the frontend calls the backend.** The database has one applied
 migration, so the auth queries can run against a migrated database.

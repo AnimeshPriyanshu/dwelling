@@ -1,8 +1,22 @@
-import { describe, test, expect } from 'vitest';
+import { beforeEach, describe, test, expect } from 'vitest';
 import http from 'node:http';
-import app from '../src/app.js';
 import request from 'supertest';
-import { errorHandler } from '../src/app.js';
+
+import { createApp, errorHandler } from '../src/app.js';
+import { env } from '../src/config/env.js';
+import { normalizeOrigin } from '../src/middleware/originCheck.js';
+import { createAuthRateLimiter } from '../src/middleware/rateLimit.js';
+
+// Every state-changing request must carry the configured origin (PR-27).
+const ALLOWED_ORIGIN = normalizeOrigin(env.clientOrigin);
+
+// A fresh app per test gives the credential limiter its own counters. These
+// tests are about transport error handling, not about exhausting a budget.
+let app;
+
+beforeEach(() => {
+  app = createApp({ credentialLimiter: createAuthRateLimiter() });
+});
 
 // Imperative HTTP helpers so tests can control the exact wire headers.
 // Supertest auto-assigns a Content-Type when `.send()` receives a string,
@@ -49,6 +63,12 @@ function rawRequest({ port, path, method = 'POST', headers, body }) {
   });
 }
 
+// POSTs to the API with the Origin the transport guards require. Individual
+// tests then control Content-Type and body exactly.
+function postToApi(path) {
+  return request(app).post(path).set('Origin', ALLOWED_ORIGIN);
+}
+
 describe('PR-12 Error handling', () => {
   test('unknown route returns 404 with error envelope', async () => {
     const response = await request(app).get('/api/nonexistent');
@@ -58,9 +78,10 @@ describe('PR-12 Error handling', () => {
   });
 
   test('bodyless POST without Content-Type is allowed through guard', async () => {
-    // No Content-Type and no body: the guard must not reject this.
-    const response = await request(app).post('/api/auth/logout');
-    expect(response.status).not.toBe(400);
+    // No Content-Type and no body: the guard must not reject this, so the
+    // request reaches the logout handler and answers 204.
+    const response = await postToApi('/api/auth/logout');
+    expect(response.status).toBe(204);
   });
 
   test('POST with a body and no Content-Type returns 400 BAD_REQUEST', async () => {
@@ -72,9 +93,12 @@ describe('PR-12 Error handling', () => {
 
       const { status, raw, sentHeaders } = await rawRequest({
         port,
-        path: '/api/auth/signup',
-        // Content-Length, deliberately no Content-Type.
-        headers: { 'Content-Length': Buffer.byteLength(payload) },
+        path: '/api/signup',
+        // Content-Length and Origin, deliberately no Content-Type.
+        headers: {
+          'Content-Length': Buffer.byteLength(payload),
+          Origin: ALLOWED_ORIGIN,
+        },
         body: payload,
       });
 
@@ -82,6 +106,8 @@ describe('PR-12 Error handling', () => {
       expect(sentHeaders['content-type']).toBeUndefined();
       expect(Number(sentHeaders['content-length'])).toBeGreaterThan(0);
 
+      // The Content-Type guard answers before the Origin guard, the body
+      // parser, or routing.
       expect(status).toBe(400);
       expect(JSON.parse(raw)).toEqual({
         code: 'BAD_REQUEST',
@@ -115,8 +141,11 @@ describe('PR-12 Error handling', () => {
     try {
       const probeResult = await rawRequest({
         port: probe.address().port,
-        path: '/api/auth/signup',
-        headers: { 'Transfer-Encoding': 'chunked' },
+        path: '/api/signup',
+        headers: {
+          'Transfer-Encoding': 'chunked',
+          Origin: ALLOWED_ORIGIN,
+        },
         body: payload,
       });
       wire = JSON.parse(probeResult.raw);
@@ -136,9 +165,12 @@ describe('PR-12 Error handling', () => {
     try {
       const { status, raw } = await rawRequest({
         port: server.address().port,
-        path: '/api/auth/signup',
+        path: '/api/signup',
         // Node's HTTP client frames the chunked encoding itself.
-        headers: { 'Transfer-Encoding': 'chunked' },
+        headers: {
+          'Transfer-Encoding': 'chunked',
+          Origin: ALLOWED_ORIGIN,
+        },
         body: payload,
       });
 
@@ -153,8 +185,7 @@ describe('PR-12 Error handling', () => {
   });
 
   test('POST with text/plain Content-Type returns 400 BAD_REQUEST', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'text/plain')
       .send('email=test@test.com&password=pass');
 
@@ -164,36 +195,45 @@ describe('PR-12 Error handling', () => {
   });
 
   test('POST with application/json Content-Type is accepted', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'application/json')
       .send('{"email":"test@test.com"}');
 
-    // Guard accepts it; the route itself does not exist yet, so 404 is fine.
-    expect(response.status).not.toBe(400);
+    // The guard accepts the media type, so the request reaches the route and
+    // fails field validation — not `400 BAD_REQUEST`.
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid input',
+    });
   });
 
   test('POST with application/json; charset=utf-8 Content-Type is accepted', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'application/json; charset=utf-8')
       .send('{"email":"test@test.com"}');
 
-    expect(response.status).not.toBe(400);
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid input',
+    });
   });
 
   test('POST with uppercase APPLICATION/JSON Content-Type is accepted', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'APPLICATION/JSON')
       .send('{"email":"test@test.com"}');
 
-    expect(response.status).not.toBe(400);
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid input',
+    });
   });
 
   test('POST with application/jsonp Content-Type returns 400 BAD_REQUEST', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'application/jsonp')
       .send('{"email":"test@test.com"}');
 
@@ -201,14 +241,22 @@ describe('PR-12 Error handling', () => {
     expect(response.body).toHaveProperty('code', 'BAD_REQUEST');
   });
 
-  test('OPTIONS request is not rejected by Content-Type guard', async () => {
-    const response = await request(app).options('/api/auth/signup');
-    expect(response.status).not.toBe(400);
+  test('OPTIONS preflight is not rejected by Content-Type guard', async () => {
+    const response = await request(app)
+      .options('/api/signup')
+      .set('Origin', ALLOWED_ORIGIN)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type');
+
+    // CORS answers preflight before the guard and the rate limiter run.
+    expect(response.status).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe(
+      ALLOWED_ORIGIN
+    );
   });
 
   test('malformed JSON with application/json returns 400 BAD_REQUEST', async () => {
-    const response = await request(app)
-      .post('/api/auth/signup')
+    const response = await postToApi('/api/signup')
       .set('Content-Type', 'application/json')
       .send('not valid json');
 
@@ -227,7 +275,8 @@ describe('PR-12 Error handling', () => {
       .set('Content-Type', 'text/plain')
       .send('email=test@test.com&password=pass');
 
-    // The guard does not run, so we get the unknown-route 404.
+    // The guard does not run — and neither does the /api Origin guard — so we
+    // get the unknown-route 404.
     expect(response.status).toBe(404);
     expect(response.body).toHaveProperty('code', 'NOT_FOUND');
     expect(response.body).toHaveProperty('message');
@@ -236,7 +285,7 @@ describe('PR-12 Error handling', () => {
   test('genuine raw HTTP chunked POST with CHUNKED (uppercase) and no Content-Type returns 400 BAD_REQUEST', async () => {
     // Verify the uppercase CHUNKED normalization fix from the middleware.
     // Use raw node:http so Supertest does not auto-assign a Content-Type.
-    // Path is /api/auth/signup so the guard applies; uppercase CHUNKED tests the normalization.
+    // Path is /api/... so the guard applies; uppercase CHUNKED tests the normalization.
     const server = await startServer();
 
     try {
@@ -245,8 +294,11 @@ describe('PR-12 Error handling', () => {
 
       const { status, raw } = await rawRequest({
         port,
-        path: '/api/auth/signup',
-        headers: { 'Transfer-Encoding': 'CHUNKED' },
+        path: '/api/signup',
+        headers: {
+          'Transfer-Encoding': 'CHUNKED',
+          Origin: ALLOWED_ORIGIN,
+        },
         body: payload,
       });
 
