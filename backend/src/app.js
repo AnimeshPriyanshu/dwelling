@@ -3,7 +3,11 @@ import cookieParser from 'cookie-parser';
 import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
 import { authRouter } from './routes/auth.js';
-import { EmailTakenError, ValidationError } from './auth/errors.js';
+import {
+  EmailTakenError,
+  InvalidCredentialsError,
+  ValidationError,
+} from './auth/errors.js';
 
 const app = express();
 
@@ -115,6 +119,13 @@ export function errorHandler(err, _request, _response, next) {
   if (err instanceof EmailTakenError) {
     return _response.status(409).json({
       code: 'EMAIL_TAKEN',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof InvalidCredentialsError) {
+    return _response.status(401).json({
+      code: 'INVALID_CREDENTIALS',
       message: err.message,
     });
   }
