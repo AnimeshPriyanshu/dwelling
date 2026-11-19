@@ -4,8 +4,9 @@ Status: **approved roadmap, in progress.** Phases 0 and 1 are complete
 (PR-02…PR-09, verified 2026-11-13). Phase 2's data model and initial migration
 (PR-15/PR-16) and the API contract (PR-11) have landed. Phase 3 is under way:
 password hashing (PR-20), the JWT/cookie helpers plus auth middleware
-(PR-21/PR-22), signup (PR-23), and login (PR-24) are implemented; logout
-(PR-25) is next. The original 84-PR record
+(PR-21/PR-22), signup (PR-23), login (PR-24), logout (PR-25), and
+`GET /api/auth/me` (PR-26) are implemented and merged; auth rate limiting,
+CORS, and security headers (PR-27) are next. The original 84-PR record
 below is preserved as written, with completion marks added. Altars and group
 conversations are scheduled as **Phase 12** (PR-85…PR-92) and are not part of the
 direct-message phases.
@@ -116,7 +117,8 @@ Adding root `lint`/`test` aliases is an open improvement, not part of any PR abo
 | Player moves while the chat drawer is open | PR-07 | ✅ Done 2026-11-13 (`UI_STATE` input blocking) |
 | `Dwelling.js` bypasses the bridge with a raw `window` event | PR-08 | ✅ Done 2026-11-13 (bridge only) |
 | Schema still supports groups and Altars | PR-15, PR-16 | ⏳ Pending — legacy tables drop at PR-16; Altars return redesigned in Phase 12 |
-| No authentication or authorization | PR-19 to PR-35 | ⏳ Pending |
+| No backend authentication | PR-19 to PR-26 | ✅ Done — password hashing, JWT/cookie helpers, auth middleware, signup, login, logout, and `GET /api/auth/me` are implemented and merged |
+| No frontend auth, authorization, or auth hardening | PR-27 to PR-35, PR-57, PR-81 | ⏳ Pending — rate limiting, CORS, security headers, frontend auth flows, and server-side authorization remain |
 | No contacts feature | PR-36 to PR-50 | ⏳ Pending |
 | No conversation or message APIs | PR-51 to PR-59 | ⏳ Pending |
 | No realtime messaging | PR-60 to PR-67 | ⏳ Pending |
