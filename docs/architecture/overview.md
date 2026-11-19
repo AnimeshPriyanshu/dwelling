@@ -23,8 +23,8 @@ exists today versus what is only planned.**
 ✅  npm-workspace monorepo        root package.json (node >=20.19.0)
 ✅  frontend/  Vite + React + Phaser 3  React shell + implemented Phaser world
           (movement, maps, dwellings, camera) and the conversation drawer
-✅  backend/   Express + Socket.IO  health, signup, login, auth helpers, error handling;
-          sockets emit server:ready only
+✅  backend/   Express + Socket.IO  health, signup, login, logout, session lookup,
+          auth helpers, error handling; sockets emit server:ready only
 ✅  database/  Prisma schema      five models, one migration, idempotent demo seed
 ✅  shared/    API_PREFIX + password hash/compare helpers
 ✅  docs/      documentation       this tree
@@ -85,10 +85,11 @@ frontend phase.
            ✓ interactions and map changes flow over the bridge
 ┌──────────────────────── Backend (runs; UI does not call it) ───┐
 │   routes/    GET /api/health · POST /api/signup               │
-│              POST /api/auth/login                              │
+│              POST /api/auth/login · POST /api/auth/logout      │
+│              GET /api/auth/me                                  │
 │   auth/      bcrypt hash/compare · JWT · cookies · validation  │
 │   config/    validateEnv → JWT_SECRET required                 │
-│   db/        PrismaClient; signup create + login lookup        │
+│   db/        PrismaClient; signup create · login + user lookup │
 │   sockets/   on connection → emit 'server:ready'               │
 │   cache/     no-ops unless REDIS_URL is set                    │
 └────────────────────────────────────────────────────────────────┘

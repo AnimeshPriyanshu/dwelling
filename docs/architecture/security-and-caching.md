@@ -3,11 +3,11 @@
 Responsibilities, rules, and what must never be committed.
 
 > **Partially implemented.** Signup and login validate their inputs and issue the
-> session cookie; password hashing, JWT, cookie helpers, and auth middleware exist.
-> Logout and `GET /api/auth/me` are absent, `requireAuth` is not mounted, and
-> Origin/Referer CSRF enforcement, authorization for future resources, rate
-> limiting, and functional caching are still not built. Sections below distinguish
-> current behaviour from intended controls.
+> session cookie; logout clears it; `GET /api/auth/me` returns the session user;
+> password hashing, JWT, cookie helpers, and auth middleware exist. `requireAuth`
+> is mounted on `GET /api/auth/me`. Origin/Referer CSRF enforcement, authorization
+> for future resources, rate limiting, and functional caching are still not built.
+> Sections below distinguish current behaviour from intended controls.
 
 ---
 
@@ -17,9 +17,10 @@ Dwelling currently exposes a small local-development API:
 
 - `GET /api/health` returns a constant and touches no data.
 - `POST /api/signup` and `POST /api/auth/login` validate input, query the
-  database, and issue the signed session cookie. No endpoint clears it.
+  database, and issue the signed session cookie; `POST /api/auth/logout` clears
+  it. `GET /api/auth/me` reads the session user.
 - `requireAuth` reads and verifies `dwelling_session` and attaches
-  `request.auth.userId`, but no route mounts it; it is only exercised in tests.
+  `request.auth.userId`; it is mounted on `GET /api/auth/me`.
 - Socket connections are unauthenticated; a connecting client is sent
   `server:ready` and nothing else.
 - CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for
@@ -36,18 +37,18 @@ though the frontend does not call them yet. The gaps below still apply. See Stag
 
 ---
 
-## Authentication (signup/login implemented; logout and me pending)
+## Authentication (signup, login, logout, and me implemented)
 
 **Decided in ADR-0022**
 ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
 `backend/src/auth/` provides `signSessionToken`/`verifySessionToken`,
 `setSessionCookie`/`clearSessionCookie`, and `requireAuth`. Signup and login issue
-the cookie; logout and `GET /api/auth/me` do not exist yet.
+the cookie; logout clears it; `GET /api/auth/me` loads the user from the token.
 
 **HTTP:** a signed JWT (`HS256`, `JWT_SECRET`) delivered in an `HttpOnly` cookie
 named `dwelling_session`. Signup and login set it; it is sent automatically on
-same-origin API requests. `requireAuth` can verify it before a user-specific
-handler, but no protected route is mounted yet.
+same-origin API requests. `requireAuth` verifies it on `GET /api/auth/me`, the
+first protected route.
 
 | Cookie attribute | Value |
 | --- | --- |
@@ -58,11 +59,10 @@ handler, but no protected route is mounted yet.
 | `Max-Age` | Seven days, matching the JWT `exp` |
 
 - **Lifetime:** seven days, fixed at issue. No refresh token, no sliding session.
-- **Logout (not implemented):** the contract is to clear the cookie and always
-  return `204`; `clearSessionCookie()` exists but no route calls it. It would
-  **not** revoke the token. An already-issued JWT — including a copied one —
-  remains valid until `exp`; a denylist, token-version check, or password-change
-  invalidation is not built in v1 and needs its own decision.
+- **Logout:** clears the cookie and always returns `204`, even without a valid
+  session. It does **not** revoke the token. An already-issued JWT — including a
+  copied one — remains valid until `exp`; a denylist, token-version check, or
+  password-change invalidation is not built in v1 and needs its own decision.
 - **Socket:** the socket connection must be authenticated **at connection time**,
   not on each event, and an unauthenticated socket must not be placed in any
   room. Reusing `dwelling_session` for the handshake is PR-60; origin checking

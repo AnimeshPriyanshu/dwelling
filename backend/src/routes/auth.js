@@ -2,7 +2,8 @@ import { Router } from 'express';
 
 import { clearSessionCookie, setSessionCookie } from '../auth/cookies.js';
 import { signSessionToken } from '../auth/jwt.js';
-import { loginUser, signupUser } from '../auth/service.js';
+import { requireAuth, sendAuthRequired } from '../auth/middleware.js';
+import { getUserById, loginUser, signupUser } from '../auth/service.js';
 import { validateLoginInput, validateSignupInput } from '../auth/validation.js';
 import { env } from '../config/env.js';
 
@@ -35,6 +36,23 @@ authRouter.post('/auth/login', async (request, response, next) => {
       response,
       signSessionToken(user.id, { secret: env.jwtSecret })
     );
+
+    response.status(200).json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// The session-bootstrap endpoint: the only way a client learns who it is.
+// A token for a deleted user is a failed session, not a server error (PR-26).
+authRouter.get('/auth/me', requireAuth, async (request, response, next) => {
+  try {
+    const user = await getUserById(request.auth.userId);
+
+    if (!user) {
+      sendAuthRequired(response);
+      return;
+    }
 
     response.status(200).json({ user });
   } catch (error) {
