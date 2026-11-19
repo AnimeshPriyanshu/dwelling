@@ -4,8 +4,9 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 
 > ## ⚠️ Most of this file is still a plan
 >
-> **Implemented endpoints:** `GET /api/health`, `POST /api/signup`, and
-> `POST /api/auth/login`. They are documented below.
+> **Implemented endpoints:** `GET /api/health`, `POST /api/signup`,
+> `POST /api/auth/login`, and `POST /api/auth/logout`. They are documented
+> below.
 >
 > Everything else in this file is a placeholder marked `Defined` or `Pending`.
 > Do not build against a pending endpoint, and do not assume a pending
@@ -280,7 +281,7 @@ logins set no cookie.
 - Unknown email and wrong password run the same password comparison and return
   the same response, so the endpoint does not disclose whether an address is
   registered. Do not add a distinct "user not found" error.
-- This does not implement logout or `GET /api/auth/me` (PR-25/PR-26).
+- This does not implement `GET /api/auth/me` (PR-26).
 
 **Verify**
 
@@ -324,7 +325,7 @@ curl -i -X POST http://localhost:3000/api/auth/logout
 
 ## Defined endpoints — not implemented
 
-The ten endpoints below are the remaining Phase 2–7 contract. They are grouped by
+The nine endpoints below are the remaining Phase 2–7 contract. They are grouped by
 the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 
 - **Auth:** session cookie required, unless the endpoint says otherwise

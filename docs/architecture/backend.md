@@ -1,13 +1,15 @@
 # Backend Architecture
 
-The intended backend boundaries. **The backend works, but does very little**, and
-no backend features are being added in the current phase.
+The intended backend boundaries and the HTTP surface that actually exists.
+
+The backend currently provides health, signup, and login; the frontend still does
+not call any of them. Contacts, conversations, messaging, logout, and
+`GET /api/auth/me` are not implemented.
 
 > **Scope reminder:** the ten-day plan is frontend-only. This document exists so
 > the boundaries are fixed before they are needed and so they are not violated
-> later — reading it is fine;
-> starting work from it is not, until the frontend milestone is Done
-> ([`../project/scope.md`](../project/scope.md)).
+> later — reading it is fine; starting work from it is not, until the frontend
+> milestone is Done ([`../project/scope.md`](../project/scope.md)).
 
 ---
 
@@ -18,9 +20,18 @@ Every backend file, verified by inspection:
 ```text
 backend/src/
 ├── server.js              ✅  http.createServer(app) + Socket.IO Server (CORS: env.clientOrigin)
-│                              registers socket handlers, connects cache, listens on env.port
-├── app.js                 ✅  express(), express.json(), GET /api/health → { status: 'ok' }
-├── config/env.js          ✅  loads root .env via dotenv; exports { port, clientOrigin }
+│                              validates required env, registers socket handlers, connects cache, listens
+├── app.js                 ✅  Express app: Content-Type guard, JSON + cookie parsing,
+│                              auth router, health, error handler, JSON 404
+├── config/env.js          ✅  loads root .env via dotenv; exports port, origins, URLs, JWT secret
+├── config/validateEnv.js  ✅  requires JWT_SECRET; validates optional TEST_DATABASE_URL
+├── routes/auth.js         ✅  POST /signup and POST /auth/login handlers
+├── auth/service.js        ✅  signupUser() and loginUser()
+├── auth/validation.js     ✅  signup and login field validation
+├── auth/errors.js         ✅  ValidationError, EmailTakenError, InvalidCredentialsError
+├── auth/jwt.js            ✅  signSessionToken / verifySessionToken
+├── auth/cookies.js        ✅  setSessionCookie / clearSessionCookie / SESSION_COOKIE_NAME
+├── auth/middleware.js     ✅  createRequireAuth / requireAuth (defined, not mounted)
 ├── cache/index.js         ✅  Redis behind connectCache/getCache/setCache/closeCache; no-ops without REDIS_URL
 ├── db/prisma.js           ✅  exports a single `new PrismaClient()`
 ├── sockets/index.js       ✅  registerSocketHandlers(io): on connection → socket.emit('server:ready')
@@ -29,16 +40,21 @@ backend/src/
 └── db/README.md, cache/README.md   ▢ boundary notes
 ```
 
-- **Scripts:** `dev` → `node --watch src/server.js`, `start` → `node src/server.js`.
-- **Package:** `"type": "module"` (ES modules), private.
+- **Scripts:** `dev` → `node --watch src/server.js`, `start` → `node src/server.js`,
+  `test` → `vitest run`.
+- **Package:** `@dwelling/backend`, private, `"type": "module"` (ES modules).
 - **Dependencies:** `express`, `socket.io`, `@prisma/client`, `dotenv`, `redis`,
-  `@dwelling/shared`.
-- **The only endpoint is `GET /api/health`.**
-- **There is no middleware for auth, validation, rate limiting, logging, or error
-  handling** — not even a 404 or error handler.
+  `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`, `@dwelling/shared`.
+  Dev-only: `vitest`, `supertest`.
+- **HTTP routes:** `GET /api/health`, `POST /api/signup`, and
+  `POST /api/auth/login`. Signup and login issue the session cookie.
+- **Implemented middleware:** Content-Type enforcement, JSON body parsing,
+  cookie parsing, centralized error handling, and a JSON 404 catch-all.
+- **Not mounted:** `requireAuth` and `helmet`; there is no rate limiter and no
+  Origin/Referer CSRF check.
 
-**Nothing in the frontend calls the backend.** `database/` has no migrations, so
-even a working Prisma query would fail against an unmigrated database.
+**Nothing in the frontend calls the backend.** The database has one applied
+migration, so the auth queries can run against a migrated database.
 
 ---
 
@@ -70,29 +86,30 @@ sockets/             business rules and         cache/index.js → Redis (option
 5. `shared/` is imported, never imported *from* — it must not depend on a
    workspace.
 
-**What this means today:** there is no domain layer yet, because there is no
-domain behavior. When the first real endpoint arrives, it introduces
-`backend/src/<domain>/` modules rather than putting logic in `app.js`.
+**What this means today:** `backend/src/auth/` is the domain/data module for
+signup and login; `routes/auth.js` parses transport input, calls it, and sets the
+cookie. New features should follow that shape rather than putting logic in
+`app.js`.
 
 ---
 
 ## HTTP API
 
-**Only one endpoint exists:**
-
 | Method | Path | Response | Source |
 | --- | --- | --- | --- |
 | `GET` | `/api/health` | `{ "status": "ok" }` | `backend/src/app.js` |
+| `POST` | `/api/signup` | `201 { user }` and session cookie | `backend/src/routes/auth.js` |
+| `POST` | `/api/auth/login` | `200 { user }` and session cookie | `backend/src/routes/auth.js` |
 
 - The `/api` prefix comes from `@dwelling/shared` (`API_PREFIX`), so both sides
-  agree on the base path.
-- The health route currently lives in `app.js`; `backend/src/routes/README.md`
-  states it stays there "while the route surface is small". Move it to
-  `routes/` when real routes arrive.
-
-**Everything else is pending.** Planned (not implemented) endpoint areas are
-listed in [`../api/README.md`](../api/README.md) and are explicitly marked as
-pending there.
+  agree on the base path. The auth router is mounted at that prefix, which is why
+  signup is `/api/signup` while login is `/api/auth/login`.
+- Signup validates `{ email, password, displayName }`; duplicate email answers
+  `409 EMAIL_TAKEN`.
+- Login validates `{ email, password }`; unknown email and wrong password both
+  answer the same `401 INVALID_CREDENTIALS`.
+- Logout and `GET /api/auth/me` do not exist. Contacts, conversations, and
+  messages are pending; the contract is in [`../api/README.md`](../api/README.md).
 
 ---
 
@@ -119,18 +136,20 @@ separation of messaging, presence, and movement is in
 | --- | --- | --- |
 | `port` | `3000` | `process.env.PORT`, coerced with `Number()` |
 | `clientOrigin` | `http://localhost:5173` | `process.env.CLIENT_ORIGIN` |
+| `nodeEnv` / `isProduction` | `development` / `false` | `process.env.NODE_ENV` |
+| `databaseUrl` | `undefined` | `process.env.DATABASE_URL` |
+| `redisUrl` | `undefined` | `process.env.REDIS_URL` |
+| `jwtSecret` | `undefined` | `process.env.JWT_SECRET` |
 
-- **Only these two values are read through the config module.**
-  `DATABASE_URL` and `REDIS_URL` are read directly by Prisma and
-  `backend/src/cache/index.js` respectively.
-- **Proposed:** as the surface grows, all environment reads should funnel through
-  `config/env.js` so configuration is inspectable in one place.
 - **Required:** `JWT_SECRET` is checked by `config/validateEnv.js` before the
   server listens; it has no default. `DATABASE_URL` and `REDIS_URL` are optional
-  until those features are used.
-- **Required:** secrets stay out of source control (NFR-011). The root `.env` is
-  gitignored; `backend/.env.example` (copied to the root) documents the shape with
-  placeholders only.
+  at boot until those features are used.
+- The demo seed is separate: it loads the root `.env.local` (for `DEMO_PASSWORD`
+  and, if present, `DATABASE_URL`); `DATABASE_URL` must also be exported in the
+  shell when it is not in that file.
+- **Required:** secrets stay out of source control (NFR-011). The root `.env` and
+  `.env.local` are gitignored; `backend/.env.example` (copied to the root)
+  documents the shape with placeholders only.
 
 See [`../development/setup.md`](../development/setup.md).
 
@@ -138,16 +157,18 @@ See [`../development/setup.md`](../development/setup.md).
 
 ## Error handling and shutdown
 
-- **Today:** none. There is no error-handling middleware, and no `SIGINT`/`SIGTERM`
-  handling to close the HTTP server, Prisma, or Redis.
-- **Proposed boundaries for later:**
-  - A single Express error-handling middleware as the last `app.use`.
-  - A 404 handler for unmatched `/api` routes.
-  - Graceful shutdown that stops accepting connections, then closes
-    `closeCache()` and `prisma.$disconnect()`.
-  - Domain modules throw typed/plain errors; transport decides the status code.
-- **Why it matters:** `closeCache()` already exists and is **never called**, which
-  is a real (if harmless) gap — nothing shuts it down.
+- **Implemented:** the last `app.use` is a centralized error handler. It maps
+  malformed JSON to `400 BAD_REQUEST`, `ValidationError` to `400
+  VALIDATION_FAILED`, `EmailTakenError` to `409 EMAIL_TAKEN`, and
+  `InvalidCredentialsError` to `401 INVALID_CREDENTIALS`. Anything else becomes a
+  sanitized `500 INTERNAL`; the full error is logged server-side only outside
+  production.
+- **Implemented:** unmatched routes return JSON `404 NOT_FOUND`.
+- **Not implemented:** `SIGINT`/`SIGTERM` handling to stop the server and close
+  Prisma/Redis. `closeCache()` exists but is never called, which is a real (if
+  harmless) gap.
+- **Domain errors:** auth service modules throw typed errors; the transport layer
+  chooses the status code.
 
 ---
 
@@ -167,5 +188,5 @@ See [`../development/setup.md`](../development/setup.md).
 - [`database.md`](database.md) — schema-level concepts
 - [`realtime.md`](realtime.md) — planned realtime separation
 - [`security-and-caching.md`](security-and-caching.md) — validation, auth, caching
-- [`../api/README.md`](../api/README.md) — endpoint documentation (pending)
+- [`../api/README.md`](../api/README.md) — implemented and defined endpoints
 - [`../architecture.md`](../architecture.md) — original module-boundary note

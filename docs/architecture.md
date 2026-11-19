@@ -9,8 +9,8 @@ backend cache module and remains optional for local development.
 
 - `frontend/`: Vite browser app, Phaser world experience, and chat interface.
 - `backend/`: Express HTTP API and Socket.IO event transport.
-- `database/`: Prisma schema and generated migration history.
-- `shared/`: environment-independent JavaScript constants and contracts.
+- `database/`: Prisma schema, migration history, and explicit demo seed.
+- `shared/`: environment-independent constants, contracts, and password helpers.
 - `tests/`: cross-workspace tests as features are implemented.
 - `docs/`: architecture and project decisions.
 - `scripts/`: repeatable maintenance and development scripts.

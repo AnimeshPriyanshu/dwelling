@@ -174,7 +174,7 @@ The project combines a familiar communication system with a spatial 2D environme
 ```text
 frontend/   Vite, React 18, and Phaser 3 (plain JavaScript/JSX — no TypeScript)
 backend/    Node.js, Express, Socket.IO, and Prisma
-database/   Prisma schema for PostgreSQL (no migrations generated yet)
+database/   Prisma schema, initial migration, and demo seed for PostgreSQL
 shared/     Small JavaScript contracts shared by workspaces
 tests/      Cross-workspace tests (placeholder; workspace tests live with their code)
 docs/       Project documentation, planning, and architecture notes
@@ -201,11 +201,15 @@ work, and Redis is optional.
    `http://localhost:3000` (`GET /api/health`).
 
 Database work is optional: `npm run db:generate` builds the Prisma client, and
-`npm run db:migrate` needs a reachable PostgreSQL instance. **No migrations have
-been generated yet.** Leave `REDIS_URL` unset to run without Redis.
+`npm run db:migrate` applies the committed initial migration to a reachable
+PostgreSQL database. Demo data is explicit and idempotent:
+`npm run seed --workspace=@dwelling/database`, with `DEMO_PASSWORD` in the
+gitignored root `.env.local` and `DATABASE_URL` available in the environment.
+Leave `REDIS_URL` unset to run without Redis.
 
 Checks: `npm test --workspace=@dwelling/frontend`,
-`npm test --workspace=@dwelling/backend`, and `npm run build`.
+`npm test --workspace=@dwelling/backend`,
+`npm test --workspace=@dwelling/shared`, and `npm run build`.
 
 ## Documentation
 

@@ -41,9 +41,7 @@ describe('POST /api/auth/logout', () => {
     const response = await request(app).post('/api/auth/logout');
 
     expect(response.headers['set-cookie']).toHaveLength(1);
-    expect(clearedCookieHeader(response)).toContain(
-      `${SESSION_COOKIE_NAME}=;`
-    );
+    expect(clearedCookieHeader(response)).toContain(`${SESSION_COOKIE_NAME}=;`);
   });
 
   it('accepts a bodyless POST without a Content-Type', async () => {

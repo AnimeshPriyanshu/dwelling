@@ -2,12 +2,11 @@
 
 The conceptual data model for Dwelling.
 
-> **Status: approved; schema and initial migration committed.** The model below was
-> approved on 2026-11-13, including **Option A** for Phase 12. The five-model schema
-> is in `database/prisma/schema.prisma` with one migration,
-> `20261113220000_initial_migration`. No application code reads or writes it yet —
-> there is no query in the repository — so the schema can still change as later PRs
-> land.
+> **Status: approved; schema, initial migration, auth queries, and demo seed are
+> committed.** The model below was approved on 2026-11-13, including **Option A**
+> for Phase 12. The five-model schema is in `database/prisma/schema.prisma` with
+> one migration, `20261113220000_initial_migration`. Signup inserts users, login
+> looks them up, and an explicit idempotent seed populates demo data.
 >
 > Sections below that refer to "the sketch" and to a pending schema revision are the
 > pre-migration design record: the revision they describe is the committed
@@ -19,20 +18,26 @@ The conceptual data model for Dwelling.
 
 ```text
 database/
-├── package.json              ✅  scripts: generate (prisma generate), migrate (prisma migrate dev)
+├── package.json              ✅  scripts: generate, migrate, seed
+├── seed.js                   ✅  idempotent demo dataset with safety guards
 ├── prisma/schema.prisma      ✅  generator + datasource(PostgreSQL) + 5 models
 └── prisma/migrations/        ✅  20261113220000_initial_migration
 ```
 
 - **Provider:** PostgreSQL, URL from the `DATABASE_URL` environment variable.
 - **Migrations:** one — `20261113220000_initial_migration` creates the five-model
-  schema. `prisma migrate status` reports the local database up to date; there is
-  no seed script.
-- **Generated client:** `backend/src/db/prisma.js` instantiates `PrismaClient`,
-  but **no query is executed anywhere** in the repository yet.
+  schema. Apply it with `npm run db:migrate`.
+- **Generated client:** `backend/src/db/prisma.js` instantiates `PrismaClient`;
+  run `npm run db:generate` before importing it.
+- **Queries:** `backend/src/auth/service.js` performs `user.create` (signup) and
+  `user.findUnique` (login).
+- **Seed:** `database/seed.js` is explicit, transactional, and idempotent. It
+  refuses `NODE_ENV=production`, requires `DEMO_PASSWORD` from the root
+  `.env.local`, verifies existing rows before writing, and is run with
+  `npm run seed --workspace=@dwelling/database`.
 
-**Consequence:** the data layer is ready for the auth and messaging routes; those
-routes are still to be written.
+**Consequence:** the data layer supports signup and login; contacts, conversations,
+and messages still have no routes.
 
 ---
 
@@ -49,8 +54,10 @@ The committed schema defines five models:
 | `Message` | `id`, `content`, `createdAt`, `conversationId`, `senderId` | A single message |
 
 This is the target five-model set (ADR-0020, ADR-0021). The legacy
-`ConversationMember`, `Altar` and `AltarMembership` tables were dropped at
-PR-15/PR-16; Phase 12 reintroduces Altar support in a redesigned shape.
+`ConversationMember`, `Altar` and `AltarMembership` models were removed from the
+schema at PR-15/PR-16; the committed initial migration only creates the five
+models and contains no `DROP` statements. Phase 12 reintroduces Altar support in
+a redesigned shape.
 
 Notable design points already expressed in the schema:
 
@@ -133,9 +140,9 @@ edit/delete semantics, and read receipts. None are designed.
 
 **Out of scope** (ADR-0020). An Altar is scenery in the world — a visible landmark
 positioned by map data — with no interaction, no membership and no conversation.
-The legacy `Altar` and `AltarMembership` tables were removed at PR-15/PR-16 and
-are not part of the current data model; Phase 12 adds redesigned Altar tables
-with their own migration.
+The legacy `Altar` and `AltarMembership` models were removed from the schema at
+PR-15/PR-16 and are not part of the current data model; Phase 12 adds redesigned
+Altar tables with their own migration.
 
 ### Map
 
@@ -169,15 +176,16 @@ Conversation ─1:N─▶ Message
 
 | Model | Fields | Represents |
 | --- | --- | --- |
-| `User` | `id`, `displayName`, `createdAt` (+ `email`, `passwordHash` from Phase 3) | A person using Dwelling |
+| `User` | `id`, `email` (unique), `passwordHash`, `displayName`, `createdAt` | A person using Dwelling |
 | `Dwelling` | `id`, `title` (default `"Home"`), `ownerId` (unique) | A user's place in the world |
 | `Contact` | `userId`, `contactId`, `createdAt` | One entry in one user's contact list |
 | `Conversation` | `id`, `createdAt`, `userOneId`, `userTwoId` | A one-to-one conversation |
 | `Message` | `id`, `content`, `createdAt`, `conversationId`, `senderId` | A single message |
 
-Legacy `ConversationMember`, `Altar`, and `AltarMembership` are dropped by the
-first migration (PR-15/PR-16). Altars are **deferred, not removed from the
-product**: Phase 12 reintroduces them in a redesigned shape
+Legacy `ConversationMember`, `Altar`, and `AltarMembership` were removed from the
+schema at PR-15/PR-16; the initial migration does not drop them because they
+never appeared in a committed migration. Altars are **deferred, not removed
+from the product**: Phase 12 reintroduces them in a redesigned shape
 ([`plan.md`](../planning/plan.md), "Phase 12").
 
 ### `Contact` — two mirrored rows
@@ -284,10 +292,10 @@ the Altar's thread. Two shapes were considered; **Option A is approved (ADR-0021
   realtime delivery, and conversation-list code.
 
 **Implications of the change from today:** the legacy `Altar`/`AltarMembership`
-were dropped at PR-15/PR-16 and are recreated here with a conversation link.
+were removed at PR-15/PR-16 and are recreated here with a conversation link.
 Nothing was migrated: the initial migration creates only the five-model schema
-(`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) and no legacy rows
-existed. `ConversationMember` is reintroduced for groups only; direct messages
+(`User`, `Dwelling`, `Contact`, `Conversation`, `Message`) with no `DROP`
+statements, and no legacy rows existed. `ConversationMember` is reintroduced for groups only; direct messages
 never use it. `Altar` stores identity and membership only — world position stays
 in frontend map data.
 
@@ -379,9 +387,10 @@ direct row ever loses its pair.
 
 ---
 
-## Proposed schema for Phases 0–11 (not written to `schema.prisma`)
+## Committed schema reference
 
-Approved shape. `email` and `passwordHash` stay required: the deletion policy will
+This mirrors the committed `schema.prisma`; that file is authoritative. `email`
+and `passwordHash` stay required: the deletion policy will
 overwrite them with anonymised values rather than null them, so uniqueness and
 NOT NULL remain simple. `deletedAt` is deliberately **not** in this proposal — it
 arrives with the retention implementation, after the UI proposal is approved.
@@ -428,9 +437,6 @@ model Contact {
   contact User @relation("ContactTarget", fields: [contactId], references: [id], onDelete: Cascade)
 
   @@id([userId, contactId])
-  @@index([contactId])
-
-  @@unique([userId, contactId])
   @@index([contactId])
 }
 
@@ -481,24 +487,24 @@ for the objects above, review it, then apply. Migrations are the source of truth
 should query `pg_constraint` / `pg_indexes` so a hand-written guarantee cannot
 silently disappear.
 
-## PR-16 table operations (approved, not executed)
+## Initial migration operations (applied)
 
 | Operation | Objects |
 | --- | --- |
 | **CREATE** | `User`, `Dwelling`, `Contact`, `Conversation`, `Message` (with the PKs, unique constraints, indexes, and FKs from the schema above) |
-| **DROP** | `ConversationMember`, `Altar`, `AltarMembership` |
-| **ALTER** | None. There is no migration history, so the first migration creates the five tables in their final shape |
+| **DROP** | None. The migration has no `DROP` statements; the legacy models were removed from `schema.prisma` before it was committed, so there was nothing to drop |
+| **ALTER** | None. The initial migration creates the five tables in their final shape |
 | Prisma metadata | `_prisma_migrations` is created by `prisma migrate dev` |
 | Not in PR-16 | Altar tables (Phase 12), `deletedAt` (retention implementation), any seed data |
 
 PR-16 adds these hand-written constraints after the generated `CREATE TABLE`s:
 `Contact_no_self`, `Conversation_canonical_pair`.
 
-**Destructive-drop guard:** before the three `DROP`s, count rows in the legacy
-tables. If any contain data, stop and ask the owner; do not reset the database and
-do not drop data. If a local database already has the seven-model sketch (for
-example via `prisma db push`), `migrate dev` will require a baseline or a reset —
-that decision needs explicit owner approval and a dump first.
+**Legacy-schema note:** the destructive-drop guard originally specified here does
+not apply to the committed migration, which drops nothing. If a local database
+was created from the earlier seven-model sketch (for example via `prisma db
+push`), `migrate dev` will require a baseline or a reset — that decision needs
+explicit owner approval and a dump first.
 
 ---
 
@@ -550,8 +556,8 @@ that decision needs explicit owner approval and a dump first.
 ## Approved Demo Dataset
 
 The following dataset is validated by the Prisma schema, ADR-0021, and the
-approved Contact model (`@@id([userId, contactId])` composite primary key). It
-is deterministic, idempotent, and safe for seed script implementation (PR-17).
+approved Contact model (`@@id([userId, contactId])` composite primary key). It is
+deterministic and idempotent; `database/seed.js` implements it.
 
 ### Entity counts
 - **7 users**, 7 dwellings, **12 Contact rows** (6 mutual Alex-resident
@@ -567,6 +573,11 @@ is deterministic, idempotent, and safe for seed script implementation (PR-17).
 | Lyra | Verdant Rest |
 | Sable | Sunhollow Cottage |
 | Tomas | Tidewood Lodge |
+
+`Dwelling.title` in the seed is the short title — `Home`, `Cottage`, `Haven`,
+`Hearth`, `Rest`, `Cottage`, `Lodge`. The names above are the display names from
+the frontend map data (`Redwood Cottage`, `Cobalt Haven`, …); they are not stored
+in `Dwelling.title`.
 
 ### Deterministic ID lists (approved, exact)
 - **Users**: `demo-alex`, `demo-elowen`, `demo-rowan`, `demo-kael`, `demo-lyra`, `demo-sable`, `demo-tomas`
@@ -628,13 +639,11 @@ is deterministic, idempotent, and safe for seed script implementation (PR-17).
 - No arbitrary or variable timestamps; all 18 timestamps are deterministic.
 
 ### Password and authentication
-- Shared demo password read from `DEMO_PASSWORD` in local `.env.local`
-  (placeholder `DEMO_PASSWORD=placeholder-only-never-commit` in
-  `.env.example`).
-- Dependency order: **PR-19** (install bcryptjs) → **PR-20** (shared `hash()`
-  and `compare()` implementation) → **PR-17** (seed script using shared
-  implementation). PR-17 depends on both PR-19 and PR-20; bcryptjs alone is
-  insufficient.
+- Shared demo password read from `DEMO_PASSWORD` in the gitignored root
+  `.env.local`. It is deliberately not part of the tracked `.env.example`.
+  `DATABASE_URL` must also be available in the environment when seeding.
+- The seed imports `hash()`/`compare()` from `@dwelling/shared`; bcryptjs alone
+  is insufficient.
 - For an existing seeded user's password: use `compare(DEMO_PASSWORD, existing.passwordHash)` — never compare raw bcrypt hash strings because salts differ. If verification fails, abort; never overwrite the existing hash.
 - Seed execution must be explicit CLI execution, never application startup.
 - Abort when `NODE_ENV=production`. Do not expose the demo password in logs or errors.
