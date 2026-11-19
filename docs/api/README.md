@@ -2,12 +2,14 @@
 
 Documentation for Dwelling's HTTP endpoints and realtime events.
 
-> ## ⚠️ Almost nothing here exists yet
+> ## ⚠️ Most of this file is still a plan
 >
-> **One endpoint is implemented:** `GET /api/health`. It is documented below.
+> **Implemented endpoints:** `GET /api/health`, `POST /api/signup`, and
+> `POST /api/auth/login`. They are documented below.
 >
-> Everything else in this file is a **placeholder** marked `Pending`. Do not
-> build against a pending endpoint, and do not assume a pending endpoint's shape.
+> Everything else in this file is a placeholder marked `Defined` or `Pending`.
+> Do not build against a pending endpoint, and do not assume a pending
+> endpoint's shape.
 >
 > The permitted sources of truth, in order: the code, then this file. If they
 > disagree, the code wins — and this file is wrong and must be fixed.
@@ -53,7 +55,7 @@ documented how to verify it.
 
 ## Authentication and sessions
 
-Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22); no route issues or clears the cookie yet, so this remains the contract those routes must satisfy.
+Decided in **ADR-0022** ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)). The JWT, cookie and middleware helpers are merged (PR-21, PR-22). Signup (PR-23) and login (PR-24) issue the cookie; logout and `GET /api/auth/me` do not exist yet.
 
 ### Cookie
 
@@ -150,11 +152,149 @@ GET /api/health HTTP/1.1
 curl -i http://localhost:3000/api/health
 ```
 
+### `POST /api/signup` ✅ Implemented
+
+Create an account and start a session.
+
+> **Path note:** the PR-11 contract calls this endpoint `/api/auth/signup`. The
+> implemented route is `/api/signup` (`backend/src/routes/auth.js`), and the
+> existing signup tests call that path. It is documented here as implemented so
+> the code and this file agree; changing the path is a separate decision.
+
+**Request**
+
+```http
+POST /api/signup HTTP/1.1
+Content-Type: application/json
+
+{ "email": "ada@example.com", "password": "correct horse battery", "displayName": "Ada" }
+```
+
+**Response — `201 Created`**
+
+```json
+{
+  "user": {
+    "id": "clx0user1",
+    "email": "ada@example.com",
+    "displayName": "Ada",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+Also sets `Set-Cookie: dwelling_session=…` with the attributes above.
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `VALIDATION_FAILED` | Missing, malformed, unknown, or out-of-range fields |
+| `409` | `EMAIL_TAKEN` | The normalized email already exists |
+| `500` | `INTERNAL` | Unexpected failure; no details are returned |
+
+**Notes**
+
+- Email is trimmed and lowercased before storage and lookup.
+- Password must be at least 8 characters and at most 72 UTF-8 bytes.
+- Signing up logs the user in; there is no separate verification step.
+- No password, password hash, or JWT appears in the response body.
+
+**Verify**
+
+```bash
+curl -i -X POST http://localhost:3000/api/signup \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"correct horse battery","displayName":"Ada"}'
+```
+
+### `POST /api/auth/login` ✅ Implemented
+
+Exchange an email and password for a session cookie.
+
+**Request**
+
+```http
+POST /api/auth/login HTTP/1.1
+Content-Type: application/json
+
+{ "email": "ada@example.com", "password": "correct horse battery" }
+```
+
+- **Auth:** none.
+- **Body:** `{ "email": string, "password": string }`. Only these fields are
+  accepted; `email` is trimmed and lowercased. The password is **not** trimmed.
+- **Success — `200 OK`:** `{ "user": User }` and
+  `Set-Cookie: dwelling_session=…`.
+
+```json
+{
+  "user": {
+    "id": "clx0user1",
+    "email": "ada@example.com",
+    "displayName": "Ada",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `VALIDATION_FAILED` | Missing, malformed, non-string, empty, whitespace-only, unknown, or oversized fields |
+| `401` | `INVALID_CREDENTIALS` | Unknown email **or** incorrect password — identical body for both |
+| `500` | `INTERNAL` | Unexpected failure; no details are returned |
+
+Both failed-credential cases return exactly:
+
+```json
+{ "code": "INVALID_CREDENTIALS", "message": "Invalid email or password." }
+```
+
+**Cookie behavior**
+
+On success the response sets the ADR-0022 cookie:
+
+| Attribute | Value |
+| --- | --- |
+| Name | `dwelling_session` |
+| Value | Signed JWT (`HS256`, `JWT_SECRET`) |
+| `HttpOnly` | Yes |
+| `SameSite` | `Lax` |
+| `Secure` | Only when `NODE_ENV=production` |
+| `Path` | `/` |
+| `Max-Age` | `604800` (7 days), matching `exp` |
+
+A successful login replaces any existing `dwelling_session` cookie. Failed
+logins set no cookie.
+
+**Notes**
+
+- The response contains only `id`, `email`, `displayName`, and `createdAt`. It
+  never contains the password, password hash, or JWT.
+- The token claims are exactly `sub`, `iat`, and `exp`; the lifetime is seven
+  days with no refresh or sliding expiry.
+- Login does not apply signup's minimum password length. A short or otherwise
+  wrong password is a credential mismatch (`401`), not a `400`.
+- Unknown email and wrong password run the same password comparison and return
+  the same response, so the endpoint does not disclose whether an address is
+  registered. Do not add a distinct "user not found" error.
+- This does not implement logout or `GET /api/auth/me` (PR-25/PR-26).
+
+**Verify**
+
+```bash
+curl -i -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"correct horse battery"}'
+```
+
 ---
 
 ## Defined endpoints — not implemented
 
-The twelve endpoints below are the agreed Phase 2–7 contract. They are grouped by
+The ten endpoints below are the remaining Phase 2–7 contract. They are grouped by
 the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 
 - **Auth:** session cookie required, unless the endpoint says otherwise
@@ -166,30 +306,6 @@ the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 ### Authentication (PR-19 – PR-29)
 
 All auth endpoints use session cookie authentication.
-
-#### `POST /api/auth/signup` ▢ Defined
-
-Create an account and start a session.
-
-- **Auth:** none.
-- **Body:** `{ "email": string, "password": string, "displayName": string }`
-- **Success — `201 Created`:** `{ "user": User }` and `Set-Cookie: dwelling_session=…`
-- **Errors:** `400 VALIDATION_FAILED`, `409 EMAIL_TAKEN`
-- **Notes:** signing up logs the user in. Email uniqueness, normalization, and
-  password rules are validation mechanics and belong to PR-12/PR-23; this
-  contract fixes only the field names. `displayName` uniqueness is **OQ-1**.
-
-#### `POST /api/auth/login` ▢ Defined
-
-Exchange credentials for a session cookie.
-
-- **Auth:** none.
-- **Body:** `{ "email": string, "password": string }`
-- **Success — `200 OK`:** `{ "user": User }` and `Set-Cookie: dwelling_session=…`
-- **Errors:** `400 VALIDATION_FAILED`, `401 INVALID_CREDENTIALS`
-- **Notes:** unknown email and wrong password return the **same** `401` body.
-  Login does not reveal whether an address is registered. A successful login
-  replaces any existing cookie.
 
 #### `POST /api/auth/logout` ▢ Defined
 
@@ -219,9 +335,7 @@ Return the authenticated user. The canonical replacement for the old
   loads the user; a token for a deleted user is `401`, not `500`. Used by PR-31.
 
 **User** = `{ id, email, displayName, createdAt }`. The email is returned only to
-the user themselves; no other endpoint exposes it. `email` is part of the target
-schema and arrives with PR-15 — the current Prisma sketch has no email column, so
-nothing can be implemented against this shape yet.
+the user themselves; no other endpoint exposes it.
 
 ### Contacts (PR-36 – PR-42)
 

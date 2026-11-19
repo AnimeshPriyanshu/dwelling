@@ -12,3 +12,14 @@ export class EmailTakenError extends Error {
     this.name = 'EmailTakenError';
   }
 }
+
+/**
+ * One error for every failed login. Unknown email and wrong password must be
+ * indistinguishable to the client (PR-11, ADR-0022).
+ */
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super('Invalid email or password.');
+    this.name = 'InvalidCredentialsError';
+  }
+}

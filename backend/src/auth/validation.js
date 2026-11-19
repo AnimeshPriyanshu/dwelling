@@ -1,6 +1,7 @@
 import { ValidationError } from './errors.js';
 
-const ALLOWED_FIELDS = ['email', 'password', 'displayName'];
+const SIGNUP_ALLOWED_FIELDS = ['email', 'password', 'displayName'];
+const LOGIN_ALLOWED_FIELDS = ['email', 'password'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+[.][^\s@]+$/;
 const MAXIMUM_EMAIL_LENGTH = 254;
 const MINIMUM_PASSWORD_LENGTH = 8;
@@ -8,6 +9,20 @@ const MINIMUM_PASSWORD_LENGTH = 8;
 // truncated. Enforce the byte limit before hashing instead.
 export const MAXIMUM_PASSWORD_BYTES = 72;
 const MAXIMUM_DISPLAY_NAME_LENGTH = 50;
+
+function validateLoginPassword(value, details) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    details.password = 'is required';
+    return undefined;
+  }
+
+  if (new TextEncoder().encode(value).length > MAXIMUM_PASSWORD_BYTES) {
+    details.password = `must be at most ${MAXIMUM_PASSWORD_BYTES} UTF-8 bytes`;
+    return undefined;
+  }
+
+  return value;
+}
 
 export function validateSignupInput(body) {
   const details = {};
@@ -17,7 +32,7 @@ export function validateSignupInput(body) {
   }
 
   for (const field of Object.keys(body)) {
-    if (!ALLOWED_FIELDS.includes(field)) {
+    if (!SIGNUP_ALLOWED_FIELDS.includes(field)) {
       details[field] = 'is not an allowed field';
     }
   }
@@ -31,6 +46,41 @@ export function validateSignupInput(body) {
   }
 
   return { email, password, displayName };
+}
+
+/**
+ * Validates a login body using the same conventions as signup: an object with
+ * only known fields, a normalized email, and a non-empty password string.
+ *
+ * Login does not apply signup's minimum length rule: a credential attempt is
+ * checked against the stored hash, and only a genuine mismatch should produce
+ * the generic 401. The 72-byte cap is still enforced because bcrypt ignores
+ * input beyond it.
+ *
+ * @param {unknown} body
+ * @returns {{ email: string, password: string }}
+ */
+export function validateLoginInput(body) {
+  const details = {};
+
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    throw new ValidationError({ body: 'must be a JSON object' });
+  }
+
+  for (const field of Object.keys(body)) {
+    if (!LOGIN_ALLOWED_FIELDS.includes(field)) {
+      details[field] = 'is not an allowed field';
+    }
+  }
+
+  const email = normalizeEmail(body.email, details);
+  const password = validateLoginPassword(body.password, details);
+
+  if (Object.keys(details).length > 0) {
+    throw new ValidationError(details);
+  }
+
+  return { email, password };
 }
 
 function normalizeEmail(value, details) {
