@@ -32,15 +32,17 @@ database/
 - **Queries:** `backend/src/auth/service.js` performs `user.create` (signup) and
   `user.findUnique` (login); `backend/src/contacts/service.js` reads and writes
   the mirrored contact rows; `backend/src/conversations/service.js` resolves the
-  canonical conversation pair (PR-51).
+  canonical conversation pair (PR-51); `backend/src/messages/service.js` reads
+  one keyset page of a conversation's messages, newest first (PR-55).
 - **Seed:** `database/seed.js` is explicit, transactional, and idempotent. It
   refuses `NODE_ENV=production`, requires `DEMO_PASSWORD` from the root
   `.env.local`, verifies existing rows before writing, and is run with
   `npm run seed --workspace=@dwelling/database`.
 
-**Consequence:** the data layer supports signup, login, mutual contacts, and
-canonical conversation lookup. Only `GET /api/contacts` is routed; the remaining
-contact routes and all conversation and message routes still do not exist.
+**Consequence:** the data layer supports signup, login, mutual contacts,
+canonical conversation lookup, and paginated message reads. Only
+`GET /api/contacts` is routed; the remaining contact routes and all conversation
+and message routes still do not exist.
 
 ---
 
