@@ -3,9 +3,9 @@
 The intended backend boundaries and the HTTP surface that actually exists.
 
 The backend currently provides health, signup, login, logout, session lookup
-(`GET /api/auth/me`), and contact listing (`GET /api/contacts`). Contacts and
-canonical conversation lookup exist as services; conversation and message routes
-are not implemented.
+(`GET /api/auth/me`), and contact listing (`GET /api/contacts`). Contacts,
+canonical conversation lookup, and paginated message history exist as services;
+conversation and message routes are not implemented.
 
 > **Scope reminder:** the ten-day plan is frontend-only. This document exists so
 > the boundaries are fixed before they are needed and so they are not violated
@@ -40,6 +40,9 @@ backend/src/
 ├── contacts/errors.js     ✅  SelfContactError, ContactUserNotFoundError
 ├── conversations/service.js ✅ canonicalPair(), getOrCreateConversation()
 ├── conversations/errors.js ✅ SelfConversationError, ConversationNotContactsError, ConversationUserNotFoundError
+├── messages/service.js    ✅  listMessages() — participant-checked, newest-first keyset pages
+├── messages/cursor.js     ✅  encodeMessageCursor(), decodeMessageCursor() — opaque base64url token
+├── messages/errors.js     ✅  InvalidMessageLimitError, InvalidMessageCursorError, MessageConversationNotFoundError
 ├── cache/index.js         ✅  Redis behind connectCache/getCache/setCache/closeCache; no-ops without REDIS_URL
 ├── db/prisma.js           ✅  exports a single `new PrismaClient()`
 ├── sockets/index.js       ✅  registerSocketHandlers(io): on connection → socket.emit('server:ready')
@@ -133,8 +136,9 @@ putting logic in `app.js`.
 - Logout clears the cookie and always answers `204`, even without a valid session.
 - `GET /api/auth/me` loads the session user from the token `sub` and returns only
   public fields; a token for a deleted user answers `401 AUTH_REQUIRED`, not `500`.
-  Contacts, conversations, and messages are pending; the contract is in
-  [`../api/README.md`](../api/README.md).
+  Contact, conversation, and message **routes** are pending; the contract is in
+  [`../api/README.md`](../api/README.md). The message-history service already
+  enforces participation and pagination for that endpoint.
 
 ---
 

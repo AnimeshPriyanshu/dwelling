@@ -846,6 +846,73 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-20 — Phase 7, PR-55: paginated message queries
+
+**Status:** complete locally (not committed)
+**Focus task(s):** PR-55
+
+### Completed
+- Added `backend/src/messages/service.js`. `listMessages(callerId,
+  conversationId, { cursor, limit })` returns one newest-first page as
+  `{ messages: [{ id, conversationId, senderId, body, createdAt }], nextCursor }`,
+  mapping the Prisma `content` column to the wire field `body`.
+- Ordering is `createdAt DESC, id DESC`; the page is the `limit` messages strictly
+  older than the cursor, expressed as `createdAt < cursor.createdAt OR
+  (createdAt = cursor.createdAt AND id < cursor.id)` because Prisma has no
+  row-value comparison. One extra row is read to decide `nextCursor`, so no count
+  query is needed and `nextCursor` is `null` exactly on the last page.
+- Added `backend/src/messages/cursor.js`: `encodeMessageCursor()` /
+  `decodeMessageCursor()` for an opaque `base64url(JSON { createdAt, id })` token.
+  Decoding rejects a wrong type, a non-base64url alphabet, an over-long token,
+  non-JSON, missing fields, an impossible date, and a non-canonical timestamp —
+  all as one `InvalidMessageCursorError`, so a malformed cursor never silently
+  restarts from the top.
+- Added `backend/src/messages/errors.js`: `InvalidMessageLimitError` →
+  `400 INVALID_LIMIT`, `InvalidMessageCursorError` → `400 INVALID_CURSOR`,
+  `MessageConversationNotFoundError` → `404 CONVERSATION_NOT_FOUND`.
+- Participation is enforced in the service with one conversation read: a missing
+  conversation and a non-participant produce the identical not-found error. The
+  check reads only the conversation pair, so a conversation stays readable by its
+  participants after a contact is removed — OQ-4 remains open and untouched.
+- `limit` defaults to 50 and accepts only integers 1–100. A larger value is
+  rejected, never clamped; an already-parsed number is expected, because parsing
+  query strings is the route's job in PR-57.
+- Added `backend/tests/messages/cursor.test.js` (22 tests) and
+  `backend/tests/messages/service.test.js` (28 tests) against an in-memory Prisma
+  stand-in that applies the cursor predicate, multi-key ordering, and `take`;
+  plus `backend/tests/messages/service.integration.test.js` (3 tests) for the
+  real-PostgreSQL path, including paging five messages two at a time and tied
+  timestamps across a page boundary.
+- Synced `docs/architecture/backend.md`, `docs/architecture/database.md`, and
+  this plan's intro, baseline row, and Phase 7 status.
+- No HTTP route, Prisma schema, migration, or dependency changed; the message
+  endpoints are PR-56 onward.
+
+### Problems encountered
+- The PostgreSQL integration suite is skipped locally because `TEST_DATABASE_URL`
+  is not set, so its paging assertions have not run against a real database here.
+- The committed index is `(conversationId, createdAt)`; the contract's read
+  pattern also sorts by `id` as a tie-breaker. The query is correct either way,
+  but the index does not cover the second key, and changing it is a schema and
+  migration concern (PR-16), not PR-55.
+
+### Decisions made
+- Keyset pagination only; no offset or page-number parameters, so messages
+  arriving at the top of a conversation cannot shift a page being read.
+- Cursors are not bound to a conversation id: they carry exactly the two sort
+  keys, and the participant check already scopes every read.
+- Limit validation lives in the service, query-string parsing in the route PR.
+
+### Next day's priority
+1. PR-56 — `POST /api/conversations/:id/messages` (send).
+2. PR-57 — conversation routes, participant authorization, and message
+   validation, exposing this service.
+3. Run the PostgreSQL message suite with `TEST_DATABASE_URL` set.
+
+**Tasks moved to Done:** PR-55
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:

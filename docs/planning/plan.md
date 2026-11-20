@@ -10,8 +10,8 @@ exists in the tree, but the PR's completion has not been confirmed, so it is not
 counted as delivered. PR-27 adds auth rate limiting, CORS, security headers, and
 the Origin/Referer CSRF check. Phase 5's contact service and `GET /api/contacts`
 (PR-36/PR-37) and Phase 7's canonical one-to-one conversation service (PR-51)
-have landed; their remaining routes are pending, and frontend authentication
-(PR-30…) is still to come. The original 84-PR record below is preserved as
+and paginated message-history service (PR-55) have landed; their remaining
+routes are pending, and frontend authentication (PR-30…) is still to come. The original 84-PR record below is preserved as
 written, with completion marks added. Altars and group conversations are
 scheduled as **Phase 12** (PR-85…PR-92) and are not part of the direct-message
 phases.
@@ -125,7 +125,7 @@ Adding root `lint`/`test` aliases is an open improvement, not part of any PR abo
 | No backend authentication | PR-19 to PR-26 | 🟡 Partial — password hashing, JWT/cookie helpers, auth middleware, signup, login, and `GET /api/auth/me` are implemented and merged; logout (PR-25) remains pending/unverified |
 | No frontend auth, authorization, or auth hardening | PR-27 to PR-35, PR-57, PR-81 | 🟡 Partial — PR-27 adds rate limiting, CORS, security headers, and the Origin/Referer check; frontend auth flows and server-side authorization remain |
 | No contacts feature | PR-36 to PR-50 | ⏳ Pending |
-| No conversation or message APIs | PR-51 to PR-59 | 🟡 Partial — PR-51 adds the canonical conversation service (`backend/src/conversations/`); conversation and message routes are PR-52 to PR-59 |
+| No conversation or message APIs | PR-51 to PR-59 | 🟡 Partial — PR-51 adds the canonical conversation service (`backend/src/conversations/`) and PR-55 adds paginated message history (`backend/src/messages/`); conversation and message routes are PR-52 to PR-59 |
 | No realtime messaging | PR-60 to PR-67 | ⏳ Pending |
 | Chat uses hardcoded `RESIDENT_MESSAGES` | PR-68 to PR-80 | ⏳ Pending |
 | No lint, test, or CI tooling | PR-02 to PR-05 | ✅ Done 2026-11-13 (`eslint`, `prettier`, `vitest`, CI) |
@@ -237,8 +237,9 @@ Adding root `lint`/`test` aliases is an open improvement, not part of any PR abo
 ## Phase 7: Messaging API
 
 **Status:** in progress. PR-51 (canonical one-to-one conversation service) is
-implemented in `backend/src/conversations/` with unit tests and a PostgreSQL
-integration suite; there is no conversation or message HTTP route yet — those
+implemented in `backend/src/conversations/`, and PR-55 (paginated message
+queries) in `backend/src/messages/`, both with unit tests and a PostgreSQL
+integration suite. There is no conversation or message HTTP route yet — those
 start at PR-52.
 
 | PR | Title | Lane | Depends on |
