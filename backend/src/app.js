@@ -6,6 +6,7 @@ import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContactsRouter } from './routes/contacts.js';
+import { createMessagesRouter } from './routes/messages.js';
 import {
   createOriginCheck,
   normalizeOrigin,
@@ -16,6 +17,10 @@ import {
   InvalidCredentialsError,
   ValidationError,
 } from './auth/errors.js';
+import {
+  MessageConversationNotFoundError,
+  MessageValidationError,
+} from './messages/errors.js';
 
 const allowedClientOrigin = normalizeOrigin(env.clientOrigin);
 
@@ -141,6 +146,11 @@ export function createApp({
   //     global API limiter and the Origin/Referer guard (GET is unaffected).
   app.use(API_PREFIX, createContactsRouter());
 
+  // 2f. Messages router. POST /api/conversations/:id/messages stores a message;
+  //     the sender is the session user and participation is checked by the
+  //     service. A state-changing route, so the Origin guard applies.
+  app.use(API_PREFIX, createMessagesRouter());
+
   // 3. Health check — independent route, registered before the 404 catch-all
   //    so it never falls through to the unknown-route handler.
   app.get(`${API_PREFIX}/health`, (_request, response) => {
@@ -192,6 +202,20 @@ export function errorHandler(err, _request, _response, next) {
   if (err instanceof InvalidCredentialsError) {
     return _response.status(401).json({
       code: 'INVALID_CREDENTIALS',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof MessageValidationError) {
+    return _response.status(400).json({
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid input',
+    });
+  }
+
+  if (err instanceof MessageConversationNotFoundError) {
+    return _response.status(404).json({
+      code: 'CONVERSATION_NOT_FOUND',
       message: err.message,
     });
   }

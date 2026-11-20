@@ -913,6 +913,71 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-20 — Phase 7, PR-56: send-message endpoint
+
+**Status:** complete locally (not committed)
+**Focus task(s):** PR-56
+
+### Completed
+- Added `POST /api/conversations/:id/messages` in
+  `backend/src/routes/messages.js` (`createMessagesRouter`), mounted at the API
+  prefix before the health route. It answers `201 { message }` with the stored
+  message and requires a session cookie via `requireAuth`.
+- Added `sendMessage(callerId, conversationId, body)` to
+  `backend/src/messages/service.js`: it re-uses the participant check from
+  PR-55, inserts `{ conversationId, senderId: callerId, content: body }`, and
+  returns the wire shape (`content` → `body`). A deletion race surfaces as a
+  foreign-key `P2003` and is mapped to the same `404 CONVERSATION_NOT_FOUND`
+  rather than a 500.
+- Added `backend/src/messages/validation.js`:
+  `validateCreateMessageInput()` rejects a non-object body, any field other than
+  `body` (so `senderId` and `conversationId` fail loudly instead of being
+  ignored), and a missing/blank/non-string/over-long body;
+  `normalizeMessageBody()` trims and enforces a 4000-character limit.
+- Added `MessageValidationError` → `400 VALIDATION_FAILED` and mapped
+  `MessageConversationNotFoundError` → `404 CONVERSATION_NOT_FOUND` in the
+  shared error handler, so a missing conversation and a non-participant answer
+  identically.
+- The sender is always `request.auth.userId`; the conversation always comes
+  from the path. Neither is read from the request body.
+- Added `backend/tests/messages/send.route.test.js` (25 tests) covering the
+  exact 201 shape, session-derived sender, path-derived conversation, trimming,
+  the maximum length, unknown fields, non-object bodies, both 404 cases, the
+  401 and foreign-`Origin` rejections, non-idempotent double send, the `P2003`
+  mapping, and a sanitized 500 with no stored field leakage.
+- Synced `docs/api/README.md` (endpoint moved from Defined to Implemented, with
+  a `curl` verification command, and OQ-9 marked resolved), this plan's intro,
+  baseline row, and Phase 7 status, and `docs/architecture/backend.md`.
+- No Prisma schema, migration, dependency, or realtime change; emitting a
+  message-created event is PR-62 and the message-list route is PR-57.
+
+### Problems encountered
+- The PostgreSQL message suite is still skipped locally because
+  `TEST_DATABASE_URL` is not set; the insert is covered here only through the
+  mocked Prisma boundary.
+- `body` length is enforced in the service layer (characters, after trimming)
+  because the `content` column is unbounded text; if a different limit is
+  wanted it belongs in the API contract, not the database.
+
+### Decisions made
+- Unknown fields are rejected, not ignored: a client sending `senderId` believes
+  it can choose the sender, so silently overriding it would hide a bug.
+- The body is trimmed before storage; whitespace-only input is a `400`, never a
+  silent drop.
+- Validation lives in the route module's helper (`messages/validation.js`) and
+  the service only guards against programming errors, matching the auth
+  modules' split. PR-57 owns the cross-route participant and validation pass.
+
+### Next day's priority
+1. PR-57 — conversation routes, participant authorization, and message
+   validation, including the message-history route.
+2. PR-52 to PR-54 — get-or-create, list, and detail conversation endpoints.
+3. Run the PostgreSQL message suite with `TEST_DATABASE_URL` set.
+
+**Tasks moved to Done:** PR-56
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:

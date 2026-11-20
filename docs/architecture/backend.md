@@ -3,9 +3,10 @@
 The intended backend boundaries and the HTTP surface that actually exists.
 
 The backend currently provides health, signup, login, logout, session lookup
-(`GET /api/auth/me`), and contact listing (`GET /api/contacts`). Contacts,
-canonical conversation lookup, and paginated message history exist as services;
-conversation and message routes are not implemented.
+(`GET /api/auth/me`), contact listing (`GET /api/contacts`), and message sending
+(`POST /api/conversations/:id/messages`). Contacts, canonical conversation
+lookup, and paginated message history exist as services; the conversation routes
+and the message-history route are not implemented.
 
 > **Scope reminder:** the ten-day plan is frontend-only. This document exists so
 > the boundaries are fixed before they are needed and so they are not violated
@@ -30,6 +31,7 @@ backend/src/
 ├── config/validateEnv.js  ✅  requires JWT_SECRET; validates optional TEST_DATABASE_URL
 ├── routes/auth.js         ✅  createAuthRouter(): POST /signup, POST /auth/login, POST /auth/logout, GET /auth/me handlers
 ├── routes/contacts.js     ✅  createContactsRouter(): GET /contacts handler
+├── routes/messages.js     ✅  createMessagesRouter(): POST /conversations/:id/messages handler
 ├── auth/service.js        ✅  signupUser(), loginUser(), and getUserById()
 ├── auth/validation.js     ✅  signup and login field validation
 ├── auth/errors.js         ✅  ValidationError, EmailTakenError, InvalidCredentialsError
@@ -40,9 +42,12 @@ backend/src/
 ├── contacts/errors.js     ✅  SelfContactError, ContactUserNotFoundError
 ├── conversations/service.js ✅ canonicalPair(), getOrCreateConversation()
 ├── conversations/errors.js ✅ SelfConversationError, ConversationNotContactsError, ConversationUserNotFoundError
-├── messages/service.js    ✅  listMessages() — participant-checked, newest-first keyset pages
+├── messages/service.js    ✅  listMessages() — participant-checked, newest-first keyset pages;
+│                              sendMessage() — participant-checked insert, sender from session
 ├── messages/cursor.js     ✅  encodeMessageCursor(), decodeMessageCursor() — opaque base64url token
-├── messages/errors.js     ✅  InvalidMessageLimitError, InvalidMessageCursorError, MessageConversationNotFoundError
+├── messages/errors.js     ✅  MessageValidationError, InvalidMessageLimitError, InvalidMessageCursorError,
+│                              MessageConversationNotFoundError
+├── messages/validation.js  ✅  validateCreateMessageInput(), normalizeMessageBody() — shape and 4000-character rule
 ├── cache/index.js         ✅  Redis behind connectCache/getCache/setCache/closeCache; no-ops without REDIS_URL
 ├── db/prisma.js           ✅  exports a single `new PrismaClient()`
 ├── sockets/index.js       ✅  registerSocketHandlers(io): on connection → socket.emit('server:ready')
@@ -58,12 +63,14 @@ backend/src/
   `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`,
   `express-rate-limit`, `@dwelling/shared`. Dev-only: `vitest`, `supertest`.
 - **HTTP routes:** `GET /api/health`, `POST /api/signup`, `POST /api/auth/login`,
-  `POST /api/auth/logout`, `GET /api/auth/me`, and `GET /api/contacts`. Signup and
-  login issue the session cookie; logout clears it.
+  `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/contacts`, and
+  `POST /api/conversations/:id/messages`. Signup and login issue the session
+  cookie; logout clears it.
 - **Implemented middleware, in order:** Helmet → CORS → global API rate limiter
   (health exempt) → Content-Type enforcement → JSON body parsing → cookie
   parsing → Origin/Referer guard → auth router (with the stricter credentials
-  limiter on signup and login) → contacts router → health route → JSON 404
+  limiter on signup and login) → contacts router → messages router → health
+  route → JSON 404
   catch-all → centralized error handler.
 - **`createApp(options)`** builds the app and accepts `apiLimiter` and
   `credentialLimiter` overrides so tests can use fresh counters. The default
@@ -125,6 +132,7 @@ putting logic in `app.js`.
 | `POST` | `/api/auth/login` | `200 { user }` and session cookie | `backend/src/routes/auth.js` |
 | `POST` | `/api/auth/logout` | `204` and cleared session cookie | `backend/src/routes/auth.js` |
 | `GET` | `/api/auth/me` | `200 { user }` or `401 AUTH_REQUIRED` | `backend/src/routes/auth.js` |
+| `POST` | `/api/conversations/:id/messages` | `201 { message }`, `400 VALIDATION_FAILED`, or `404 CONVERSATION_NOT_FOUND` | `backend/src/routes/messages.js` |
 
 - The `/api` prefix comes from `@dwelling/shared` (`API_PREFIX`), so both sides
   agree on the base path. The auth router is mounted at that prefix, which is why
@@ -136,9 +144,15 @@ putting logic in `app.js`.
 - Logout clears the cookie and always answers `204`, even without a valid session.
 - `GET /api/auth/me` loads the session user from the token `sub` and returns only
   public fields; a token for a deleted user answers `401 AUTH_REQUIRED`, not `500`.
-  Contact, conversation, and message **routes** are pending; the contract is in
-  [`../api/README.md`](../api/README.md). The message-history service already
-  enforces participation and pagination for that endpoint.
+- `POST /api/conversations/:id/messages` validates `{ body }`, takes the sender
+  from the session (a `senderId` field is rejected), and calls `sendMessage()`,
+  which enforces participation and answers the same `404 CONVERSATION_NOT_FOUND`
+  for a missing conversation and a non-participant. Send is not idempotent
+  (OQ-9).
+- Contact and conversation **routes** plus the message-history route are still
+  pending; the contract is in [`../api/README.md`](../api/README.md). The
+  message-history service already enforces participation and pagination for that
+  endpoint.
 
 ---
 
@@ -187,10 +201,11 @@ See [`../development/setup.md`](../development/setup.md).
 ## Error handling and shutdown
 
 - **Implemented:** the last `app.use` is a centralized error handler. It maps
-  malformed JSON to `400 BAD_REQUEST`, `ValidationError` to `400
-  VALIDATION_FAILED`, `EmailTakenError` to `409 EMAIL_TAKEN`, and
-  `InvalidCredentialsError` to `401 INVALID_CREDENTIALS`. Anything else becomes a
-  sanitized `500 INTERNAL`; the full error is logged server-side only outside
+  malformed JSON to `400 BAD_REQUEST`, `ValidationError` and
+  `MessageValidationError` to `400 VALIDATION_FAILED`, `EmailTakenError` to `409
+  EMAIL_TAKEN`, `InvalidCredentialsError` to `401 INVALID_CREDENTIALS`, and
+  `MessageConversationNotFoundError` to `404 CONVERSATION_NOT_FOUND`. Anything
+  else becomes a sanitized `500 INTERNAL`; the full error is logged server-side only outside
   production.
 - **Implemented:** unmatched routes return JSON `404 NOT_FOUND`.
 - **Not implemented:** `SIGINT`/`SIGTERM` handling to stop the server and close
