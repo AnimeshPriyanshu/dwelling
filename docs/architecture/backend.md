@@ -2,9 +2,10 @@
 
 The intended backend boundaries and the HTTP surface that actually exists.
 
-The backend currently provides health, signup, login, logout, and session lookup
-(`GET /api/auth/me`); the frontend still does not call any of them. Contacts,
-conversations, and messaging are not implemented.
+The backend currently provides health, signup, login, logout, session lookup
+(`GET /api/auth/me`), and contact listing (`GET /api/contacts`). Contacts and
+canonical conversation lookup exist as services; conversation and message routes
+are not implemented.
 
 > **Scope reminder:** the ten-day plan is frontend-only. This document exists so
 > the boundaries are fixed before they are needed and so they are not violated
@@ -28,12 +29,17 @@ backend/src/
 ├── config/env.js          ✅  loads root .env via dotenv; exports port, origins, URLs, JWT secret
 ├── config/validateEnv.js  ✅  requires JWT_SECRET; validates optional TEST_DATABASE_URL
 ├── routes/auth.js         ✅  createAuthRouter(): POST /signup, POST /auth/login, POST /auth/logout, GET /auth/me handlers
+├── routes/contacts.js     ✅  createContactsRouter(): GET /contacts handler
 ├── auth/service.js        ✅  signupUser(), loginUser(), and getUserById()
 ├── auth/validation.js     ✅  signup and login field validation
 ├── auth/errors.js         ✅  ValidationError, EmailTakenError, InvalidCredentialsError
 ├── auth/jwt.js            ✅  signSessionToken / verifySessionToken
 ├── auth/cookies.js        ✅  setSessionCookie / clearSessionCookie / SESSION_COOKIE_NAME
 ├── auth/middleware.js     ✅  createRequireAuth / requireAuth (mounted on GET /auth/me)
+├── contacts/service.js    ✅  addContact(), listContacts() — mirrored rows in one transaction
+├── contacts/errors.js     ✅  SelfContactError, ContactUserNotFoundError
+├── conversations/service.js ✅ canonicalPair(), getOrCreateConversation()
+├── conversations/errors.js ✅ SelfConversationError, ConversationNotContactsError, ConversationUserNotFoundError
 ├── cache/index.js         ✅  Redis behind connectCache/getCache/setCache/closeCache; no-ops without REDIS_URL
 ├── db/prisma.js           ✅  exports a single `new PrismaClient()`
 ├── sockets/index.js       ✅  registerSocketHandlers(io): on connection → socket.emit('server:ready')
@@ -49,13 +55,13 @@ backend/src/
   `cookie-parser`, `bcryptjs`, `jsonwebtoken`, `helmet`, `cors`,
   `express-rate-limit`, `@dwelling/shared`. Dev-only: `vitest`, `supertest`.
 - **HTTP routes:** `GET /api/health`, `POST /api/signup`, `POST /api/auth/login`,
-  `POST /api/auth/logout`, and `GET /api/auth/me`. Signup and login issue the
-  session cookie; logout clears it.
+  `POST /api/auth/logout`, `GET /api/auth/me`, and `GET /api/contacts`. Signup and
+  login issue the session cookie; logout clears it.
 - **Implemented middleware, in order:** Helmet → CORS → global API rate limiter
   (health exempt) → Content-Type enforcement → JSON body parsing → cookie
   parsing → Origin/Referer guard → auth router (with the stricter credentials
-  limiter on signup and login) → health route → JSON 404 catch-all → centralized
-  error handler.
+  limiter on signup and login) → contacts router → health route → JSON 404
+  catch-all → centralized error handler.
 - **`createApp(options)`** builds the app and accepts `apiLimiter` and
   `credentialLimiter` overrides so tests can use fresh counters. The default
   export is the single production instance.

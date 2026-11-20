@@ -787,6 +787,65 @@ and a seeded helper derives the obstacle list.
 
 ---
 
+## 2026-11-20 — Phase 7, PR-51: canonical one-to-one conversation service
+
+**Status:** complete locally (not committed)
+**Focus task(s):** PR-51
+
+### Completed
+- Added `backend/src/conversations/service.js`. `canonicalPair()` orders two user
+  ids with plain string `<` — never `localeCompare` — so application order matches
+  the migration's `CHECK ("userOneId" < "userTwoId")` byte order.
+  `getOrCreateConversation(callerId, peerId)` derives the pair on the server and
+  returns the pair's single conversation, creating it on first use.
+- Added `backend/src/conversations/errors.js`:
+  `SelfConversationError` → `400 SELF_CONVERSATION`,
+  `ConversationNotContactsError` → `403 NOT_CONTACTS`, and
+  `ConversationUserNotFoundError` → `404 USER_NOT_FOUND` (OQ-10, resolved).
+- A conversation requires **both** mirrored contact rows, so a half-written pair
+  cannot unlock one. Self-targeting is rejected before the database is touched.
+- Creation is race-safe through the unique constraint: read → insert against
+  `@@unique([userOneId, userTwoId])` → on `P2002` re-read the winning row. Two
+  simultaneous requests yield one row, one `created: true`, one
+  `created: false`. `P2003` (a user deleted mid-flight) maps to user-not-found.
+- The service returns only `{ id, participants: [{ id, displayName }], createdAt }`;
+  no email, password hash, or conversation type is exposed.
+- Added `backend/tests/conversations/service.test.js` (23 tests) against an
+  in-memory Prisma stand-in that enforces the canonical CHECK, the pair unique
+  constraint, contact keys, and foreign keys; and
+  `backend/tests/conversations/service.integration.test.js` (3 tests) for the
+  real-PostgreSQL path, including 10 rounds of concurrent opposite-direction
+  requests and non-contact/unknown-user rejection.
+- Synced `docs/architecture/backend.md` and `docs/architecture/database.md` to
+  list the contacts and conversations services, the contacts route, and
+  `GET /api/contacts`.
+- No HTTP route, Prisma schema, migration, or dependency changed; the
+  conversation endpoints are PR-52 onward.
+
+### Problems encountered
+- The new PostgreSQL integration suite is skipped locally because
+  `TEST_DATABASE_URL` is not set, so its concurrency assertions have not run
+  against a real database here. It needs `TEST_DATABASE_URL` (or the CI
+  `database-test` job) to execute.
+
+### Decisions made
+- Canonical pair ordering is plain string comparison, matching the database
+  CHECK; any future move away from cuid strings must review both sides.
+- Requiring both contact directions is enforced in the service rather than assumed
+  from the add-contact transaction.
+- **OQ-4 stays open:** removing a contact does not delete, hide, or freeze an
+  existing conversation, because the API contract has not settled that behaviour.
+  PR-51 therefore never writes on the contact-removal path.
+
+### Next day's priority
+1. PR-52 — `POST /api/conversations` (get-or-create) on top of this service.
+2. PR-53 — `GET /api/conversations`, settling OQ-7 ordering.
+3. Run the PostgreSQL conversation suite with `TEST_DATABASE_URL` set.
+
+**Tasks moved to Done:** PR-51
+
+---
+
 ## Upcoming entries
 
 Entries are added as the ten-day plan is executed:
