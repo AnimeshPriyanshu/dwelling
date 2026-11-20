@@ -5,10 +5,25 @@
  * these to the status codes and error codes documented in
  * docs/api/README.md:
  *
+ * - MessageValidationError            → 400 VALIDATION_FAILED
  * - InvalidMessageLimitError          → 400 INVALID_LIMIT
  * - InvalidMessageCursorError         → 400 INVALID_CURSOR
  * - MessageConversationNotFoundError  → 404 CONVERSATION_NOT_FOUND
  */
+
+/**
+ * A create-message request body is missing, malformed, or out of range.
+ *
+ * `details` names the offending field and is for logging and tests only; the
+ * HTTP envelope never echoes it, matching the auth endpoints' error shape.
+ */
+export class MessageValidationError extends Error {
+  constructor(details) {
+    super('Request body is invalid.');
+    this.name = 'MessageValidationError';
+    this.details = details;
+  }
+}
 export class InvalidMessageLimitError extends Error {
   constructor() {
     super('limit must be an integer between 1 and 100.');
