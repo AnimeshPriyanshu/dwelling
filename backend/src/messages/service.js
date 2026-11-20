@@ -109,6 +109,70 @@ function toWireMessage(row) {
 }
 
 /**
+ * Stores one message in a conversation and returns it in wire shape.
+ *
+ * The sender is the verified caller, never a value from the request: a client
+ * cannot post as somebody else. Participation is checked before the insert, so
+ * a non-participant cannot write and cannot learn that the conversation exists
+ * — both cases answer the same not-found error.
+ *
+ * Send is **not idempotent** (OQ-9): calling it twice with the same text stores
+ * two messages. Deduplication needs a client-supplied key and a uniqueness
+ * constraint, which v1 does not have; clients must not retry blindly.
+ *
+ * `createdAt` comes from the database default, so the response carries the
+ * stored time, not the time the server handled the request.
+ *
+ * `callerId` must come from the verified session cookie (`request.auth.userId`
+ * via `requireAuth`).
+ *
+ * @param {string} callerId verified session user id
+ * @param {string} conversationId conversation to write to
+ * @param {string} body already-validated message text
+ * @returns {Promise<{
+ *   message: {
+ *     id: string,
+ *     conversationId: string,
+ *     senderId: string,
+ *     body: string,
+ *     createdAt: Date,
+ *   },
+ * }>}
+ * @throws {TypeError} for a malformed id or body
+ * @throws {MessageConversationNotFoundError} when absent or not a participant
+ */
+export async function sendMessage(callerId, conversationId, body) {
+  assertId(callerId, 'callerId');
+  assertId(conversationId, 'conversationId');
+
+  // The route validates untrusted input; this guard only catches a programming
+  // error, so an empty message can never reach the database from any caller.
+  if (typeof body !== 'string' || body.trim() === '') {
+    throw new TypeError('body must be a non-empty string.');
+  }
+
+  await assertParticipant(callerId, conversationId);
+
+  try {
+    const row = await prisma.message.create({
+      data: { conversationId, senderId: callerId, content: body },
+      select: MESSAGE_SELECT,
+    });
+
+    return { message: toWireMessage(row) };
+  } catch (error) {
+    // P2003: the conversation was deleted between the participant check and the
+    // insert. The caller no longer has a conversation to write to, so report it
+    // as the same not-found error rather than an internal failure.
+    if (error?.code === 'P2003') {
+      throw new MessageConversationNotFoundError();
+    }
+
+    throw error;
+  }
+}
+
+/**
  * Reads one page of a conversation's message history, newest first.
  *
  * Ordering is `createdAt DESC, id DESC` and paging is keyset, matching the

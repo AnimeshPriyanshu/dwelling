@@ -5,7 +5,8 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 > ## ⚠️ Most of this file is still a plan
 >
 > **Implemented endpoints:** `GET /api/health`, `POST /api/signup`,
-> `POST /api/auth/login`, and `GET /api/auth/me`. `POST /api/auth/logout` is
+> `POST /api/auth/login`, `GET /api/auth/me`, and
+> `POST /api/conversations/:id/messages`. `POST /api/auth/logout` is
 > documented as a **contract only**: its implementation is unverified because
 > PR-25 is not confirmed complete.
 >
@@ -385,11 +386,77 @@ curl -i http://localhost:3000/api/auth/me \
   --cookie 'dwelling_session=<token>'
 ```
 
+### `POST /api/conversations/:id/messages` ✅ Implemented
+
+Send a message to a conversation the caller participates in.
+
+**Request**
+
+```http
+POST /api/conversations/clx0conv1/messages HTTP/1.1
+Content-Type: application/json
+Origin: http://localhost:5173
+
+{ "body": "See you at the square" }
+```
+
+- **Auth:** session cookie required. The caller must be one of the two
+  participants.
+- **Path parameter:** `:id` — the conversation id.
+- **Body:** `{ "body": string }`. No other field is accepted; `senderId` is
+  rejected as an unknown field rather than silently overridden.
+- **Success — `201 Created`:**
+
+```json
+{
+  "message": {
+    "id": "clx0msg9",
+    "conversationId": "clx0conv1",
+    "senderId": "clx0user1",
+    "body": "See you at the square",
+    "createdAt": "2026-11-20T09:30:00.000Z"
+  }
+}
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `VALIDATION_FAILED` | Missing, empty, whitespace-only, non-string, or over-long `body`; any unknown field (including `senderId`); or a non-object body |
+| `401` | `AUTH_REQUIRED` | No session, or an invalid/expired one |
+| `403` | `ORIGIN_NOT_ALLOWED` | Missing or foreign `Origin`/`Referer` on this state-changing request (PR-27) |
+| `404` | `CONVERSATION_NOT_FOUND` | No such conversation, **or** the caller is not a participant — deliberately indistinguishable |
+| `500` | `INTERNAL` | Unexpected failure; no details are returned |
+
+**Notes**
+
+- The sender is always the session user (`request.auth.userId`); it is never
+  read from the request body, query, or a header.
+- `body` is trimmed before storage; a body that is empty after trimming is
+  rejected, never silently dropped. The stored maximum is **4000 characters**
+  after trimming, well under the 10 kB JSON body limit.
+- `createdAt` is the stored database time, so the echoed value is authoritative
+  for ordering and for the pagination cursor.
+- **Send is not idempotent (OQ-9, resolved):** the same text sent twice creates
+  two messages. Clients must not retry automatically; a retry needs a user
+  action.
+
+**Verify**
+
+```bash
+curl -i -X POST http://localhost:3000/api/conversations/<conversationId>/messages \
+  -H "Origin: http://localhost:5173" \
+  -H 'Content-Type: application/json' \
+  --cookie 'dwelling_session=<token>' \
+  -d '{"body":"See you at the square"}'
+```
+
 ---
 
 ## Defined endpoints — not implemented
 
-The eight endpoints below are the remaining Phase 2–7 contract. They are grouped by
+The six endpoints below are the remaining Phase 2–7 contract. They are grouped by
 the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 
 - **Auth:** session cookie required, unless the endpoint says otherwise
@@ -541,22 +608,6 @@ Read message history, newest first.
   `404`, identical to an unknown conversation. The full rules are in
   [Pagination](#pagination).
 
-#### `POST /api/conversations/:id/messages` ▢ Defined
-
-Send a message.
-
-- **Auth:** session cookie required; participant only. The sender is the caller —
-  a `senderId` in the body is ignored and must be rejected as an unknown field.
-- **Body:** `{ "body": string }`
-- **Success — `201 Created`:** `{ "message": Message }`
-- **Errors:** `400 VALIDATION_FAILED`, `404 CONVERSATION_NOT_FOUND`,
-  `401 AUTH_REQUIRED`
-- **Notes:** content length limits and empty/whitespace rules are validation
-  mechanics owned by PR-12. **Send is not idempotent in v1** (OQ-9): a retried
-  request creates a second message, and clients must not auto-retry blindly. A
-  message is returned with its stored `createdAt`; there is no delivery state,
-  read receipt, edit, or delete in v1 (OQ-12).
-
 ---
 
 ## Pagination
@@ -684,7 +735,7 @@ resolve it; none is answered by this document.
 | OQ-6 | Does the conversation list ever include a last-message preview, and is its text private? | PR-53 |
 | OQ-7 | Conversation-list ordering and tie-breaker; no sort key is promised in v1 | PR-53 |
 | OQ-8 | Can conversations be deleted or archived? No endpoint is defined | PR-54 |
-| OQ-9 | Send-message idempotency and safe client retry semantics | PR-56 |
+| OQ-9 | ✅ Resolved by PR-56: send is **not** idempotent — a retried request stores a second message, and clients must not retry blindly | PR-56 |
 | OQ-11 | `404 USER_NOT_FOUND` on contact add discloses whether a user id exists — accepted for v1 | PR-38 |
 | OQ-12 | Message edit/delete, read receipts, delivery states, unread counts — all out of v1 | PR-59 |
 | OQ-13 | CSRF token mechanism (double-submit cookie vs. header) — still deferred, not denied; PR-27 added the Origin/Referer check instead | Revisit if the topology becomes split-origin |
