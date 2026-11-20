@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
 import { createAuthRouter } from './routes/auth.js';
+import { createContactsRouter } from './routes/contacts.js';
 import {
   createOriginCheck,
   normalizeOrigin,
@@ -135,6 +136,10 @@ export function createApp({
 
   // 2d. Auth router (signup and login carry the stricter rate limiter).
   app.use(API_PREFIX, createAuthRouter({ credentialLimiter }));
+
+  // 2e. Contacts router. GET /api/contacts is read-only and inherits the
+  //     global API limiter and the Origin/Referer guard (GET is unaffected).
+  app.use(API_PREFIX, createContactsRouter());
 
   // 3. Health check — independent route, registered before the 404 catch-all
   //    so it never falls through to the unknown-route handler.

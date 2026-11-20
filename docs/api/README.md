@@ -403,7 +403,7 @@ the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 Contacts are mutual and immediate (ADR-0021). There is no request, accept, or
 pending state, and no endpoint returns a `Contact` row.
 
-#### `GET /api/contacts` ▢ Defined
+#### `GET /api/contacts` ■ Implemented
 
 List the caller's contacts.
 
@@ -417,9 +417,10 @@ List the caller's contacts.
 
 - **Errors:** `401 AUTH_REQUIRED`
 - **Notes:** one entry per relationship, never a mirrored duplicate. The response
-  deliberately contains no contact timestamp and no email in v1; whether a
-  timestamp is ever returned is left open for a later version. List ordering is
-  **OQ-18**; clients must not rely on it until PR-37 documents one. Empty list is
+  contains only the peer's `id` and `displayName`; it deliberately contains no
+  contact timestamp and no email. List ordering is deterministic: newest first
+  by the contact's `createdAt` (descending), with `contactId` ascending as the
+  tie-breaker (OQ-18, resolved by PR-37). Empty list is
   `200 { "contacts": [] }`.
 
 #### `POST /api/contacts` ▢ Defined
@@ -691,7 +692,7 @@ resolve it; none is answered by this document.
 | OQ-15 | Mapping frontend map/contact ids to server `User.id` for dwellings and world rendering | PR-76, PR-15 |
 | OQ-16 | Socket.IO handshake authentication reusing this cookie, including origin checks | PR-60 |
 | OQ-17 | ✅ Resolved by PR-27: `429 RATE_LIMITED` with an integer `Retry-After` | PR-27 |
-| OQ-18 | Contact-list ordering | PR-37 |
+| OQ-18 | ✅ Resolved by PR-37: `createdAt DESC`, then `contactId ASC` | PR-37 |
 
 **Resolved during review:** OQ-10 (non-contact vs. unknown user) — existing
 non-contact is `403 NOT_CONTACTS`, unknown user is `404 USER_NOT_FOUND`, and the
