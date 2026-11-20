@@ -94,7 +94,9 @@ export async function addContact(callerId, peerId) {
  * Lists the contacts owned by `callerId`.
  *
  * Only the caller's directed `Contact` rows are read, so a user appears once
- * per relationship and mirrored duplicates are never returned. The contact relationship's `createdAt` is used internally for ordering only and is never exposed.
+ * per relationship and mirrored duplicates are never returned. The contact
+ * relationship's `createdAt` is used internally for ordering only and is never
+ * exposed.
  *
  * @param {string} callerId verified session user id
  * @returns {Promise<Array<{ user: { id: string, displayName: string } }>>}
@@ -116,4 +118,47 @@ export async function listContacts(callerId) {
   return rows.map((row) => ({
     user: { id: row.contact.id, displayName: row.contact.displayName },
   }));
+}
+
+/**
+ * Removes a mutual contact relationship.
+ *
+ * The relationship is removed for both directions: the caller→peer row and
+ * the peer→caller row are deleted atomically. Removing a non-existent contact
+ * is idempotent and returns silently.
+ *
+ * `callerId` must come from the verified session cookie (`request.auth.userId`
+ * via `requireAuth`). A user id from a request body or query is never proof of
+ * identity and must not be passed here.
+ *
+ * @param {string} callerId verified session user id
+ * @param {string} peerId the other user's `User.id`
+ * @returns {Promise<{ removed: boolean }>} `removed` is true when at least one
+ *   row was deleted; `false` when no contact row existed
+ * @throws {TypeError} for malformed ids
+ * @throws {SelfContactError} when the caller targets themselves
+ */
+export async function removeContact(callerId, peerId) {
+  assertUserId(callerId, 'callerId');
+  assertUserId(peerId, 'peerId');
+
+  if (callerId === peerId) {
+    throw new SelfContactError();
+  }
+
+  const rows = await prisma.$transaction(async (transaction) => {
+    // Delete both directions atomically; if neither row exists, count is 0.
+    const result = await transaction.contact.deleteMany({
+      where: {
+        OR: [
+          { userId: callerId, contactId: peerId },
+          { userId: peerId, contactId: callerId },
+        ],
+      },
+    });
+
+    return { removed: result.count > 0 };
+  });
+
+  return rows;
 }

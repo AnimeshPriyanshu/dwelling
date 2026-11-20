@@ -9,9 +9,8 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 > documented as a **contract only**: its implementation is unverified because
 > PR-25 is not confirmed complete.
 >
-> Everything else in this file is a placeholder marked `Defined` or `Pending`.
-> Do not build against a pending endpoint, and do not assume a pending
-> endpoint's shape.
+> Everything else in this file is a placeholder marked `Defined` or `Pending`. Do not
+> build against a pending endpoint, and do not assume a pending endpoint's shape.
 >
 > The permitted sources of truth, in order: the code, then this file. If they
 > disagree, the code wins — and this file is wrong and must be fixed.
@@ -99,8 +98,8 @@ tokens in a header do not have. The v1 posture:
   cross-site HTML form cannot produce that content type, and a cross-origin
   `fetch` with it is stopped by CORS preflight.
 - **Origin validation.** Every state-changing request (`POST`, `PUT`, `PATCH`,
-  `DELETE`) must carry an `Origin` — or, when `Origin` is absent, a `Referer` —
-  matching `CLIENT_ORIGIN`. A missing, foreign, malformed, or opaque (`null`)
+  `DELETE`) must carry an `Origin` — or, when `Origin` is absent, a `Referer`
+  — matching `CLIENT_ORIGIN`. A missing, foreign, malformed, or opaque (`null`)
   origin is rejected with `403 ORIGIN_NOT_ALLOWED`. An `Origin` header is
   authoritative: a valid `Referer` never rescues a foreign `Origin`. `GET` is
   not checked. This is enforced server-side at the transport boundary (PR-27).
@@ -385,6 +384,82 @@ curl -i http://localhost:3000/api/auth/me \
   --cookie 'dwelling_session=<token>'
 ```
 
+### `GET /api/contacts` ✅ Implemented
+
+List the caller's contacts.
+
+- **Auth:** session cookie required.
+- **Parameters:** none.
+- **Success — `200 OK`:**
+
+```json
+{ "contacts": [ { "user": { "id": "clx0user2", "displayName": "Bo" } } ] }
+```
+
+- **Errors:** `401 AUTH_REQUIRED`
+- **Notes:** one entry per relationship, never a mirrored duplicate. The response
+  deliberately contains no contact timestamp and no email in v1; whether a
+  timestamp is ever returned is left open for a later version. List ordering is
+  deterministic: newest first by the contact's `createdAt` (descending), with
+  `contactId` ascending as the tie-breaker (OQ-18, resolved by PR-37). Empty list is
+  `200 { "contacts": [] }`.
+
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/contacts \
+  --cookie 'dwelling_session=<valid-session-cookie>'
+```
+
+### `POST /api/contacts` ✅ Implemented
+
+Add a user as a contact. Immediate and symmetric.
+
+- **Auth:** session cookie required.
+- **Body:** `{ "peerId": string }` — the **other user's `User.id`**, never a
+  `Contact` row id.
+- **Success — `201 Created`** when the relationship is new; `200 OK` when it
+  already existed (idempotent). Both return `{ "contact": { "user": { "id", "displayName" } } }`.
+- **Errors:** `400 SELF_CONTACT`, `400 VALIDATION_FAILED`,
+  `404 USER_NOT_FOUND`, `401 AUTH_REQUIRED`
+- **Notes:** adding an existing contact is a no-op (reports `200 OK` with
+  the existing contact). `404 USER_NOT_FOUND` discloses that a user id does not
+  exist — see OQ-11 resolved by PR-38. The endpoint is idempotent: a duplicate
+  add does not create a second relationship nor return an error; it simply
+  reports `created: false` at the API level with `200 OK`.
+
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/contacts \
+  --cookie 'dwelling_session=<valid-session-cookie>' \
+  -X POST \
+  -H "Origin: http://localhost:5173" \
+  -H 'Content-Type: application/json' \
+  -d '{"peerId":"user_bob"}'
+```
+
+### `DELETE /api/contacts/:peerId` ✅ Implemented (PR-39)
+
+Remove a mutual contact relationship.
+
+- **Auth:** session cookie required.
+- **Path parameter:** `:peerId` — the **other user's `User.id`**, never a `Contact` row id.
+- **Success — `204 No Content`:** idempotent. Removing a non-contact, or the same
+  contact twice, still returns `204`.
+- **Errors:** `400 SELF_CONTACT`, `401 AUTH_REQUIRED`
+- **Notes:** removing is symmetric — the relationship disappears for both users.
+  Removing a non-existent contact is idempotent and returns `204`. An existing
+  conversation between the pair is undecided (OQ-4).
+
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/contacts/user_bob \
+  --cookie 'dwelling_session=<valid-session-cookie>' \
+  -X DELETE
+```
+
 ---
 
 ## Defined endpoints — not implemented
@@ -403,7 +478,7 @@ the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
 Contacts are mutual and immediate (ADR-0021). There is no request, accept, or
 pending state, and no endpoint returns a `Contact` row.
 
-#### `GET /api/contacts` ■ Implemented
+#### `GET /api/contacts` ✅ Implemented
 
 List the caller's contacts.
 
@@ -417,34 +492,53 @@ List the caller's contacts.
 
 - **Errors:** `401 AUTH_REQUIRED`
 - **Notes:** one entry per relationship, never a mirrored duplicate. The response
-  contains only the peer's `id` and `displayName`; it deliberately contains no
-  contact timestamp and no email. List ordering is deterministic: newest first
-  by the contact's `createdAt` (descending), with `contactId` ascending as the
-  tie-breaker (OQ-18, resolved by PR-37). Empty list is
+  deliberately contains no contact timestamp and no email in v1; whether a
+  timestamp is ever returned is left open for a later version. List ordering is
+  deterministic: newest first by the contact's `createdAt` (descending), with
+  `contactId` ascending as the tie-breaker (OQ-18, resolved by PR-37). Empty list is
   `200 { "contacts": [] }`.
 
-#### `POST /api/contacts` ▢ Defined
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/contacts \
+  --cookie 'dwelling_session=<valid-session-cookie>'
+```
+
+#### `POST /api/contacts` ✅ Implemented
 
 Add a user as a contact. Immediate and symmetric.
 
 - **Auth:** session cookie required.
-- **Body:** `{ "userId": string }` — the **other user's `User.id`**, never a
+- **Body:** `{ "peerId": string }` — the **other user's `User.id`**, never a
   `Contact` row id.
-- **Success:** `201 Created` when the relationship is new, `200 OK` when it
-  already existed; both return `{ "contact": { "user": { "id", "displayName" } } }`.
+- **Success — `201 Created`** when the relationship is new; `200 OK` when it
+  already existed (idempotent). Both return `{ "contact": { "user": { "id", "displayName" } } }`.
 - **Errors:** `400 SELF_CONTACT`, `400 VALIDATION_FAILED`,
   `404 USER_NOT_FOUND`, `401 AUTH_REQUIRED`
-- **Notes:** adding an existing contact is a no-op, and the response does not
-  reveal whether this call created it beyond the status code. `404
-  USER_NOT_FOUND` discloses that a user id does not exist — see OQ-11.
+- **Notes:** adding an existing contact is a no-op (reports `200 OK` with
+  the existing contact). `404 USER_NOT_FOUND` discloses that a user id does not
+  exist — see OQ-11 resolved by PR-38. The endpoint is idempotent: a duplicate
+  add does not create a second relationship nor return an error; it simply
+  reports `created: false` at the API level with `200 OK`.
 
-#### `DELETE /api/contacts/:id` ▢ Defined
+**Verify**
 
-Remove a contact relationship.
+```bash
+curl -i http://localhost:3000/api/contacts \
+  --cookie 'dwelling_session=<valid-session-cookie>' \
+  -X POST \
+  -H "Origin: http://localhost:5173" \
+  -H 'Content-Type: application/json' \
+  -d '{"peerId":"user_bob"}'
+```
+
+#### `DELETE /api/contacts/:id` ✅ Implemented (PR-39)
+
+Remove a mutual contact relationship.
 
 - **Auth:** session cookie required.
-- **Path parameter:** `:id` — the **other user's `User.id`**, never a `Contact`
-  row id.
+- **Path parameter:** `:id` — the **other user's `User.id`**, never a `Contact` row id.
 - **Success — `204 No Content`:** idempotent. Removing a non-contact, or the same
   contact twice, still returns `204`.
 - **Errors:** `400 SELF_CONTACT`, `401 AUTH_REQUIRED`
@@ -452,6 +546,14 @@ Remove a contact relationship.
   **What happens to an existing conversation between the pair is undecided**
   (OQ-4). This contract does not delete, hide, or freeze anything; the messaging
   PRs must settle it before this endpoint ships.
+
+**Verify**
+
+```bash
+curl -i http://localhost:3000/api/contacts/user_bob \
+  --cookie 'dwelling_session=<valid-session-cookie>' \
+  -X DELETE
+```
 
 ### Conversations (PR-51 – PR-54)
 
@@ -493,7 +595,7 @@ Get or create the single conversation for a pair.
     existence (OQ-10, resolved).
   - **Concurrency:** the server derives the ordered pair itself —
     `(min(callerId, peerId), max(callerId, peerId))` — and inserts against the
-    pair's unique constraint (`upsert`, retrying on `P2002` and re-reading). Two
+    pair's unique constraint (`upsert`, retrying on `P2002` and re-reading`). Two
     simultaneous requests must yield one row, one `201`, and one `200`. An
     implementation that reads-then-writes without the constraint is non-conforming.
   - The endpoint is idempotent by pair, not by request: repeated calls never
@@ -510,11 +612,21 @@ Fetch one conversation.
   a missing id, so the endpoint cannot be used to confirm that a conversation
   exists. Membership is checked server-side on every request.
 
-### Messages (PR-55 – PR-59)
+#### `POST /api/conversations/:id/messages` ▢ Defined
 
-`Message` = `{ id, conversationId, senderId, body, createdAt }`. `body` is the
-wire field name; the current Prisma sketch calls the column `content`, and PR-15
-may align the two. This contract fixes only the JSON name.
+Send a message.
+
+- **Auth:** session cookie required; participant only. The sender is the caller —
+  a `senderId` in the body is ignored and must be rejected as an unknown field.
+- **Body:** `{ "body": string }`
+- **Success — `201 Created`:** `{ "message": Message }`
+- **Errors:** `400 VALIDATION_FAILED`, `404 CONVERSATION_NOT_FOUND`,
+  `401 AUTH_REQUIRED`
+- **Notes:** content length limits and empty/whitespace rules are validation
+  mechanics owned by PR-12. **Send is not idempotent in v1** (OQ-9): a retried
+  request creates a second message, and clients must not auto-retry blindly. A
+  message is returned with its stored `createdAt`; there is no delivery state,
+  read receipt, edit, or delete in v1 (OQ-12).
 
 #### `GET /api/conversations/:id/messages` ▢ Defined
 
@@ -582,9 +694,9 @@ requirement. This contract states the read pattern; it does not design indexes.
 
 ## Error format
 
-**PR-12 defines the JSON error envelope as `{ "code": "...", "message": "..." }`.**
-The status code and the stable *code string* are part of the contract (PR-11);
-PR-12 fixes the response body shape.
+**PR-12 defines the JSON error envelope as `{ "code": "..."`, `message: "..." }`.**
+The status code and the stable *code string* are part of the contract (PR-11); PR-12
+fixes the response body shape.
 
 No response may contain a stack trace, an absolute file path, SQL, or other
 internal detail.
@@ -663,8 +775,8 @@ Map definitions. **Undecided:** maps may never become server data.
 Altar identity and membership (FR-026, FR-027). Group conversations belong to an
 Altar and arrive in Phase 12 of [`../../plan.md`](../../plan.md).
 
-**Do not invent event names in code before they are designed and documented
-here.** An undocumented event is an integration bug waiting to happen. HTTP
+**Do not invent event names in code before they are designed and documented**
+here. An undocumented event is an integration bug waiting to happen. HTTP
 message creation may later emit an event; the HTTP contract above does not
 promise one.
 
@@ -685,14 +797,14 @@ resolve it; none is answered by this document.
 | OQ-7 | Conversation-list ordering and tie-breaker; no sort key is promised in v1 | PR-53 |
 | OQ-8 | Can conversations be deleted or archived? No endpoint is defined | PR-54 |
 | OQ-9 | Send-message idempotency and safe client retry semantics | PR-56 |
-| OQ-11 | `404 USER_NOT_FOUND` on contact add discloses whether a user id exists — accepted for v1 | PR-38 |
+| OQ-11 | ✅ Resolved by PR-38: `404 USER_NOT_FOUND` discloses user existence by design | PR-38 |
 | OQ-12 | Message edit/delete, read receipts, delivery states, unread counts — all out of v1 | PR-59 |
 | OQ-13 | CSRF token mechanism (double-submit cookie vs. header) — still deferred, not denied; PR-27 added the Origin/Referer check instead | Revisit if the topology becomes split-origin |
 | OQ-14 | Deployment topology: same-site (Lax viable) or split-origin (needs `SameSite=None; Secure` plus a CSRF token) — **unresolved**, and `trust proxy` follows from it | Launch |
 | OQ-15 | Mapping frontend map/contact ids to server `User.id` for dwellings and world rendering | PR-76, PR-15 |
 | OQ-16 | Socket.IO handshake authentication reusing this cookie, including origin checks | PR-60 |
 | OQ-17 | ✅ Resolved by PR-27: `429 RATE_LIMITED` with an integer `Retry-After` | PR-27 |
-| OQ-18 | ✅ Resolved by PR-37: `createdAt DESC`, then `contactId ASC` | PR-37 |
+| OQ-18 | Contact-list ordering | PR-37 |
 
 **Resolved during review:** OQ-10 (non-contact vs. unknown user) — existing
 non-contact is `403 NOT_CONTACTS`, unknown user is `404 USER_NOT_FOUND`, and the
@@ -711,9 +823,18 @@ disclosure is documented.
    - state how to verify it (a `curl` command or a UI action);
    - state the authorization rule actually enforced;
    - if it caches anything, give the key, TTL, and invalidation trigger
-     ([`../architecture/security-and-caching.md`](../architecture/security-and-caching.md));
+     (`../architecture/security-and-caching.md`);
    - if it emits or consumes a socket event, document the event here too.
 4. Keep the [Error format](#error-format) codes in sync with PR-12's envelope.
+
+---
+
+## Related
+
+- [`../architecture/backend.md`](../architecture/backend.md) — backend layering
+- [`../architecture/realtime.md`](../architecture/realtime.md) — realtime design
+- [`../architecture/security-and-caching.md`](../architecture/security-and-caching.md) — cookie, CSRF, authorization, validation
+- [`../planning/decisions.md`](../planning/decisions.md) — ADR-0020, ADR-0021, ADR-0022
 
 ---
 
