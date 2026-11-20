@@ -35,7 +35,7 @@ export function createContactsRouter() {
   contactsRouter.post(
     '/contacts',
     requireAuth,
-    async (request, response, next) => {
+    async (request, response) => {
       try {
         const { peerId } = request.body;
 
@@ -84,7 +84,7 @@ export function createContactsRouter() {
   contactsRouter.delete(
     '/contacts/:peerId',
     requireAuth,
-    async (request, response, next) => {
+    async (request, response) => {
       try {
         const peerId = request.params.peerId;
 
@@ -95,9 +95,8 @@ export function createContactsRouter() {
           });
         }
 
-        const removed = await removeContact(request.auth.userId, peerId);
+        await removeContact(request.auth.userId, peerId);
 
-        // removed is true when at least one row was deleted; false when no contact existed
         // Idempotent: always returns 204 No Content
         response.status(204).end();
       } catch (error) {
