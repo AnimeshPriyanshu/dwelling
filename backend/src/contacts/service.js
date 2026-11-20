@@ -89,3 +89,31 @@ export async function addContact(callerId, peerId) {
     return { peer, created: result.count > 0 };
   });
 }
+
+/**
+ * Lists the contacts owned by `callerId`.
+ *
+ * Only the caller's directed `Contact` rows are read, so a user appears once
+ * per relationship and mirrored duplicates are never returned. The contact relationship's `createdAt` is used internally for ordering only and is never exposed.
+ *
+ * @param {string} callerId verified session user id
+ * @returns {Promise<Array<{ user: { id: string, displayName: string } }>>}
+ * @throws {TypeError} for a malformed caller id
+ */
+export async function listContacts(callerId) {
+  assertUserId(callerId, 'callerId');
+
+  const rows = await prisma.contact.findMany({
+    where: { userId: callerId },
+    orderBy: [{ createdAt: 'desc' }, { contactId: 'asc' }],
+    select: {
+      contact: {
+        select: { id: true, displayName: true },
+      },
+    },
+  });
+
+  return rows.map((row) => ({
+    user: { id: row.contact.id, displayName: row.contact.displayName },
+  }));
+}
