@@ -184,6 +184,7 @@ const App = () => {
     const map = getDefaultMap();
     return map ? summarizeMap(map) : { id: "", name: "No map", range: "" };
   });
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   // Close chat handler. Focus is returned to the world by the drawer's own
   // focus-management effect, so closing by button, Escape, or a map change all
@@ -191,6 +192,13 @@ const App = () => {
   const handleCloseChat = useCallback(() => {
     setIsChatOpen(false);
   }, []);
+
+  // Open conversation with a contact
+  function openChatWithContact(contactId, contactName) {
+    setSelectedContactId(contactId);
+    setIsChatOpen(true);
+    fetchConversationsAndMessages();
+  }
 
   // React owns drawer visibility; the world blocks its own input while the
   // drawer is open. Publishing from state covers every open and close path.
@@ -208,8 +216,10 @@ const App = () => {
   useEffect(() => {
     unsubscribeRef.current = subscribe(EventType.DWELLING_INTERACT, (event) => {
       if (!event || !event.dwelling) return;
-      setActiveContact(event.dwelling);
+      const contact = contactFromDwelling(event.dwelling);
+      setActiveContact(contact);
       setIsChatOpen(true);
+      openChatWithContact(contact.contactId, contact.contact);
     });
 
     return unsubscribeRef.current;

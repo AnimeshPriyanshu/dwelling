@@ -6,6 +6,7 @@ import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContactsRouter } from './routes/contacts.js';
+import { createConversationsRouter } from './routes/conversations.js';
 import {
   createOriginCheck,
   normalizeOrigin,
@@ -140,6 +141,9 @@ export function createApp({
   // 2e. Contacts router. GET /api/contacts is read-only and inherits the
   //     global API limiter and the Origin/Referer guard (GET is unaffected).
   app.use(API_PREFIX, createContactsRouter());
+
+  // 2f. Conversations router.
+  app.use(API_PREFIX, createConversationsRouter());
 
   // 3. Health check — independent route, registered before the 404 catch-all
   //    so it never falls through to the unknown-route handler.
