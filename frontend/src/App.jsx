@@ -184,7 +184,8 @@ const App = () => {
     const map = getDefaultMap();
     return map ? summarizeMap(map) : { id: "", name: "No map", range: "" };
   });
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  // Pagination cursor state — registered for future messaging integration
+  // Removed: pagination cursor state for future messaging integration (not yet implemented)
 
   // Close chat handler. Focus is returned to the world by the drawer's own
   // focus-management effect, so closing by button, Escape, or a map change all
@@ -194,7 +195,8 @@ const App = () => {
   }, []);
 
   // Open conversation with a contact
-  function openChatWithContact(contactId, contactName) {
+  function openChatWithContact(contactId, _contactName) {
+    // contactName is intentionally unused for future messaging integration
     setSelectedContactId(contactId);
     setIsChatOpen(true);
     fetchConversationsAndMessages();
