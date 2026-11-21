@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma.js';
 import {
   ConversationNotContactsError,
+  ConversationNotFoundError,
   ConversationUserNotFoundError,
   SelfConversationError,
 } from './errors.js';
@@ -106,6 +107,42 @@ function findConversation(userOneId, userTwoId) {
     where: { userOneId_userTwoId: { userOneId, userTwoId } },
     select: CONVERSATION_SELECT,
   });
+}
+
+/**
+ * Loads one conversation for a participant.
+ *
+ * A missing conversation and a non-participant produce the identical error, so
+ * the endpoint cannot be used to confirm that a conversation exists.
+ *
+ * @param {string} callerId verified session user id
+ * @param {string} conversationId conversation to load
+ * @returns {Promise<{
+ *   id: string,
+ *   participants: Array<{ id: string, displayName: string }>,
+ *   createdAt: Date,
+ * }>}
+ * @throws {TypeError} for malformed ids
+ * @throws {ConversationNotFoundError} when absent or not a participant
+ */
+export async function getConversationForUser(callerId, conversationId) {
+  assertUserId(callerId, 'callerId');
+  assertUserId(conversationId, 'conversationId');
+
+  const row = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: CONVERSATION_SELECT,
+  });
+
+  const isParticipant =
+    row !== null &&
+    (row.userOne.id === callerId || row.userTwo.id === callerId);
+
+  if (!isParticipant) {
+    throw new ConversationNotFoundError();
+  }
+
+  return toConversation(row);
 }
 
 /**

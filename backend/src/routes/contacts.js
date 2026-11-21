@@ -1,7 +1,8 @@
 import { Router } from 'express';
 
 import { requireAuth } from '../auth/middleware.js';
-import { listContacts } from '../contacts/service.js';
+import { addContact, listContacts } from '../contacts/service.js';
+import { validateAddContactInput } from '../contacts/validation.js';
 
 /**
  * Builds the contacts router.
@@ -21,6 +22,26 @@ export function createContactsRouter() {
         const contacts = await listContacts(request.auth.userId);
 
         response.status(200).json({ contacts });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  // Adding a contact is immediate and symmetric (ADR-0021): one call writes
+  // both mirrored rows. 201 means the relationship is new, 200 means it already
+  // existed, so the call is safe to repeat.
+  contactsRouter.post(
+    '/contacts',
+    requireAuth,
+    async (request, response, next) => {
+      try {
+        const { userId } = validateAddContactInput(request.body);
+        const { peer, created } = await addContact(request.auth.userId, userId);
+
+        response.status(created ? 201 : 200).json({
+          contact: { user: peer },
+        });
       } catch (error) {
         next(error);
       }
