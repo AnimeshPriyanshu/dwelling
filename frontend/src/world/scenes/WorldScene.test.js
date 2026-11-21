@@ -51,7 +51,15 @@ const createScene = (overrides = {}) =>
     dwellings: [],
     activeDwelling: null,
     interactKey: { _justDown: false },
-    input: { enabled: true, keyboard: { enabled: true, resetKeys: vi.fn() } },
+    input: {
+      enabled: true,
+      keyboard: {
+        enabled: true,
+        resetKeys: vi.fn(),
+        disableGlobalCapture: vi.fn(),
+        enableGlobalCapture: vi.fn(),
+      },
+    },
     uiInputBlocked: false,
     ...overrides,
   });
@@ -82,8 +90,12 @@ const createDwellingScene = () => {
         add: vi.fn(),
         destroy: vi.fn(),
       })),
-      rectangle: vi.fn(() => ({ setStrokeStyle: vi.fn(), setOrigin: vi.fn() })),
-      text: vi.fn(() => ({ setOrigin: vi.fn() })),
+      rectangle: vi.fn(() => ({
+        setStrokeStyle: vi.fn(),
+        setOrigin: vi.fn(),
+        setSize: vi.fn(),
+      })),
+      text: vi.fn(() => ({ setOrigin: vi.fn(), setText: vi.fn() })),
     },
   };
 };
@@ -142,8 +154,62 @@ describe("WorldScene interaction routing", () => {
         name: "Rowan Lodge",
         contact: "Rowan",
         role: "Carpenter",
+        contactUserId: null,
       },
     });
+  });
+
+  it("binds real contacts to authored slots and clears unassigned houses", () => {
+    const scene = createDwellingScene();
+    const createConfig = (contactId, contact) => ({
+      id: `dwelling-${contactId}`,
+      contactId,
+      name: `${contact} House`,
+      contact,
+      role: "Resident",
+      x: 100,
+      y: 100,
+      sprite: "cottage-blue",
+    });
+    const redwood = new Dwelling(
+      scene,
+      createConfig("contact-elowen", "Elowen"),
+    );
+    const rowan = new Dwelling(scene, createConfig("contact-rowan", "Rowan"));
+    const world = createScene({ dwellings: [redwood, rowan] });
+
+    world.applyContacts([
+      {
+        slotContactId: "contact-elowen",
+        userId: "user_bob",
+        displayName: "Bo",
+      },
+    ]);
+
+    expect(redwood.contactUserId).toBe("user_bob");
+    expect(redwood.contact).toBe("Bo");
+    expect(redwood.getInteractionData().contactUserId).toBe("user_bob");
+    expect(rowan.contactUserId).toBeNull();
+    expect(rowan.contact).toBe("Rowan");
+  });
+
+  it("destroys the objects a dwelling created when the map is cleared", () => {
+    const dwelling = new Dwelling(createDwellingScene(), {
+      id: "dwelling-rowan",
+      contactId: "contact-rowan",
+      name: "Rowan Lodge",
+      contact: "Rowan",
+      role: "Carpenter",
+      x: 100,
+      y: 100,
+      sprite: "cottage-blue",
+    });
+
+    dwelling.destroy();
+
+    expect(dwelling.sprite.destroy).toHaveBeenCalledTimes(1);
+    expect(dwelling.clickZone.destroy).toHaveBeenCalledTimes(1);
+    expect(dwelling.promptContainer.destroy).toHaveBeenCalledTimes(1);
   });
 
   it("does not interact with a dwelling that is out of range", () => {
@@ -173,12 +239,14 @@ describe("WorldScene interaction routing", () => {
 
     expect(scene.input.keyboard.enabled).toBe(false);
     expect(scene.input.enabled).toBe(false);
+    expect(scene.input.keyboard.disableGlobalCapture).toHaveBeenCalledTimes(1);
     expect(scene.input.keyboard.resetKeys).toHaveBeenCalledTimes(1);
 
     scene.setUiInputBlocked(false);
 
     expect(scene.input.keyboard.enabled).toBe(true);
     expect(scene.input.enabled).toBe(true);
+    expect(scene.input.keyboard.enableGlobalCapture).toHaveBeenCalledTimes(1);
   });
 
   it("interacts again once the drawer closes", () => {

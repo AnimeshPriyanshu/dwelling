@@ -36,6 +36,11 @@ export default class Dwelling {
     this.name = config.name
     this.contact = config.contact
     this.role = config.role || 'Resident'
+    // The map authors a fictional resident; a real contact can replace that
+    // label once the player's contact list arrives. `contactUserId` is null
+    // until then, which tells the UI there is nobody to message here.
+    this.baseContact = config.contact
+    this.contactUserId = null
     this.x = config.x
     this.y = config.y
     this.radius = config.radius || 64
@@ -84,22 +89,59 @@ export default class Dwelling {
     this.promptContainer.setDepth(this.baseY + 60)
     this.promptContainer.setVisible(false)
 
-    const label = `[E] ${this.contact}`;
-    const textWidth = Math.max(label.length * 7 + 16, 70);
+    this.promptBg = this.scene.add.rectangle(0, 0, 70, 20, 0x161c1a, 0.88);
+    this.promptBg.setStrokeStyle(1, 0x9ac96b, 0.9);
+    this.promptBg.setOrigin(0.5, 0.5);
 
-    const bg = this.scene.add.rectangle(0, 0, textWidth, 20, 0x161c1a, 0.88);
-    bg.setStrokeStyle(1, 0x9ac96b, 0.9);
-    bg.setOrigin(0.5, 0.5);
-
-    const text = this.scene.add.text(0, 0, label, {
+    this.promptText = this.scene.add.text(0, 0, '', {
       fontFamily: "system-ui, -apple-system, sans-serif",
       fontSize: "11px",
       color: "#f4f5f1",
       fontStyle: "bold",
     });
-    text.setOrigin(0.5, 0.5);
+    this.promptText.setOrigin(0.5, 0.5);
 
-    this.promptContainer.add([bg, text]);
+    this.promptContainer.add([this.promptBg, this.promptText]);
+    this.updatePromptLabel()
+  }
+
+  /** Rebuilds the prompt text and badge width from the current resident. */
+  updatePromptLabel() {
+    const label = `[E] ${this.contact}`
+    this.promptText.setText(label)
+
+    if (typeof this.promptBg.setSize === 'function') {
+      this.promptBg.setSize(Math.max(label.length * 7 + 16, 70), 20)
+    }
+  }
+
+  /**
+   * Points this dwelling at a real contact.
+   *
+   * @param {{ userId: string, displayName: string }} resident
+   */
+  setResident({ userId, displayName }) {
+    this.contactUserId = userId
+    this.contact = displayName
+    this.updatePromptLabel()
+  }
+
+  /** Restores the map-authored label when no contact occupies this slot. */
+  clearResident() {
+    this.contactUserId = null
+    this.contact = this.baseContact
+    this.updatePromptLabel()
+  }
+
+  /**
+   * Removes every object this dwelling created. `WorldScene.clearMap` calls
+   * this before loading another map, and the scene keeps its static group.
+   */
+  destroy() {
+    this.promptContainer?.destroy()
+    this.clickZone?.destroy()
+    this.sprite?.destroy()
+    this.collider?.destroy()
   }
 
   setPromptVisible(visible) {
@@ -115,6 +157,7 @@ export default class Dwelling {
       name: this.name,
       contact: this.contact,
       role: this.role,
+      contactUserId: this.contactUserId,
     };
   }
 

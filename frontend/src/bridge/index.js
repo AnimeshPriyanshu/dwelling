@@ -18,6 +18,7 @@ export const EventType = {
   UI_ACTION: 'ui:action',
   UI_STATE: 'ui:state',
   MAP_SWITCH: 'map:switch',
+  SYNC_CONTACTS: 'contacts:sync',
 }
 
 // Phaser event names creators
@@ -39,6 +40,11 @@ export const reactEvents = {
   toggleChat: () => ({ type: 'toggle-chat' }),
   switchMap: (mapId) => ({ type: EventType.MAP_SWITCH, mapId }),
 }
+
+// The latest contact assignment. Kept here as well as published, because the
+// Phaser scene may be created after the API call that fetched the contacts;
+// a scene asks for this on boot instead of missing an earlier event.
+let worldContacts = []
 
 // Subscription map for the bridge
 const subscribers = {}
@@ -69,9 +75,36 @@ export function requestMapSwitch(mapId) {
   publish(EventType.MAP_SWITCH, { mapId })
 }
 
-// UI → Phaser helper. Tells the world whether a DOM panel owns the input.
-export function setChatOpen(open) {
-  publish(EventType.UI_STATE, { chatOpen: Boolean(open) })
+// The latest input-blocking state. Kept here because a scene may boot after
+// the panel that owns the input is already open (for example the auth gate).
+let uiInputBlocked = false
+
+// UI → Phaser helper. Tells the world whether a DOM panel owns the keyboard.
+export function setUiInputBlocked(blocked) {
+  uiInputBlocked = Boolean(blocked)
+  publish(EventType.UI_STATE, { inputBlocked: uiInputBlocked })
+}
+
+/** @returns {boolean} the latest input-blocking state */
+export function getUiInputBlocked() {
+  return uiInputBlocked
+}
+
+/**
+ * UI → Phaser helper. Assigns real contacts to the map's dwelling slots.
+ *
+ * `assignments` is plain data: `{ slotContactId, userId, displayName }[]`,
+ * where `slotContactId` is the map-authored `contactId` of a dwelling. The
+ * bridge stores the latest value so a scene booting later can still apply it.
+ */
+export function setWorldContacts(assignments) {
+  worldContacts = Array.isArray(assignments) ? assignments : []
+  publish(EventType.SYNC_CONTACTS, { assignments: worldContacts })
+}
+
+/** @returns {Array<{ slotContactId: string, userId: string, displayName: string }>} */
+export function getWorldContacts() {
+  return worldContacts
 }
 
 // Unsubscribe all listeners for a topic (or all topics)
@@ -96,7 +129,10 @@ export default {
   reactEvents,
   phaserPublish,
   requestMapSwitch,
-  setChatOpen,
+  setUiInputBlocked,
+  getUiInputBlocked,
+  setWorldContacts,
+  getWorldContacts,
   subscribe,
   publish,
   unsubscribeAll,

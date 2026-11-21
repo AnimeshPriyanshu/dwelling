@@ -12,7 +12,13 @@ import {
   soilFrame,
   tileCentre,
 } from '../farm'
-import { EventType, phaserPublish, subscribe } from '../../bridge'
+import {
+  EventType,
+  getUiInputBlocked,
+  getWorldContacts,
+  phaserPublish,
+  subscribe,
+} from '../../bridge'
 
 const CAMERA_BACKGROUND = '#1b2320'
 
@@ -45,6 +51,8 @@ export default class WorldScene extends Phaser.Scene {
     this._handleMapSwitchRequest = null
     this._unsubscribeUiState = null
     this._handleUiStateChange = null
+    this._unsubscribeContacts = null
+    this._handleContactsChange = null
     this.uiInputBlocked = false
   }
 
@@ -84,8 +92,16 @@ export default class WorldScene extends Phaser.Scene {
     this._unsubscribeMapSwitch = subscribe(EventType.MAP_SWITCH, this._handleMapSwitchRequest)
 
     // React owns panel visibility; the world blocks its own input in response.
-    this._handleUiStateChange = (payload) => this.setUiInputBlocked(Boolean(payload && payload.chatOpen))
+    // Read the retained value too: the auth gate can be open before this scene
+    // boots, so its earlier event would otherwise be missed.
+    this._handleUiStateChange = (payload) => this.setUiInputBlocked(Boolean(payload && payload.inputBlocked))
     this._unsubscribeUiState = subscribe(EventType.UI_STATE, this._handleUiStateChange)
+    this.setUiInputBlocked(getUiInputBlocked())
+
+    // Contacts can arrive before or after the scene boots, so the bridge keeps
+    // the latest assignment and the scene applies it on every map load.
+    this._handleContactsChange = (payload) => this.applyContacts(payload && payload.assignments)
+    this._unsubscribeContacts = subscribe(EventType.SYNC_CONTACTS, this._handleContactsChange)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleSceneTeardown, this)
     this.events.once(Phaser.Scenes.Events.DESTROY, this.handleSceneTeardown, this)
 
@@ -388,6 +404,44 @@ export default class WorldScene extends Phaser.Scene {
       }
       this.dwellings.push(new Dwelling(this, config))
     }
+
+    this.applyContacts(getWorldContacts())
+  }
+
+  /**
+   * Attaches real contacts to the matching authored dwelling slots.
+   *
+   * A dwelling whose slot has no assignment keeps its map-authored label but
+   * reports `contactUserId: null`, so React never opens a live conversation
+   * for a resident who is not in the player's contacts.
+   *
+   * @param {Array<{slotContactId: string, userId: string, displayName: string}>} [assignments]
+   */
+  applyContacts(assignments) {
+    const bySlot = new Map()
+
+    for (const assignment of Array.isArray(assignments) ? assignments : []) {
+      if (
+        assignment &&
+        typeof assignment.slotContactId === 'string' &&
+        typeof assignment.userId === 'string'
+      ) {
+        bySlot.set(assignment.slotContactId, assignment)
+      }
+    }
+
+    for (const dwelling of this.dwellings) {
+      const assignment = bySlot.get(dwelling.contactId)
+
+      if (assignment) {
+        dwelling.setResident({
+          userId: assignment.userId,
+          displayName: assignment.displayName,
+        })
+      } else {
+        dwelling.clearResident()
+      }
+    }
   }
 
   /** @param {{ mapId?: string }} payload */
@@ -421,7 +475,12 @@ export default class WorldScene extends Phaser.Scene {
     this.input.enabled = !blocked
 
     if (blocked) {
+      // Keep Phaser's global key captures from swallowing keys typed into DOM
+      // inputs; without this, WASD/arrows do not reach the focused field.
+      this.input.keyboard.disableGlobalCapture()
       this.input.keyboard.resetKeys()
+    } else {
+      this.input.keyboard.enableGlobalCapture()
     }
   }
 
@@ -434,6 +493,11 @@ export default class WorldScene extends Phaser.Scene {
     if (this._unsubscribeMapSwitch) {
       this._unsubscribeMapSwitch()
       this._unsubscribeMapSwitch = null
+    }
+
+    if (this._unsubscribeContacts) {
+      this._unsubscribeContacts()
+      this._unsubscribeContacts = null
     }
   }
 

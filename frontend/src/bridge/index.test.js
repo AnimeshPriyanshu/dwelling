@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   EventType,
+  getUiInputBlocked,
   phaserPublish,
   phaserEvents,
-  setChatOpen,
+  setUiInputBlocked,
   subscribe,
   unsubscribeAll,
 } from "./index";
@@ -13,15 +14,18 @@ describe("bridge", () => {
     unsubscribeAll();
   });
 
-  it("publishes chat visibility as a plain boolean payload", () => {
+  it("publishes and retains the input-blocking state", () => {
     const handler = vi.fn();
     subscribe(EventType.UI_STATE, handler);
 
-    setChatOpen(true);
-    setChatOpen(0);
+    setUiInputBlocked(true);
+    expect(getUiInputBlocked()).toBe(true);
 
-    expect(handler).toHaveBeenNthCalledWith(1, { chatOpen: true });
-    expect(handler).toHaveBeenNthCalledWith(2, { chatOpen: false });
+    setUiInputBlocked(0);
+
+    expect(handler).toHaveBeenNthCalledWith(1, { inputBlocked: true });
+    expect(handler).toHaveBeenNthCalledWith(2, { inputBlocked: false });
+    expect(getUiInputBlocked()).toBe(false);
   });
 
   it("publishes a dwelling interaction with the full resident payload", () => {
@@ -53,12 +57,12 @@ describe("bridge", () => {
     });
   });
 
-  it("stops delivering chat visibility once unsubscribed", () => {
+  it("stops delivering input state once unsubscribed", () => {
     const handler = vi.fn();
     const unsubscribe = subscribe(EventType.UI_STATE, handler);
 
     unsubscribe();
-    setChatOpen(true);
+    setUiInputBlocked(true);
 
     expect(handler).not.toHaveBeenCalled();
   });

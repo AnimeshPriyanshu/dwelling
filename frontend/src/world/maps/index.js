@@ -88,5 +88,25 @@ export function listMaps() {
   return [...registry.values()].map(summarizeMap)
 }
 
+/**
+ * Every dwelling slot across all registered maps, in a stable registry order.
+ *
+ * The UI uses this to attach real contacts to the six existing houses without
+ * inventing world geometry: each entry's `contactId` matches a dwelling's
+ * authored slot id, so the binding survives map switches.
+ *
+ * @returns {{contactId: string, name: string, contact: string, role: string}[]}
+ */
+export function listDwellingSlots() {
+  return [...registry.values()].flatMap((map) =>
+    (map.dwellings || []).map((dwelling) => ({
+      contactId: dwelling.contactId,
+      name: dwelling.name,
+      contact: dwelling.contact,
+      role: dwelling.role || 'Resident',
+    }))
+  )
+}
+
 registerMap(aC)
 registerMap(sU)
