@@ -1,8 +1,12 @@
 import { Router } from 'express';
 
 import { requireAuth } from '../auth/middleware.js';
-import { sendMessage } from '../messages/service.js';
-import { validateCreateMessageInput } from '../messages/validation.js';
+import { listMessages, sendMessage } from '../messages/service.js';
+import {
+  validateCreateMessageInput,
+  validateMessageListQuery,
+} from '../messages/validation.js';
+import { emitMessageCreated } from '../sockets/index.js';
 
 /**
  * Builds the messages router.
@@ -31,7 +35,34 @@ export function createMessagesRouter() {
           body
         );
 
+        // Realtime fan-out is best effort: the message is already stored, so a
+        // missing or broken socket layer must not turn a successful send into
+        // an error response. `emitMessageCreated` is a no-op without a server.
+        emitMessageCreated(message);
+
         response.status(201).json({ message });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  // Newest-first keyset page. `cursor` and `limit` are the only query values;
+  // participation is enforced by the service, and a non-participant gets the
+  // same 404 as an unknown conversation.
+  messagesRouter.get(
+    '/conversations/:id/messages',
+    requireAuth,
+    async (request, response, next) => {
+      try {
+        const { cursor, limit } = validateMessageListQuery(request.query);
+        const page = await listMessages(
+          request.auth.userId,
+          request.params.id,
+          { cursor, limit }
+        );
+
+        response.status(200).json(page);
       } catch (error) {
         next(error);
       }

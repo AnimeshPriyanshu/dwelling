@@ -31,6 +31,23 @@ export class ConversationNotContactsError extends Error {
 }
 
 /**
+ * The conversation does not exist, or the caller is not one of its two
+ * participants.
+ *
+ * Both cases share one error on purpose: a non-participant must not be able to
+ * confirm that a conversation exists, matching the message endpoints'
+ * not-found behavior.
+ *
+ * - ConversationNotFoundError → 404 CONVERSATION_NOT_FOUND
+ */
+export class ConversationNotFoundError extends Error {
+  constructor() {
+    super('No conversation with that id exists.');
+    this.name = 'ConversationNotFoundError';
+  }
+}
+
+/**
  * The target user id does not resolve to a user.
  *
  * Also used when a user is deleted between the contact check and the insert,

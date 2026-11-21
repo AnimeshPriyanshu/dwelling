@@ -6,6 +6,7 @@ import { API_PREFIX } from '@dwelling/shared';
 import { env } from './config/env.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createContactsRouter } from './routes/contacts.js';
+import { createConversationsRouter } from './routes/conversations.js';
 import { createMessagesRouter } from './routes/messages.js';
 import {
   createOriginCheck,
@@ -18,6 +19,18 @@ import {
   ValidationError,
 } from './auth/errors.js';
 import {
+  ContactUserNotFoundError,
+  SelfContactError,
+} from './contacts/errors.js';
+import {
+  ConversationNotContactsError,
+  ConversationNotFoundError,
+  ConversationUserNotFoundError,
+  SelfConversationError,
+} from './conversations/errors.js';
+import {
+  InvalidMessageCursorError,
+  InvalidMessageLimitError,
   MessageConversationNotFoundError,
   MessageValidationError,
 } from './messages/errors.js';
@@ -143,8 +156,13 @@ export function createApp({
   app.use(API_PREFIX, createAuthRouter({ credentialLimiter }));
 
   // 2e. Contacts router. GET /api/contacts is read-only and inherits the
-  //     global API limiter and the Origin/Referer guard (GET is unaffected).
+  //     global API limiter and the Origin/Referer guard (GET is unaffected);
+  //     POST /api/contacts is state-changing and therefore origin-checked.
   app.use(API_PREFIX, createContactsRouter());
+
+  // 2e2. Conversations router. Creation resolves the canonical pair; the
+  //      lookup route is participant-only.
+  app.use(API_PREFIX, createConversationsRouter());
 
   // 2f. Messages router. POST /api/conversations/:id/messages stores a message;
   //     the sender is the session user and participation is checked by the
@@ -216,6 +234,62 @@ export function errorHandler(err, _request, _response, next) {
   if (err instanceof MessageConversationNotFoundError) {
     return _response.status(404).json({
       code: 'CONVERSATION_NOT_FOUND',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof ConversationNotFoundError) {
+    return _response.status(404).json({
+      code: 'CONVERSATION_NOT_FOUND',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof SelfContactError) {
+    return _response.status(400).json({
+      code: 'SELF_CONTACT',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof SelfConversationError) {
+    return _response.status(400).json({
+      code: 'SELF_CONVERSATION',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof ContactUserNotFoundError) {
+    return _response.status(404).json({
+      code: 'USER_NOT_FOUND',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof ConversationUserNotFoundError) {
+    return _response.status(404).json({
+      code: 'USER_NOT_FOUND',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof ConversationNotContactsError) {
+    return _response.status(403).json({
+      code: 'NOT_CONTACTS',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof InvalidMessageLimitError) {
+    return _response.status(400).json({
+      code: 'INVALID_LIMIT',
+      message: err.message,
+    });
+  }
+
+  if (err instanceof InvalidMessageCursorError) {
+    return _response.status(400).json({
+      code: 'INVALID_CURSOR',
       message: err.message,
     });
   }
