@@ -2,17 +2,22 @@
 
 Documentation for Dwelling's HTTP endpoints and realtime events.
 
-> ## ⚠️ Most of this file is still a plan
+> ## ⚠️ Parts of this file are still a plan
 >
 > **Implemented endpoints:** `GET /api/health`, `POST /api/signup`,
-> `POST /api/auth/login`, `GET /api/auth/me`, and
-> `POST /api/conversations/:id/messages`. `POST /api/auth/logout` is
+> `POST /api/auth/login`, `GET /api/auth/me`, `GET /api/contacts`,
+> `POST /api/contacts`, `POST /api/conversations`,
+> `GET /api/conversations/:id`, `POST /api/conversations/:id/messages`, and
+> `GET /api/conversations/:id/messages`. `POST /api/auth/logout` is
 > documented as a **contract only**: its implementation is unverified because
 > PR-25 is not confirmed complete.
 >
-> Everything else in this file is a placeholder marked `Defined` or `Pending`.
-> Do not build against a pending endpoint, and do not assume a pending
-> endpoint's shape.
+> **Implemented realtime:** authenticated Socket.IO conversations with
+> `server:ready`, `conversation:subscribe`, `conversation:unsubscribe`, and
+> `message:created`. See [Realtime events](#realtime-events).
+>
+> Endpoints still marked `Defined` or `Pending` are not implemented. Do not
+> build against them, and do not assume their shape.
 >
 > The permitted sources of truth, in order: the code, then this file. If they
 > disagree, the code wins — and this file is wrong and must be fixed.
@@ -33,9 +38,9 @@ Documentation for Dwelling's HTTP endpoints and realtime events.
 
 **In frontend code, always use the relative `/api` prefix** — the Vite dev proxy
 forwards it to the backend, so no absolute URL or CORS setup is needed
-([`../architecture/frontend.md`](../architecture/frontend.md)). The frontend
-currently makes **no** network calls; the `API_PREFIX` constant is not imported
-there.
+([`../architecture/frontend.md`](../architecture/frontend.md)). The frontend's
+`src/api/client.js` uses that relative prefix with `credentials: "include"`; it
+does not import the shared `API_PREFIX` constant.
 
 ---
 
@@ -125,7 +130,9 @@ tokens in a header do not have. The v1 posture:
 - Always send requests with credentials enabled (`credentials: 'include'` in
   `fetch`) once a client is built; without it the cookie is omitted cross-origin.
 - Treat `401 AUTH_REQUIRED` as "session over" and route to sign-in; do not retry
-  in a loop.
+  in a loop. The frontend does this centrally in `src/api/client.js`, and the
+  socket client reports an `AUTH_REQUIRED` handshake failure through the same
+  handler.
 
 ---
 
@@ -454,10 +461,11 @@ curl -i -X POST http://localhost:3000/api/conversations/<conversationId>/message
 
 ---
 
-## Defined endpoints — not implemented
+## Contacts, conversations, and messages
 
-The six endpoints below are the remaining Phase 2–7 contract. They are grouped by
-the PRs that implement them (`plan.md` Phases 3, 5, 7). All of them:
+The endpoints in this section are implemented unless marked `▢ Defined`.
+Remaining contract-only endpoints are `GET /api/conversations` and
+`DELETE /api/contacts/:id`. All endpoints here:
 
 - **Auth:** session cookie required, unless the endpoint says otherwise
 - **Resolve the caller** from the cookie, never from a body or query value
@@ -490,7 +498,7 @@ List the caller's contacts.
   tie-breaker (OQ-18, resolved by PR-37). Empty list is
   `200 { "contacts": [] }`.
 
-#### `POST /api/contacts` ▢ Defined
+#### `POST /api/contacts` ✅ Implemented
 
 Add a user as a contact. Immediate and symmetric.
 
@@ -542,7 +550,7 @@ List the caller's conversations.
   **undecided** (OQ-7) and must be documented by PR-53 before clients depend on
   it. Empty list is `200 { "conversations": [] }`.
 
-#### `POST /api/conversations` ▢ Defined
+#### `POST /api/conversations` ✅ Implemented
 
 Get or create the single conversation for a pair.
 
@@ -559,14 +567,15 @@ Get or create the single conversation for a pair.
     no user is `404 USER_NOT_FOUND`. That difference deliberately discloses user
     existence (OQ-10, resolved).
   - **Concurrency:** the server derives the ordered pair itself —
-    `(min(callerId, peerId), max(callerId, peerId))` — and inserts against the
-    pair's unique constraint (`upsert`, retrying on `P2002` and re-reading). Two
-    simultaneous requests must yield one row, one `201`, and one `200`. An
-    implementation that reads-then-writes without the constraint is non-conforming.
+    `(min(callerId, peerId), max(callerId, peerId))` — reads for an existing row,
+    then inserts against the pair's unique constraint and re-reads after a
+    `P2002`. Two simultaneous requests must yield one row, one `201`, and one
+    `200`. An implementation that reads-then-writes without the constraint is
+    non-conforming.
   - The endpoint is idempotent by pair, not by request: repeated calls never
     create a second conversation.
 
-#### `GET /api/conversations/:id` ▢ Defined
+#### `GET /api/conversations/:id` ✅ Implemented
 
 Fetch one conversation.
 
@@ -583,7 +592,7 @@ Fetch one conversation.
 wire field name; the current Prisma sketch calls the column `content`, and PR-15
 may align the two. This contract fixes only the JSON name.
 
-#### `GET /api/conversations/:id/messages` ▢ Defined
+#### `GET /api/conversations/:id/messages` ✅ Implemented
 
 Read message history, newest first.
 
@@ -628,6 +637,36 @@ One rule set for message history.
 
 The supporting index `(conversationId, createdAt DESC, id DESC)` is a **PR-16**
 requirement. This contract states the read pattern; it does not design indexes.
+
+---
+
+## Realtime events
+
+The Socket.IO connection shares the HTTP server at `/socket.io`. The handshake
+reuses the `dwelling_session` cookie: a missing or invalid session is rejected
+with `connect_error` and message `AUTH_REQUIRED`, and the socket joins no room.
+Identity always comes from the verified cookie, never from an event payload.
+
+| Event | Direction | Payload |
+| --- | --- | --- |
+| `server:ready` | server → client | none, sent after a successful handshake |
+| `conversation:subscribe` | client → server | `{ conversationId }`; ack `{ ok: true }` or `{ ok: false, code }` |
+| `conversation:unsubscribe` | client → server | `{ conversationId }`; no ack |
+| `message:created` | server → room | a stored `Message` |
+
+- **Authorization:** `conversation:subscribe` re-checks that the socket's session
+  user is one of the conversation's two participants. A missing conversation and
+  a non-participant both answer `{ ok: false, code: "CONVERSATION_NOT_FOUND" }`;
+  a malformed payload answers `VALIDATION_FAILED`, and an unexpected database
+  failure answers `INTERNAL`. A client cannot join a room by assertion.
+- **Fan-out:** `POST /api/conversations/:id/messages` stores the message first,
+  then emits `message:created` to `conversation:<conversationId>`. Realtime is
+  best effort; history is the source of truth.
+- **Client behaviour:** the frontend subscribes while a conversation is open,
+  unsubscribes when it closes, rejoins and refetches the newest history page on
+  reconnect, and deduplicates messages by id.
+- **Not implemented:** presence, movement, group conversations, delivery acks,
+  read receipts, and unread counts.
 
 ---
 
@@ -715,9 +754,9 @@ Altar identity and membership (FR-026, FR-027). Group conversations belong to an
 Altar and arrive in Phase 12 of [`../../plan.md`](../../plan.md).
 
 **Do not invent event names in code before they are designed and documented
-here.** An undocumented event is an integration bug waiting to happen. HTTP
-message creation may later emit an event; the HTTP contract above does not
-promise one.
+here.** The currently implemented events are listed under
+[Realtime events](#realtime-events). An undocumented event is an integration
+bug waiting to happen.
 
 ---
 
@@ -741,7 +780,7 @@ resolve it; none is answered by this document.
 | OQ-13 | CSRF token mechanism (double-submit cookie vs. header) — still deferred, not denied; PR-27 added the Origin/Referer check instead | Revisit if the topology becomes split-origin |
 | OQ-14 | Deployment topology: same-site (Lax viable) or split-origin (needs `SameSite=None; Secure` plus a CSRF token) — **unresolved**, and `trust proxy` follows from it | Launch |
 | OQ-15 | Mapping frontend map/contact ids to server `User.id` for dwellings and world rendering | PR-76, PR-15 |
-| OQ-16 | Socket.IO handshake authentication reusing this cookie, including origin checks | PR-60 |
+| OQ-16 | Socket.IO cookie authentication is implemented; origin checks for the handshake remain unspecified | Origin checks: PR-60 |
 | OQ-17 | ✅ Resolved by PR-27: `429 RATE_LIMITED` with an integer `Retry-After` | PR-27 |
 | OQ-18 | ✅ Resolved by PR-37: `createdAt DESC`, then `contactId ASC` | PR-37 |
 

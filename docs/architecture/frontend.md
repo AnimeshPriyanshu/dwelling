@@ -6,8 +6,9 @@ How the browser application is organized: **React**, **HTML**, **CSS3**, bundled
 > [`../planning/decisions.md`](../planning/decisions.md).
 > TypeScript is optional but Vanilla JS within React is the default.
 >
-> Most of the structure below is **proposed** — the frontend today is a single
-> static `main.js`. Anything implemented is marked ✅.
+> The React shell, Phaser world, auth gate, contacts panel, and 1:1 chat drawer
+> are implemented. Remaining structural proposals are marked ▢. Anything
+> implemented is marked ✅.
 
 ---
 
@@ -24,8 +25,11 @@ frontend/
 │   └── assets/           ✅  tilesets, houses, interiors, props, characters, ui + CREDITS.md
 └── src/
     ├── main.js           ✅  creates the React root, renders App
-        ├── App.jsx            ✅  mounts the Phaser game; floating HUD + slide-out conversation drawer
+    ├── App.jsx            ✅  mounts the Phaser game; floating HUD + slide-out conversation drawer
     ├── style.css          ✅  fullscreen shell, floating HUD, drawer (`.chat-drawer`)
+    ├── api/               ✅  fetch client (session cookie + 401 hook) and Socket.IO client
+    ├── auth/              ✅  sign-in / sign-up screen
+    ├── contacts/          ✅  contacts panel with add-by-user-id and sign out
     ├── assets/           🟡  Vite starter leftovers (unused)
     ├── world/
     │   ├── game.js       ✅  createGame(parent) — the only Phaser config (DW-003)
@@ -67,9 +71,9 @@ transport should be kept in a separate client module").
 | **Systems** | Cross-entity logic: movement, interaction resolution | `src/world/systems/` | ▢ DW-015, DW-028 |
 | **Maps** | Map data, validation, registry, reused-scene loading | `src/world/maps/` | ✅ DW-032/033 |
 | **Bridge** | Canvas ↔ DOM event translation | `src/bridge/` | ✅ exists (DW-035 settles details) |
-| **UI** | Panels, HUD, prompts as DOM | `src/ui/` (proposed); HUD lives in `App.jsx` for now | 🟡 DW-037 done, DW-036 planned |
-| **Chat** | Conversation UI | `src/chat/` | ▢ placeholder only |
-| **Services** | HTTP + Socket.IO clients | `src/services/` (proposed) | ▢ deferred |
+| **UI** | Panels, HUD, prompts as DOM | HUD, auth, and contacts live in `src/App.jsx`, `src/auth/`, `src/contacts/` | ✅ implemented |
+| **Chat** | Conversation drawer and message lifecycle | `src/App.jsx` | 🟡 drawer implemented; `src/chat/` remains a boundary README |
+| **Services** | HTTP + Socket.IO clients | `src/api/` | ✅ implemented |
 
 > **The existing `world/` and `chat/` folders are treated as fixed boundaries.**
 > The layouts above are additions inside them, not replacements. `bridge/`,
@@ -176,13 +180,20 @@ The single seam between canvas and HTML (ADR-0005).
 
 ## Client services
 
-**Deferred.** No `fetch` or `io()` call exists in the frontend today.
+**Implemented** in `src/api/`.
 
-- **Proposed location:** `src/services/` — `api.js` for HTTP and `realtime.js`
-  for Socket.IO.
-- **Confirmed by existing config:** requests go to the relative `/api` prefix
-  (`API_PREFIX` from `@dwelling/shared`) and the Socket.IO client connects to
-  `/socket.io`; both are proxied to `localhost:3000` by `vite.config.js`.
+- **HTTP:** `client.js` wraps `fetch`, uses the relative `/api` prefix with
+  `credentials: "include"`, preserves the server's `{ code, message }` errors in
+  `ApiError`, and invokes one central handler on `401` so the app can clear the
+  session and return to sign-in.
+- **Realtime:** `socket.js` keeps one `socket.io-client` connection per tab with
+  `withCredentials: true`. It reports an `AUTH_REQUIRED` handshake failure through
+  the same central session handler. The app subscribes while a conversation is
+  open, rejoins and refetches history after reconnect, and deduplicates messages
+  by id.
+- **Config:** requests go to the relative `/api` prefix and the Socket.IO client
+  connects to `/socket.io`; both are proxied to `localhost:3000` by
+  `vite.config.js`.
 - **Rule:** services never touch the DOM or Phaser. They return data; the caller
   decides how to display it.
 

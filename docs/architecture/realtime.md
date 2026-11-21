@@ -2,9 +2,10 @@
 
 The intended realtime architecture, and how its concerns should stay separated.
 
-> **Nothing here is implemented beyond a single handshake event.** Every
-> behavioral section below is a plan, not a description of the code. Do not
-> document or build against these event names as if they exist.
+> **Implemented:** authenticated one-to-one message delivery and the
+> conversation subscription events described below. Presence, movement, and
+> group interaction remain plans; do not build against those sections as if
+> they exist.
 
 ---
 
@@ -12,14 +13,16 @@ The intended realtime architecture, and how its concerns should stay separated.
 
 | Piece | Server | Client |
 | --- | --- | --- |
-| Socket.IO | `socket.io` in `backend/src/server.js`, CORS origin = `env.clientOrigin` | `socket.io-client` is a **declared dependency but never imported** |
-| Handlers | `backend/src/sockets/index.js`: on `connection` → `socket.emit('server:ready')` | No listener exists |
-| Namespaces/rooms | none | none |
-| Auth on connect | none | none |
+| Socket.IO | `socket.io` in `backend/src/server.js`, CORS origin = `env.clientOrigin` with credentials | `socket.io-client` in `frontend/src/api/socket.js`, `withCredentials: true` |
+| Handlers | `backend/src/sockets/index.js`: JWT handshake auth, subscribe/unsubscribe, room fan-out | `frontend/src/App.jsx` subscribes while a conversation drawer is open |
+| Namespaces/rooms | `conversation:<conversationId>`, joined only after a participant check | one room per open conversation; rejoin on reconnect |
+| Auth on connect | `dwelling_session` cookie verified at handshake | session cookie sent automatically |
 | Proxy | shared HTTP server on port `3000`, path `/socket.io` | `frontend/vite.config.js` proxies `/socket.io` with `ws: true` |
 
-**The only realtime event name in the codebase is `server:ready`.** There is no
-message delivery, no presence, no movement sync, and no group interaction.
+Implemented events: `server:ready`, `conversation:subscribe`,
+`conversation:unsubscribe`, and `message:created`. Their payloads and
+acknowledgements are documented in
+[`../api/README.md`](../api/README.md#realtime-events).
 
 ---
 
@@ -57,24 +60,26 @@ services — even though all three ride the same Socket.IO connection.
 
 ---
 
-## Messaging (planned)
+## Messaging (implemented for one-to-one conversations)
 
-- **Delivered as:** Socket.IO events, with the database as the source of truth.
-- **Shape:** client emits a send event → server validates membership, persists the
-  message, then broadcasts to the conversation's room.
+- **Send path:** the client sends over HTTP `POST /api/conversations/:id/messages`.
+  The server validates membership, persists the message, then broadcasts it to
+  the conversation's room. The database remains the source of truth.
 - **Why a room per conversation:** rooms give fan-out to exactly the members
   without the server tracking sockets per user by hand, and they map directly onto
   a conversation's two participants.
-- **Ordering:** the **database timestamp is authoritative**, not the client's or
-  the arrival order of socket events. Clients render by the stored `createdAt`,
-  which the existing `Message` index `[conversationId, createdAt]` already
-  supports ([`database.md`](database.md)).
-- **Delivery guarantee:** at-least-once. Clients must tolerate a duplicate message
-  id rather than assuming exactly-once delivery.
-- **Undecided:** client-side ack semantics, optimistic rendering, retry on
-  disconnect, and history pagination.
-
-**Pending:** all of it. No messaging event exists.
+- **Ordering:** the **database timestamp is authoritative**, not the client's or the
+  arrival order of socket events. Clients merge and render by the stored
+  `createdAt`, with `id` as the tie-breaker, which the existing `Message` index
+  `[conversationId, createdAt]` supports ([`database.md`](database.md)).
+- **Delivery guarantee:** realtime delivery is best effort. The frontend refetches
+  the newest history page on reconnect and deduplicates by message id; there is
+  no ack, retry, or exactly-once guarantee. The HTTP send is intentionally not
+  idempotent (OQ-9), so clients must not retry it blindly.
+- **Frontend scope:** only the open conversation is subscribed. History is the
+  newest page (default 50); there is no older-message UI yet.
+- **Still undecided:** optimistic rendering, delivery/read receipts, unread
+  counts, and retry semantics.
 
 ---
 
@@ -149,7 +154,7 @@ For any realtime work added later:
    once it exists** — an undocumented event is a bug waiting to happen.
 6. **Validate every inbound payload.** Never treat a client-sent id as proof of
    membership — see [`security-and-caching.md`](security-and-caching.md).
-7. **The client keeps transport in a service module** (`src/services/`), never
+7. **The client keeps transport in a service module** (`src/api/`), never
    inside a Phaser scene or a DOM module
    ([`frontend.md`](frontend.md)).
 
@@ -168,10 +173,10 @@ follows from that.
 | --- | --- |
 | Movement authority (server vs. client) | Undecided — decide before coding |
 | Presence audience (all users vs. contacts) | Undecided — contact modeling is now decided (ADR-0021) |
-| Delivery/ack semantics for messages | Undecided |
-| Message history pagination | Undecided |
+| Delivery/ack semantics for messages | Realtime is best effort; no acks or retries |
+| Message history pagination | Backend keyset pagination implemented; no older-message UI |
 | How entering an Altar joins its room | Out of scope (ADR-0020) |
-| Authenticating socket connections | Deferred to Stage 6 |
+| Authenticating socket connections | Cookie handshake implemented; origin checks still open (OQ-16) |
 
 ## Related
 

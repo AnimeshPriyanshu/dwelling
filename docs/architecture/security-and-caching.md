@@ -5,11 +5,12 @@ Responsibilities, rules, and what must never be committed.
 > **Partially implemented.** Signup and login validate their inputs and issue the
 > session cookie; logout clears it; `GET /api/auth/me` returns the session user;
 > password hashing, JWT, cookie helpers, and auth middleware exist. `requireAuth`
-> is mounted on `GET /api/auth/me`. PR-27 added Helmet security headers, an
-> explicit CORS policy, the Origin/Referer CSRF check, and HTTP rate limiting.
-> Authorization for future resources, a CSRF token, shared rate-limit storage,
-> and functional caching are still not built. Sections below distinguish current
-> behaviour from intended controls.
+> protects contacts, conversations, and message endpoints. Contacts, one-to-one
+> conversations, message history, and authenticated Socket.IO delivery are
+> implemented. PR-27 added Helmet security headers, an explicit CORS policy, the
+> Origin/Referer CSRF check, and HTTP rate limiting. A CSRF token, shared
+> rate-limit storage, socket rate limiting, and functional caching are still not
+> built. Sections below distinguish current behaviour from intended controls.
 
 ---
 
@@ -22,12 +23,15 @@ Dwelling currently exposes a small local-development API:
   database, and issue the signed session cookie; `POST /api/auth/logout` clears
   it. `GET /api/auth/me` reads the session user.
 - `requireAuth` reads and verifies `dwelling_session` and attaches
-  `request.auth.userId`; it is mounted on `GET /api/auth/me`.
-- Socket connections are unauthenticated; a connecting client is sent
-  `server:ready` and nothing else.
+  `request.auth.userId`; it protects `/api/auth/me`, contacts, conversations, and
+  message endpoints.
+- Socket connections are authenticated at handshake time with the same
+  `dwelling_session` cookie. A missing or invalid session is rejected with
+  `AUTH_REQUIRED` before any handler runs; a valid socket joins only
+  `conversation:<id>` rooms after a participant check.
 - CORS is limited to `CLIENT_ORIGIN` (default `http://localhost:5173`) for both
-  Socket.IO and Express. There is no wildcard origin: the session cookie requires
-  `credentials: true`, and preflight is answered for the API's methods.
+  Socket.IO and Express, with `credentials: true`. There is no wildcard origin,
+  and preflight is answered for the API's methods.
 - Helmet security headers are applied to every response, including rejections,
   and `X-Powered-By` is removed.
 - Errors pass through a centralized handler: malformed JSON answers
@@ -37,13 +41,13 @@ Dwelling currently exposes a small local-development API:
   unhandled failures a sanitized `500 INTERNAL`, and unknown routes JSON
   `404 NOT_FOUND`.
 
-**Consequence:** the auth endpoints are real and must be treated as such, even
-though the frontend does not call them yet. The gaps below still apply. See Stage
-6 in [`../planning/roadmap.md`](../planning/roadmap.md).
+**Consequence:** the frontend calls these endpoints and the socket handshake, so
+the cookie and origin rules are live behavior, not a future contract. The gaps
+below still apply.
 
 ---
 
-## Authentication (signup, login, and me implemented; logout unverified)
+## Authentication (signup, login, me, and socket handshake implemented; logout unverified)
 
 **Decided in ADR-0022**
 ([`../planning/decisions.md`](../planning/decisions.md#adr-0022--jwt-authentication-using-an-httponly-cookie)).
@@ -53,8 +57,8 @@ the cookie; logout clears it; `GET /api/auth/me` loads the user from the token.
 
 **HTTP:** a signed JWT (`HS256`, `JWT_SECRET`) delivered in an `HttpOnly` cookie
 named `dwelling_session`. Signup and login set it; it is sent automatically on
-same-origin API requests. `requireAuth` verifies it on `GET /api/auth/me`, the
-first protected route.
+same-origin API requests. `requireAuth` verifies it on `/api/auth/me`, contacts,
+conversations, and message routes.
 
 | Cookie attribute | Value |
 | --- | --- |
@@ -69,10 +73,10 @@ first protected route.
   session. It does **not** revoke the token. An already-issued JWT — including a
   copied one — remains valid until `exp`; a denylist, token-version check, or
   password-change invalidation is not built in v1 and needs its own decision.
-- **Socket:** the socket connection must be authenticated **at connection time**,
-  not on each event, and an unauthenticated socket must not be placed in any
-  room. Reusing `dwelling_session` for the handshake is PR-60; origin checking
-  there is not yet specified (OQ-16).
+- **Socket:** the socket connection is authenticated **at connection time**, not
+  on each event; an unauthenticated socket is rejected and placed in no room. It
+  reuses `dwelling_session` for the handshake. Origin checking for the handshake
+  is still unspecified (OQ-16).
 - **Identity:** always comes from the verified cookie. A `userId`, `senderId`, or
   role in a request body or event payload is a claim, not a proof.
 - **Client:** the token is never exposed to JavaScript, never stored in
@@ -105,12 +109,11 @@ requests need CSRF defenses that a bearer header would not.
 
 ---
 
-## Authorization (not implemented)
+## Authorization (implemented for contacts, conversations, and messages)
 
-**Intended:** every read and write is checked against the caller's identity.
-
-The rules to enforce, derived from the data model (ADR-0020, ADR-0021,
-[`database.md`](database.md)):
+Every implemented read and write is checked against the caller's identity. The
+rules below are enforced in the services, derived from the data model (ADR-0020,
+ADR-0021, [`database.md`](database.md)):
 
 | Action | Rule |
 | --- | --- |
@@ -134,19 +137,27 @@ unknown id, so the API does not confirm that a conversation exists. `403` is
 reserved for a caller who is known but not allowed to perform the specific
 operation — today only conversation creation against a non-contact.
 
-**Common failure to avoid:** resolving a resource by client-supplied id without
-checking membership. `GET /conversations/:id/messages` must verify the caller is a
-participant of *that* conversation — not merely that the conversation exists.
+**Membership is checked on every path:** `GET /conversations/:id`,
+`GET /conversations/:id/messages`, `POST /conversations/:id/messages`, and
+`conversation:subscribe` all verify the caller is a participant of *that*
+conversation, not merely that it exists. The socket check is repeated on every
+subscribe, and a room name is never treated as proof of access.
 
 ---
 
-## Input validation (auth implemented; future endpoints pending)
+## Input validation (implemented at the API boundary)
 
 **Implemented for signup and login:** allowlisted fields, trimmed/lowercased
 email, email format/length, password presence, 8-character signup minimum, and a
 72-byte bcrypt cap. Unknown fields are rejected.
 
-**Intended for every endpoint:** validate at the transport boundary, before domain
+**Implemented for contacts, conversations, and messages:** allowlisted body
+fields, non-empty id limits (64 characters), message body trimming with a
+4000-character maximum, history `limit` restricted to integers 1–100, and
+unknown/extra fields rejected. Socket subscribe validates the conversation id
+shape before querying membership.
+
+**Rule for every endpoint:** validate at the transport boundary, before domain
 logic.
 
 - **Rule:** validate **every** inbound value — request bodies, query parameters,
@@ -155,7 +166,7 @@ logic.
 - **Rule:** enforce explicit limits — maximum string lengths, array sizes,
   pagination bounds. Message pagination is fixed at a default of 50 and a maximum
   of 100 (see [`../api/README.md`](../api/README.md#pagination)); message content
-  has no length limit in the schema today.
+  is capped at 4000 characters in validation.
 - **Rule:** treat all client input as untrusted strings. Do not assume a value is
   a valid id because it is named one.
 - **Why boundary validation:** domain modules can then assume well-formed input
@@ -178,7 +189,7 @@ SQL injection, not invalid or hostile content.
 | --- | --- | --- |
 | HTTP endpoints generally | Brute force, scraping | ✅ Per-IP limits, PR-27 |
 | Signup and login | Credential brute force, enumeration | ✅ 10 per 15 min per IP, PR-27 |
-| Message sending | Spam, flooding | ▢ Per-user limit on send events, pending |
+| Message sending | Spam, flooding | 🟡 Per-IP HTTP limit only; no per-user send limit |
 | Socket connections | Connection flooding | ▢ Limit concurrent connections per user/IP, pending |
 | Movement events | Tick flooding (higher rate than anything else) | ▢ Drop excess ticks server-side rather than queueing, pending |
 
